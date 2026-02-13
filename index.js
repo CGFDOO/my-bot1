@@ -12,7 +12,7 @@ GatewayIntentBits.GuildMembers
 const prefix=":";
 
 // ضع ID روم اللوق هنا
-const LOG_CHANNEL="PUT_LOG_CHANNEL_ID";
+const LOG_CHANNEL="1454451180976603339";
 
 client.once("ready",()=>{
 console.log(`READY ${client.user.tag}`);
