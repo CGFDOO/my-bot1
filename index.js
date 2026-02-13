@@ -131,6 +131,4 @@ Moderator: ${message.author}
 
 });
 
-require("./tickets")(client);
-
 client.login(process.env.TOKEN);
