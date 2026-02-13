@@ -125,9 +125,9 @@ Moderator: ${message.author}
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
-  }
 
+}
 });
 
 client.login(process.env.TOKEN);
-  
+client.login(process.env.TOKEN);
