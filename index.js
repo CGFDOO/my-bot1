@@ -1,144 +1,134 @@
-//////////////////////////////////////////////////
-// 😈 DEVIL BOT - FINAL VERSION
-//////////////////////////////////////////////////
-
-const {
- Client,
- GatewayIntentBits,
- EmbedBuilder,
- PermissionsBitField
-} = require("discord.js");
-
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require("discord.js");
 require("dotenv").config();
 
-//////////////////////////////////////////////////
-// BASIC SETUP (الحاجات الاساسية اللي كنا كاتبينها)
-//////////////////////////////////////////////////
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
+  ]
+});
 
 const prefix = ":";
 
-const client = new Client({
- intents: [
-  GatewayIntentBits.Guilds,
-  GatewayIntentBits.GuildMessages,
-  GatewayIntentBits.MessageContent,
-  GatewayIntentBits.GuildMembers
- ]
+client.on("ready", () => {
+  console.log(`Logged in as ${client.user.tag}`);
 });
 
-//////////////////////////////////////////////////
-// READY EVENT
-//////////////////////////////////////////////////
+client.on("messageCreate", async message => {
 
-client.once("ready", () => {
- console.log(`😈 DEVIL ONLINE | ${client.user.tag}`);
-});
+  if (message.author.bot) return;
+  if (!message.content.startsWith(prefix)) return;
 
-//////////////////////////////////////////////////
-// MESSAGE HANDLER
-//////////////////////////////////////////////////
+  const args = message.content.slice(prefix.length).trim().split(/ +/);
+  const command = args.shift().toLowerCase();
 
-client.on("messageCreate", async (message) => {
+  // ================= BAN =================
+  if (command === "ban") {
 
-if(message.author.bot) return;
-if(!message.content.startsWith(prefix)) return;
+    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+      return message.reply("❌ You do not have permission.");
 
-const args = message.content.slice(prefix.length).trim().split(/ +/);
-const command = args.shift().toLowerCase();
+    const member = message.mentions.members.first();
+    if (!member) return message.reply("❌ Please mention a user.");
 
-//////////////////////////////////////////////////
-// 🔥 TEST COMMAND
-//////////////////////////////////////////////////
+    const reason = args.slice(1).join(" ") || "No reason provided";
 
-if(command === "test"){
+    await member.ban({ reason });
 
- const embed = new EmbedBuilder()
- .setColor("#000000")
- .setTitle("🔥 DEVIL BOT STATUS")
- .setDescription("البوت يعمل بكفاءة عالية 😈")
- .setTimestamp();
-
- return message.reply({ embeds:[embed] });
-}
-
-//////////////////////////////////////////////////
-// 😈 TIMEOUT COMMAND
-//////////////////////////////////////////////////
-
-if(command === "timeout"){
-
- if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
- return message.reply("❌ لا تملك صلاحية استخدام هذا الأمر.");
-
- const member = message.mentions.members.first();
-
- if(!member)
- return message.reply("⚠️ يرجى منشن العضو بشكل صحيح.");
-
- let duration = args[0] || "10m";
-
- let ms;
-
- if(duration.endsWith("m")) ms = parseInt(duration)*60000;
- else if(duration.endsWith("h")) ms = parseInt(duration)*3600000;
- else if(duration.endsWith("d")) ms = parseInt(duration)*86400000;
- else return message.reply("⚠️ صيغة الوقت غير صحيحة (مثال: 10m)");
-
- await member.timeout(ms);
-
- const embed = new EmbedBuilder()
- .setColor("#000000")
- .setTitle("⛔ DEVIL TIMEOUT")
- .setDescription(`
-👤 العضو: ${member}
-🛡 بواسطة: ${message.author}
-⏱ المدة: ${duration}
+    const embed = new EmbedBuilder()
+      .setTitle("🔨 User Banned")
+      .setDescription(`
+User: ${member}
+User ID: ${member.id}
+Moderator: ${message.author}
+Reason: ${reason}
 `)
- .setTimestamp();
+      .setColor("Red")
+      .setTimestamp();
 
- return message.channel.send({ embeds:[embed] });
-}
+    message.channel.send({ embeds: [embed] });
+  }
 
-//////////////////////////////////////////////////
-// 🔥 BAN COMMAND
-//////////////////////////////////////////////////
+  // ================= UNBAN =================
+  if (command === "unban") {
 
-if(command === "ban"){
+    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+      return message.reply("❌ You do not have permission.");
 
- if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
- return message.reply("❌ لا تملك صلاحية.");
+    const id = args[0];
+    if (!id) return message.reply("❌ Provide user ID.");
 
- const member = message.mentions.members.first();
+    await message.guild.members.unban(id);
 
- if(!member)
- return message.reply("⚠️ منشن العضو أولاً.");
-
- const reason = args.slice(1).join(" ") || "بدون سبب";
-
- await member.ban({ reason });
-
- const embed = new EmbedBuilder()
- .setColor("#000000")
- .setTitle("🔥 DEVIL BAN")
- .setDescription(`
-👤 العضو: ${member}
-🛡 الاداري: ${message.author}
-📌 السبب: ${reason}
+    const embed = new EmbedBuilder()
+      .setTitle("✅ User Unbanned")
+      .setDescription(`
+User ID: ${id}
+Moderator: ${message.author}
 `)
- .setTimestamp();
+      .setColor("Green")
+      .setTimestamp();
 
- return message.channel.send({ embeds:[embed] });
-}
+    message.channel.send({ embeds: [embed] });
+  }
+
+  // ================= TIMEOUT =================
+  if (command === "timeout") {
+
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+      return message.reply("❌ You do not have permission.");
+
+    const member = message.mentions.members.first();
+    if (!member) return message.reply("❌ Please mention a user.");
+
+    const time = args[1];
+    if (!time) return message.reply("❌ Provide time in ms.");
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+
+    await member.timeout(parseInt(time), reason);
+
+    const embed = new EmbedBuilder()
+      .setTitle("⏱️ User Timed Out")
+      .setDescription(`
+User: ${member}
+User ID: ${member.id}
+Moderator: ${message.author}
+Duration: ${time}
+Reason: ${reason}
+`)
+      .setColor("Orange")
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
+  }
+
+  // ================= UNTIMEOUT =================
+  if (command === "untimeout") {
+
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+      return message.reply("❌ You do not have permission.");
+
+    const member = message.mentions.members.first();
+    if (!member) return message.reply("❌ Please mention a user.");
+
+    await member.timeout(null);
+
+    const embed = new EmbedBuilder()
+      .setTitle("✅ Timeout Removed")
+      .setDescription(`
+User: ${member}
+User ID: ${member.id}
+Moderator: ${message.author}
+`)
+      .setColor("Green")
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
+  }
 
 });
-
-//////////////////////////////////////////////////
-// ANTI CRASH (الاساسيات المهمة)
-//////////////////////////////////////////////////
-
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
-
-//////////////////////////////////////////////////
 
 client.login(process.env.TOKEN);
