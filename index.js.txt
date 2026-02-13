@@ -8,6 +8,7 @@ client.once('ready', () => {
   console.log(`Bot is ready!`);
 });
 
-client.login("MTQ3MTY4NDMzNjA3OTA3NzYyNQ.GEZ2L3.cTX-m2j0yqcoyFtH7HpZNKiF-3klBhPEXVlFWQ");
+client.login(process.env.TOKEN);
+
 
 
