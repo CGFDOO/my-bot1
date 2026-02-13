@@ -127,6 +127,5 @@ Moderator: ${message.author}`
   }
 
 });
-
 client.login(process.env.TOKEN);
   }
