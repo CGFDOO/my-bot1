@@ -171,4 +171,3 @@ Moderator: ${message.author}`);
 });
 
 client.login(process.env.TOKEN);
- sendLog(message.guild,LOGS.TIME,e);
