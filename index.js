@@ -1,7 +1,7 @@
-const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js');
+const { Client, GatewayIntentBits, PermissionsBitField, EmbedBuilder } = require('discord.js');
 const ms = require('ms');
 
-const prefix = ":";
+const prefix = "!";
 
 const client = new Client({
   intents: [
@@ -12,100 +12,116 @@ const client = new Client({
 });
 
 client.once('ready', () => {
-  console.log(`🔥 Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-client.on('messageCreate', async (message) => {
+client.on('messageCreate', async message => {
 
-  if (message.author.bot) return;
-  if (!message.content.startsWith(prefix)) return;
+  if (!message.content.startsWith(prefix) || message.author.bot) return;
 
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  // 🔥 ping
-  if (command === "ping") {
-    return message.reply("pong 🏓");
-  }
-
-  // 🔥 BAN
+  // ================= BAN =================
   if (command === "ban") {
 
     if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-      return message.reply("❌ معندكش صلاحية");
+      return message.reply("❌ You do not have permission to use this command.");
 
-    const member = message.mentions.members.first();
-    if (!member) return message.reply("⚠️ منشن الشخص");
+    const user = message.mentions.members.first();
+    if (!user) return message.reply("❌ Please mention a user.");
 
-    const reason = args.slice(1).join(" ") || "بدون سبب";
+    const reason = args.slice(1).join(" ") || "No reason provided.";
 
-    try {
-      await member.ban({ reason });
-      message.channel.send(`🔥 تم باند ${member.user.tag}
-👮 بواسطة: ${message.author.tag}
-📌 السبب: ${reason}`);
-    } catch {
-      message.reply("❌ فشل الباند (تأكد رتبة البوت)");
-    }
+    await user.ban({ reason });
+
+    const embed = new EmbedBuilder()
+      .setColor("Red")
+      .setTitle("🔨 Member Banned")
+      .setDescription(`A member has been permanently banned from the server.`)
+      .addFields(
+        { name: "User", value: `${user} (${user.id})` },
+        { name: "Moderator", value: `${message.author}` },
+        { name: "Reason", value: reason }
+      )
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
   }
 
-  // 🔥 UNBAN
+  // ================= UNBAN =================
   if (command === "unban") {
 
     if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-      return message.reply("❌ معندكش صلاحية");
+      return message.reply("❌ You do not have permission.");
 
-    const userId = args[0];
-    if (!userId) return message.reply("⚠️ اكتب ID");
+    const userID = args[0];
+    if (!userID) return message.reply("❌ Provide user ID.");
 
-    try {
-      await message.guild.members.unban(userId);
-      message.channel.send(`✅ تم فك الباند عن ${userId}
-👮 بواسطة: ${message.author.tag}`);
-    } catch {
-      message.reply("❌ معرفتش افك الباند");
-    }
+    await message.guild.members.unban(userID);
+
+    const embed = new EmbedBuilder()
+      .setColor("Green")
+      .setTitle("✅ Member Unbanned")
+      .addFields(
+        { name: "User ID", value: userID },
+        { name: "Moderator", value: `${message.author}` }
+      )
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
   }
 
-  // 🔥 TIMEOUT
+  // ================= TIMEOUT =================
   if (command === "timeout") {
 
     if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-      return message.reply("❌ معندكش صلاحية");
+      return message.reply("❌ You do not have permission.");
 
-    const member = message.mentions.members.first();
+    const user = message.mentions.members.first();
     const time = args[1];
+    const reason = args.slice(2).join(" ") || "No reason provided.";
 
-    if (!member) return message.reply("⚠️ منشن الشخص");
-    if (!time) return message.reply("⚠️ حدد الوقت مثال 10m");
+    if (!user) return message.reply("❌ Mention a user.");
+    if (!time) return message.reply("❌ Provide time (ex: 10m).");
 
-    const reason = args.slice(2).join(" ") || "بدون سبب";
+    await user.timeout(ms(time), reason);
 
-    try {
-      await member.timeout(ms(time), reason);
-      message.channel.send(`⏱️ تم تايم اوت ${member.user.tag}
-⌛ المدة: ${time}
-📌 السبب: ${reason}`);
-    } catch {
-      message.reply("❌ فشل التايم اوت");
-    }
+    const embed = new EmbedBuilder()
+      .setColor("Orange")
+      .setTitle("⏳ Member Timed Out")
+      .addFields(
+        { name: "User", value: `${user} (${user.id})` },
+        { name: "Duration", value: time },
+        { name: "Moderator", value: `${message.author}` },
+        { name: "Reason", value: reason }
+      )
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
   }
 
-  // 🔥 UNTIMEOUT
+  // ================= UNTIMEOUT =================
   if (command === "untimeout") {
 
     if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-      return message.reply("❌ معندكش صلاحية");
+      return message.reply("❌ You do not have permission.");
 
-    const member = message.mentions.members.first();
-    if (!member) return message.reply("⚠️ منشن الشخص");
+    const user = message.mentions.members.first();
+    if (!user) return message.reply("❌ Mention a user.");
 
-    try {
-      await member.timeout(null);
-      message.channel.send(`✅ تم فك التايم اوت عن ${member.user.tag}`);
-    } catch {
-      message.reply("❌ فشل فك التايم");
-    }
+    await user.timeout(null);
+
+    const embed = new EmbedBuilder()
+      .setColor("Blue")
+      .setTitle("✅ Timeout Removed")
+      .addFields(
+        { name: "User", value: `${user} (${user.id})` },
+        { name: "Moderator", value: `${message.author}` }
+      )
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
   }
 
 });
