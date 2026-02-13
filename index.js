@@ -9,9 +9,9 @@ const prefix=":";
 
 // ===== حط آيدي رومات اللوج =====
 const LOGS={
- BAN:"BAN_LOG_ID",
- TIME:"TIME_LOG_ID",
- WARN:"WARN_LOG_ID"
+ BAN:"1454448586145398827",
+ TIME:"1454451180976603339",
+ WARN:"1472007035842334752"
 };
 
 const warns=new Map();
