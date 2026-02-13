@@ -1,21 +1,22 @@
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require("discord.js");
+require("dotenv").config();
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
   ]
 });
 
-const prefix = ":"; // البريفكس الجديد
+const prefix = ":";
 
-client.once("ready", () => {
+client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on("messageCreate", async (message) => {
+client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
   if (!message.content.startsWith(prefix)) return;
@@ -30,20 +31,20 @@ client.on("messageCreate", async (message) => {
       return message.reply("❌ You do not have permission.");
 
     const member = message.mentions.members.first();
-    if (!member) return message.reply("حدد الشخص بالمنشن.");
+    if (!member) return message.reply("❌ Please mention a user.");
 
-    const reason = args.join(" ") || "No reason provided";
+    const reason = args.slice(1).join(" ") || "No reason provided";
 
     await member.ban({ reason });
 
     const embed = new EmbedBuilder()
-      .setTitle("🔨 Member Banned")
-      .setDescription(
-`User: ${member}
+      .setTitle("🔨 User Banned")
+      .setDescription(`
+User: ${member}
 User ID: ${member.id}
 Moderator: ${message.author}
-Reason: ${reason}`
-      )
+Reason: ${reason}
+`)
       .setColor("Red")
       .setTimestamp();
 
@@ -56,46 +57,48 @@ Reason: ${reason}`
     if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
       return message.reply("❌ You do not have permission.");
 
-    const userId = args[0];
-    if (!userId) return message.reply("حط الايدي.");
+    const id = args[0];
+    if (!id) return message.reply("❌ Provide user ID.");
 
-    await message.guild.members.unban(userId);
+    await message.guild.members.unban(id);
 
     const embed = new EmbedBuilder()
-      .setTitle("✅ Member Unbanned")
-      .setDescription(
-`User ID: ${userId}
-Moderator: ${message.author}`
-      )
+      .setTitle("✅ User Unbanned")
+      .setDescription(`
+User ID: ${id}
+Moderator: ${message.author}
+`)
       .setColor("Green")
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
-    // ================= TIMEOUT =================
+  }
+
+  // ================= TIMEOUT =================
   if (command === "timeout") {
 
     if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
       return message.reply("❌ You do not have permission.");
 
     const member = message.mentions.members.first();
-    if (!member) return message.reply("حدد الشخص بالمنشن.");
+    if (!member) return message.reply("❌ Please mention a user.");
 
     const time = args[1];
-    if (!time) return message.reply("حدد الوقت بالملي ثانية.");
+    if (!time) return message.reply("❌ Provide time in ms.");
 
     const reason = args.slice(2).join(" ") || "No reason provided";
 
     await member.timeout(parseInt(time), reason);
 
     const embed = new EmbedBuilder()
-      .setTitle("⏳ Member Timed Out")
-      .setDescription(
-`User: ${member}
+      .setTitle("⏱️ User Timed Out")
+      .setDescription(`
+User: ${member}
 User ID: ${member.id}
 Moderator: ${message.author}
-Duration: ${time} ms
-Reason: ${reason}`
-      )
+Duration: ${time}
+Reason: ${reason}
+`)
       .setColor("Orange")
       .setTimestamp();
 
@@ -109,18 +112,17 @@ Reason: ${reason}`
       return message.reply("❌ You do not have permission.");
 
     const member = message.mentions.members.first();
-    if (!member) return message.reply("حدد الشخص بالمنشن.");
+    if (!member) return message.reply("❌ Please mention a user.");
 
     await member.timeout(null);
 
     const embed = new EmbedBuilder()
       .setTitle("✅ Timeout Removed")
-      .setDescription(.setDescription(
-'User: ${member}
+      .setDescription(`
+User: ${member}
 User ID: ${member.id}
-Moderator: ${message.author}'
-)
-        
+Moderator: ${message.author}
+`)
       .setColor("Green")
       .setTimestamp();
 
@@ -128,5 +130,5 @@ Moderator: ${message.author}'
   }
 
 });
+
 client.login(process.env.TOKEN);
-  }
