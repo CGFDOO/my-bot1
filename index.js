@@ -1,18 +1,19 @@
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
+require('dotenv').config();
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
   ]
 });
 
-const prefix = ":"; // البريفكس الجديد
+const prefix = ":";
 
 client.once("ready", () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 client.on("messageCreate", async (message) => {
@@ -23,80 +24,69 @@ client.on("messageCreate", async (message) => {
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
+  // ================= TEST =================
+  if (command === "test") {
+
+    const embed = new EmbedBuilder()
+      .setTitle("✅ Bot Status")
+      .setDescription("The bot is running successfully.")
+      .setColor("Green")
+      .setTimestamp();
+
+    return message.channel.send({ embeds: [embed] });
+  }
+
   // ================= BAN =================
   if (command === "ban") {
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
       return message.reply("❌ You do not have permission.");
+    }
 
     const member = message.mentions.members.first();
-    if (!member) return message.reply("حدد الشخص بالمنشن.");
+    if (!member) return message.reply("Please mention a user.");
 
-    const reason = args.join(" ") || "No reason provided";
-
-    await member.ban({ reason });
+    await member.ban();
 
     const embed = new EmbedBuilder()
       .setTitle("🔨 Member Banned")
-      .setDescription(
-`User: ${member}
+      .setDescription(`
+User: ${member}
 User ID: ${member.id}
 Moderator: ${message.author}
-Reason: ${reason}`
-      )
+`)
       .setColor("Red")
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
   }
 
-  // ================= UNBAN =================
-  if (command === "unban") {
-
-    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-      return message.reply("❌ You do not have permission.");
-
-    const userId = args[0];
-    if (!userId) return message.reply("حط الايدي.");
-
-    await message.guild.members.unban(userId);
-
-    const embed = new EmbedBuilder()
-      .setTitle("✅ Member Unbanned")
-      .setDescription(
-`User ID: ${userId}
-Moderator: ${message.author}`
-      )
-      .setColor("Green")
-      .setTimestamp();
-
-    message.channel.send({ embeds: [embed] });
-
-    // ================= TIMEOUT =================
+  // ================= TIMEOUT =================
   if (command === "timeout") {
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
       return message.reply("❌ You do not have permission.");
+    }
 
     const member = message.mentions.members.first();
-    if (!member) return message.reply("حدد الشخص بالمنشن.");
+    if (!member) return message.reply("Please mention a user.");
 
-    const time = args[1];
-    if (!time) return message.reply("حدد الوقت بالملي ثانية.");
+    const time = args[1] || "10m";
 
-    const reason = args.slice(2).join(" ") || "No reason provided";
+    let ms = 600000;
 
-    await member.timeout(parseInt(time), reason);
+    if (time.endsWith("m")) ms = parseInt(time) * 60000;
+    if (time.endsWith("h")) ms = parseInt(time) * 3600000;
+
+    await member.timeout(ms);
 
     const embed = new EmbedBuilder()
-      .setTitle("⏳ Member Timed Out")
-      .setDescription(
-`User: ${member}
-User ID: ${member.id}
+      .setTitle("⏱️ Member Timed Out")
+      .setDescription(`
+User: ${member}
+Duration: ${time}
 Moderator: ${message.author}
-Duration: ${time} ms
-Reason: ${reason}`
-      )
+`)
       .setColor("Orange")
       .setTimestamp();
 
@@ -106,11 +96,12 @@ Reason: ${reason}`
   // ================= UNTIMEOUT =================
   if (command === "untimeout") {
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
       return message.reply("❌ You do not have permission.");
+    }
 
     const member = message.mentions.members.first();
-    if (!member) return message.reply("حدد الشخص بالمنشن.");
+    if (!member) return message.reply("Please mention a user.");
 
     await member.timeout(null);
 
@@ -118,15 +109,14 @@ Reason: ${reason}`
       .setTitle("✅ Timeout Removed")
       .setDescription(`
 User: ${member}
-User ID: ${member.id}
 Moderator: ${message.author}
 `)
       .setColor("Green")
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
+  }
 
-}
 });
 
 client.login(process.env.TOKEN);
