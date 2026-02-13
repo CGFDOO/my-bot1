@@ -1,152 +1,89 @@
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require("discord.js");
-const ms = require("ms");
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.MessageContent
   ]
 });
 
-const prefix = ":";
+const PREFIX = ":";
 
-client.once("ready", () => {
+client.on("ready", () => {
   console.log(`🔥 READY ${client.user.tag}`);
 });
 
 client.on("messageCreate", async (message) => {
 
-if (message.author.bot) return;
-if (!message.content.startsWith(prefix)) return;
+  if (message.author.bot) return;
+  if (!message.content.startsWith(PREFIX)) return;
 
-const args = message.content.slice(prefix.length).trim().split(/ +/);
-const command = args.shift().toLowerCase();
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+  const command = args.shift().toLowerCase();
 
-/*
-=================
-BAN SYSTEM
-:ban @user reason
-=================
-*/
+  // ===========================
+  // 👿 BAN COMMAND
+  // ===========================
 
-if (command === "ban") {
+  if (command === "ban") {
 
-if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-return message.reply("❌ ليس لديك صلاحية.");
+    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+      return message.reply("❌ معندكش صلاحية.");
 
-const member = message.mentions.members.first();
-if (!member) return message.reply("❌ منشن الشخص.");
+    const user = message.mentions.members.first();
+    if (!user) return message.reply("❌ منشن الشخص.");
 
-const reason = args.join(" ") || "No reason provided";
+    const reason = args.slice(1).join(" ") || "No reason";
 
-await member.ban({ reason });
+    await user.ban({ reason });
 
-const embed = new EmbedBuilder()
-.setTitle("🚨 | MODERATION ACTION - BAN")
-.setColor("Black")
-.setDescription(`
-🔨 **تم تنفيذ عقوبة BAN**
+    const embed = new EmbedBuilder()
+      .setColor("#000000")
+      .setTitle("🔨 تم تنفيذ بان")
+      .addFields(
+        { name: "👤 العضو", value: `${user}`, inline: true },
+        { name: "🛡️ الإداري", value: `${message.member}`, inline: true },
+        { name: "📄 السبب", value: reason }
+      )
+      .setTimestamp();
 
-👤 العضو: ${member}  
-🆔 ID: ${member.id}  
+    message.channel.send({ embeds: [embed] });
+  }
 
-🛡️ الإداري: ${message.author}  
-🆔 ID: ${message.author.id}  
+  // ===========================
+  // 👿 TIMEOUT COMMAND
+  // ===========================
 
-📄 السبب: ${reason}
+  if (command === "time") {
 
-━━━━━━━━━━━━━━━━━━
-🔥 نظام حماية متقدم
-`)
-.setThumbnail(member.user.displayAvatarURL())
-.setFooter({ text: `Server Protection System` })
-.setTimestamp();
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+      return message.reply("❌ معندكش صلاحية.");
 
-message.channel.send({ content:`${member} ${message.author}`, embeds:[embed] });
+    const user = message.mentions.members.first();
+    if (!user) return message.reply("❌ منشن الشخص.");
 
-}
+    const minutes = args[1];
+    if (!minutes) return message.reply("❌ حدد الوقت بالدقايق.");
 
-/*
-=================
-TIMEOUT SYSTEM
-:timeout @user 10m reason
-=================
-*/
+    const reason = args.slice(2).join(" ") || "No reason";
 
-if (command === "timeout") {
+    await user.timeout(minutes * 60 * 1000, reason);
 
-if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-return message.reply("❌ ليس لديك صلاحية.");
+    const embed = new EmbedBuilder()
+      .setColor("#000000")
+      .setTitle("⏱️ تم إعطاء تايم")
+      .addFields(
+        { name: "👤 العضو", value: `${user}`, inline: true },
+        { name: "🛡️ الإداري", value: `${message.member}`, inline: true },
+        { name: "⏰ المدة", value: `${minutes} دقيقة`, inline: true },
+        { name: "📄 السبب", value: reason }
+      )
+      .setTimestamp();
 
-const member = message.mentions.members.first();
-if (!member) return message.reply("❌ منشن الشخص.");
-
-const duration = args[0];
-const reason = args.slice(1).join(" ") || "No reason";
-
-await member.timeout(ms(duration), reason);
-
-const embed = new EmbedBuilder()
-.setTitle("⏱️ | MODERATION ACTION - TIMEOUT")
-.setColor("Black")
-.setDescription(`
-🚫 **تم إعطاء تايم اوت**
-
-👤 العضو: ${member}  
-🆔 ID: ${member.id}  
-
-🛡️ الإداري: ${message.author}  
-🆔 ID: ${message.author.id}  
-
-⏰ المدة: ${duration}
-📄 السبب: ${reason}
-
-━━━━━━━━━━━━━━━━━━
-🔥 نظام العقوبات الاحترافي
-`)
-.setThumbnail(member.user.displayAvatarURL())
-.setTimestamp();
-
-message.channel.send({ content:`${member} ${message.author}`, embeds:[embed] });
-
-}
-
-/*
-=================
-UN TIMEOUT
-:untimeout @user
-=================
-*/
-
-if (command === "untimeout") {
-
-if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-return message.reply("❌ ليس لديك صلاحية.");
-
-const member = message.mentions.members.first();
-if (!member) return message.reply("❌ منشن الشخص.");
-
-await member.timeout(null);
-
-const embed = new EmbedBuilder()
-.setTitle("✅ | TIMEOUT REMOVED")
-.setColor("Black")
-.setDescription(`
-🟢 تم إزالة التايم اوت
-
-👤 العضو: ${member}
-🛡️ الإداري: ${message.author}
-
-🔥 النظام يعمل بنجاح
-`)
-.setTimestamp();
-
-message.channel.send({ content:`${member} ${message.author}`, embeds:[embed] });
-
-}
+    message.channel.send({ embeds: [embed] });
+  }
 
 });
 
-client.login("PUT_YOUR_TOKEN_HERE");
+client.login("PUT_TOKEN_HERE");
