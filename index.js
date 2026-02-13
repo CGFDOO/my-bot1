@@ -1,158 +1,125 @@
-const {Client,GatewayIntentBits,EmbedBuilder,PermissionsBitField}=require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require("discord.js");
 require("dotenv").config();
 
-const client=new Client({
-intents:[
-GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMessages,
-GatewayIntentBits.MessageContent,
-GatewayIntentBits.GuildMembers
-]});
+const client = new Client({
+ intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent,GatewayIntentBits.GuildMembers]
+});
 
 const prefix=":";
 
-// ===== LOG CHANNEL IDS =====
-const LOG_TIMEOUT="1454451180976603339";
-const LOG_BAN="1454448586145398827";
-const LOG_WARN="1472007035842334752";
+// ===== حط آيدي رومات اللوج هنا =====
+const LOGS={
+ BAN:"1454448586145398827",
+ TIME:"1454451180976603339",
+ WARN:"1472007035842334752"
+};
 
-const embedStyle=(title,desc)=>new EmbedBuilder()
-.setColor("#000000")
-.setTitle(title)
-.setDescription(desc)
-.setTimestamp();
+const warns=new Map();
 
-client.on("ready",()=>console.log(`READY ${client.user.tag}`));
+const embed=(title,desc)=> new EmbedBuilder()
+ .setColor("#000000")
+ .setTitle(title)
+ .setDescription(desc)
+ .setTimestamp();
+
+client.once("ready",()=>console.log(`Online ${client.user.tag}`));
 
 client.on("messageCreate",async message=>{
+ if(message.author.bot||!message.content.startsWith(prefix)) return;
 
-if(message.author.bot||!message.content.startsWith(prefix))return;
+ const args=message.content.slice(prefix.length).trim().split(/ +/);
+ const cmd=args.shift().toLowerCase();
+ const logSend=(id,e)=> message.guild.channels.cache.get(id)?.send({embeds:[e]});
 
-const args=message.content.slice(prefix.length).trim().split(/ +/);
-const cmd=args.shift().toLowerCase();
-
-const sendLog=async(id,embed)=>{
-const ch=message.guild.channels.cache.get(id);
-if(ch)ch.send({embeds:[embed]}).catch(()=>{});
-};
+ try{
 
 // ===== BAN =====
 if(cmd==="ban"){
-if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))return;
+ if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return;
+ const member=message.mentions.members.first(); if(!member) return;
 
-const member=message.mentions.members.first();
-if(!member)return;
+ const reason=args.slice(1).join(" ")||"No reason provided";
 
-const reason=args.slice(1).join(" ")||"No reason provided";
+ await member.ban({reason});
+ const check=await message.guild.bans.fetch(member.id).catch(()=>null);
+ if(!check) return message.reply("❌ Ban failed.");
 
-try{
-await member.ban({reason});
-
-const emb=embedStyle("🔨 Ban Executed",
-`User: ${member}
-Moderator: ${message.author}
-Reason: ${reason}`);
-
-message.channel.send({embeds:[emb]});
-sendLog(LOG_BAN,emb);
-
-}catch{}
+ const e=embed("🔨 Ban Executed",
+`User: ${member}\nID: ${member.id}\nModerator: ${message.author}\nReason: ${reason}`);
+ message.channel.send({embeds:[e]});
+ logSend(LOGS.BAN,e);
 }
 
 // ===== UNBAN =====
 if(cmd==="unban"){
-if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))return;
+ if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return;
+ const id=args[0]; if(!id) return;
 
-const id=args[0];
-if(!id)return;
-
-try{
-await message.guild.members.unban(id);
-
-const emb=embedStyle("✅ Unban Executed",
-`User ID: ${id}
-Moderator: ${message.author}`);
-
-message.channel.send({embeds:[emb]});
-sendLog(LOG_BAN,emb);
-
-}catch{}
+ await message.guild.members.unban(id);
+ const e=embed("✅ Unban Executed",
+`User ID: ${id}\nModerator: ${message.author}`);
+ message.channel.send({embeds:[e]});
+ logSend(LOGS.BAN,e);
 }
 
 // ===== TIMEOUT =====
 if(cmd==="timeout"){
-if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))return;
+ if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return;
+ const member=message.mentions.members.first(); if(!member) return;
+ const time=parseInt(args[1]); if(!time) return;
+ const reason=args.slice(2).join(" ")||"No reason provided";
 
-const member=message.mentions.members.first();
-const time=args[1];
-if(!member||!time)return;
+ await member.timeout(time,reason);
+ await member.fetch();
+ if(!member.communicationDisabledUntilTimestamp) return message.reply("❌ Timeout failed.");
 
-const reason=args.slice(2).join(" ")||"No reason provided";
-
-try{
-await member.timeout(parseInt(time),reason);
-
-const emb=embedStyle("⏱ Timeout Applied",
-`User: ${member}
-Moderator: ${message.author}
-Duration: ${time}
-Reason: ${reason}`);
-
-message.channel.send({embeds:[emb]});
-sendLog(LOG_TIMEOUT,emb);
-
-}catch{}
+ const e=embed("⏱️ Timeout Applied",
+`User: ${member}\nID: ${member.id}\nModerator: ${message.author}\nDuration: ${time}ms\nReason: ${reason}`);
+ message.channel.send({embeds:[e]});
+ logSend(LOGS.TIME,e);
 }
 
 // ===== UNTIMEOUT =====
 if(cmd==="untimeout"){
-if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))return;
+ if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return;
+ const member=message.mentions.members.first(); if(!member) return;
 
-const member=message.mentions.members.first();
-if(!member)return;
+ await member.timeout(null);
+ await member.fetch();
+ if(member.communicationDisabledUntilTimestamp) return message.reply("❌ Remove failed.");
 
-try{
-await member.timeout(null);
-
-const emb=embedStyle("⚡ Timeout Removed",
-`User: ${member}
-Moderator: ${message.author}`);
-
-message.channel.send({embeds:[emb]});
-sendLog(LOG_TIMEOUT,emb);
-
-}catch{}
+ const e=embed("✅ Timeout Removed",
+`User: ${member}\nID: ${member.id}\nModerator: ${message.author}`);
+ message.channel.send({embeds:[e]});
+ logSend(LOGS.TIME,e);
 }
 
 // ===== WARN =====
 if(cmd==="warn"){
-const member=message.mentions.members.first();
-if(!member)return;
+ const member=message.mentions.members.first(); if(!member) return;
+ const reason=args.slice(1).join(" ")||"No reason";
+ if(!warns.has(member.id)) warns.set(member.id,[]);
+ warns.get(member.id).push(reason);
 
-const reason=args.slice(1).join(" ")||"No reason provided";
-
-const emb=embedStyle("⚠ Warning Issued",
-`User: ${member}
-Moderator: ${message.author}
-Reason: ${reason}`);
-
-message.channel.send({embeds:[emb]});
-sendLog(LOG_WARN,emb);
+ const e=embed("⚠️ Warning Added",
+`User: ${member}\nModerator: ${message.author}\nReason: ${reason}\nTotal Warns: ${warns.get(member.id).length}`);
+ message.channel.send({embeds:[e]});
+ logSend(LOGS.WARN,e);
 }
 
 // ===== UNWARN =====
-if(cmd==="unwarn"){
-const member=message.mentions.members.first();
-if(!member)return;
+if(cmd==="-unwarn"){
+ const member=message.mentions.members.first(); if(!member) return;
+ if(!warns.has(member.id)||warns.get(member.id).length===0) return;
 
-const emb=embedStyle("✅ Warning Removed",
-`User: ${member}
-Moderator: ${message.author}`);
-
-message.channel.send({embeds:[emb]});
-sendLog(LOG_WARN,emb);
+ warns.get(member.id).pop();
+ const e=embed("✅ Warning Removed",
+`User: ${member}\nModerator: ${message.author}`);
+ message.channel.send({embeds:[e]});
+ logSend(LOGS.WARN,e);
 }
 
+ }catch(err){ console.log(err); }
 });
 
 client.login(process.env.TOKEN);
