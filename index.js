@@ -11,123 +11,148 @@ GatewayIntentBits.GuildMembers
 
 const prefix=":";
 
-// ضع ID روم اللوق هنا
-const LOG_CHANNEL="1454451180976603339";
+// ===== LOG CHANNEL IDS =====
+const LOG_TIMEOUT="1454451180976603339";
+const LOG_BAN="1454448586145398827";
+const LOG_WARN="1472007035842334752";
 
-client.once("ready",()=>{
-console.log(`READY ${client.user.tag}`);
-});
+const embedStyle=(title,desc)=>new EmbedBuilder()
+.setColor("#000000")
+.setTitle(title)
+.setDescription(desc)
+.setTimestamp();
 
-async function sendLog(guild,embed){
-const log=guild.channels.cache.get(LOG_CHANNEL);
-if(log) log.send({embeds:[embed]}).catch(()=>{});
-}
+client.on("ready",()=>console.log(`READY ${client.user.tag}`));
 
 client.on("messageCreate",async message=>{
 
-try{
-
-if(message.author.bot) return;
-if(!message.content.startsWith(prefix)) return;
+if(message.author.bot||!message.content.startsWith(prefix))return;
 
 const args=message.content.slice(prefix.length).trim().split(/ +/);
 const cmd=args.shift().toLowerCase();
 
-const member=message.mentions.members.first();
-const now=`<t:${Math.floor(Date.now()/1000)}:F>`;
+const sendLog=async(id,embed)=>{
+const ch=message.guild.channels.cache.get(id);
+if(ch)ch.send({embeds:[embed]}).catch(()=>{});
+};
 
-if(cmd==="timeout"){
-
-if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-return message.reply("❌ You lack permission.");
-
-if(!member) return message.reply("❌ Mention a valid user.");
-
-let duration=args[1]||"10m";
-let ms=600000;
-
-if(duration.endsWith("m")) ms=parseInt(duration)*60000;
-if(duration.endsWith("h")) ms=parseInt(duration)*3600000;
-
-await member.timeout(ms).catch(()=>null);
-
-// تحقق هل فعلاً اتعمل
-const updated=await message.guild.members.fetch(member.id);
-if(!updated.communicationDisabledUntil)
-return message.reply("❌ Timeout failed.");
-
-const embed=new EmbedBuilder()
-.setTitle("⏱️ Timeout Applied")
-.addFields(
-{name:"User",value:`${member}`,inline:true},
-{name:"Moderator",value:`${message.author}`,inline:true},
-{name:"Duration",value:duration,inline:true},
-{name:"Time",value:now}
-)
-.setColor("Orange").setTimestamp();
-
-message.channel.send({embeds:[embed]});
-sendLog(message.guild,embed);
-}
-
-if(cmd==="untimeout"){
-
-if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
-return message.reply("❌ You lack permission.");
-
-if(!member) return message.reply("❌ Mention user.");
-
-await member.timeout(null).catch(()=>null);
-
-// تحقق هل فعلاً اتفك
-const updated=await message.guild.members.fetch(member.id);
-if(updated.communicationDisabledUntil)
-return message.reply("❌ Failed to remove timeout.");
-
-const embed=new EmbedBuilder()
-.setTitle("✅ Timeout Removed")
-.addFields(
-{name:"User",value:`${member}`,inline:true},
-{name:"Moderator",value:`${message.author}`,inline:true},
-{name:"Time",value:now}
-)
-.setColor("Green").setTimestamp();
-
-message.channel.send({embeds:[embed]});
-sendLog(message.guild,embed);
-}
-
+// ===== BAN =====
 if(cmd==="ban"){
+if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))return;
 
-if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-return message.reply("❌ You lack permission.");
+const member=message.mentions.members.first();
+if(!member)return;
 
-if(!member) return message.reply("❌ Mention user.");
+const reason=args.slice(1).join(" ")||"No reason provided";
 
-await member.ban().catch(()=>null);
+try{
+await member.ban({reason});
 
-// تحقق فعلي
-const banned=await message.guild.bans.fetch(member.id).catch(()=>null);
-if(!banned) return message.reply("❌ Ban failed.");
+const emb=embedStyle("🔨 Ban Executed",
+`User: ${member}
+Moderator: ${message.author}
+Reason: ${reason}`);
 
-const embed=new EmbedBuilder()
-.setTitle("🔨 Member Banned")
-.addFields(
-{name:"User",value:`${member}`,inline:true},
-{name:"Moderator",value:`${message.author}`,inline:true},
-{name:"Time",value:now}
-)
-.setColor("Red").setTimestamp();
+message.channel.send({embeds:[emb]});
+sendLog(LOG_BAN,emb);
 
-message.channel.send({embeds:[embed]});
-sendLog(message.guild,embed);
+}catch{}
 }
 
-}catch(e){console.log(e);}
+// ===== UNBAN =====
+if(cmd==="unban"){
+if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))return;
+
+const id=args[0];
+if(!id)return;
+
+try{
+await message.guild.members.unban(id);
+
+const emb=embedStyle("✅ Unban Executed",
+`User ID: ${id}
+Moderator: ${message.author}`);
+
+message.channel.send({embeds:[emb]});
+sendLog(LOG_BAN,emb);
+
+}catch{}
+}
+
+// ===== TIMEOUT =====
+if(cmd==="timeout"){
+if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))return;
+
+const member=message.mentions.members.first();
+const time=args[1];
+if(!member||!time)return;
+
+const reason=args.slice(2).join(" ")||"No reason provided";
+
+try{
+await member.timeout(parseInt(time),reason);
+
+const emb=embedStyle("⏱ Timeout Applied",
+`User: ${member}
+Moderator: ${message.author}
+Duration: ${time}
+Reason: ${reason}`);
+
+message.channel.send({embeds:[emb]});
+sendLog(LOG_TIMEOUT,emb);
+
+}catch{}
+}
+
+// ===== UNTIMEOUT =====
+if(cmd==="untimeout"){
+if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))return;
+
+const member=message.mentions.members.first();
+if(!member)return;
+
+try{
+await member.timeout(null);
+
+const emb=embedStyle("⚡ Timeout Removed",
+`User: ${member}
+Moderator: ${message.author}`);
+
+message.channel.send({embeds:[emb]});
+sendLog(LOG_TIMEOUT,emb);
+
+}catch{}
+}
+
+// ===== WARN =====
+if(cmd==="warn"){
+const member=message.mentions.members.first();
+if(!member)return;
+
+const reason=args.slice(1).join(" ")||"No reason provided";
+
+const emb=embedStyle("⚠ Warning Issued",
+`User: ${member}
+Moderator: ${message.author}
+Reason: ${reason}`);
+
+message.channel.send({embeds:[emb]});
+sendLog(LOG_WARN,emb);
+}
+
+// ===== UNWARN =====
+if(cmd==="unwarn"){
+const member=message.mentions.members.first();
+if(!member)return;
+
+const emb=embedStyle("✅ Warning Removed",
+`User: ${member}
+Moderator: ${message.author}`);
+
+message.channel.send({embeds:[emb]});
+sendLog(LOG_WARN,emb);
+}
 
 });
-
-process.on("unhandledRejection",console.error);
-process.on("uncaughtException",console.error);
 
 client.login(process.env.TOKEN);
