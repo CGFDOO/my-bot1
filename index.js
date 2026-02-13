@@ -1,122 +1,122 @@
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField } = require('discord.js');
-require('dotenv').config();
+const {Client,GatewayIntentBits,EmbedBuilder,PermissionsBitField}=require("discord.js");
+require("dotenv").config();
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
-  ]
+const client=new Client({
+intents:[
+GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent,
+GatewayIntentBits.GuildMembers
+]});
+
+const prefix=":";
+
+const TIMEOUT_LOG="PUT_TIMEOUT_LOG_ID";
+const BAN_LOG="PUT_BAN_LOG_ID";
+
+client.once("ready",()=>{
+console.log("DEV READY "+client.user.tag);
 });
 
-const prefix = ":";
+client.on("messageCreate",async message=>{
 
-client.once("ready", () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-});
+try{
 
-client.on("messageCreate", async (message) => {
+if(message.author.bot) return;
+if(!message.content.startsWith(prefix)) return;
 
-  if (message.author.bot) return;
-  if (!message.content.startsWith(prefix)) return;
+const args=message.content.slice(prefix.length).trim().split(/ +/);
+const cmd=args.shift().toLowerCase();
 
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
+const now=`<t:${Math.floor(Date.now()/1000)}:F>`;
 
-  // ================= TEST =================
-  if (command === "test") {
+if(cmd==="ban"){
 
-    const embed = new EmbedBuilder()
-      .setTitle("✅ Bot Status")
-      .setDescription("The bot is running successfully.")
-      .setColor("Green")
-      .setTimestamp();
+if(!message.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+return message.reply("❌ Permission denied.");
 
-    return message.channel.send({ embeds: [embed] });
-  }
+const member=message.mentions.members.first();
+if(!member) return message.reply("Mention user.");
 
-  // ================= BAN =================
-  if (command === "ban") {
+await member.ban();
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-      return message.reply("❌ You do not have permission.");
-    }
+const embed=new EmbedBuilder()
+.setTitle("🔨 Member Banned")
+.addFields(
+{name:"User",value:`${member}`,inline:true},
+{name:"Moderator",value:`${message.author}`,inline:true},
+{name:"Time",value:now}
+)
+.setColor("Red").setTimestamp();
 
-    const member = message.mentions.members.first();
-    if (!member) return message.reply("Please mention a user.");
+message.channel.send({embeds:[embed]});
 
-    await member.ban();
+const log=message.guild.channels.cache.get(BAN_LOG);
+if(log) log.send({embeds:[embed]});
+}
 
-    const embed = new EmbedBuilder()
-      .setTitle("🔨 Member Banned")
-      .setDescription(`
-User: ${member}
-User ID: ${member.id}
-Moderator: ${message.author}
-`)
-      .setColor("Red")
-      .setTimestamp();
+if(cmd==="timeout"){
 
-    message.channel.send({ embeds: [embed] });
-  }
+if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+return message.reply("❌ Permission denied.");
 
-  // ================= TIMEOUT =================
-  if (command === "timeout") {
+const member=message.mentions.members.first();
+if(!member) return message.reply("Mention user.");
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
-      return message.reply("❌ You do not have permission.");
-    }
+let duration=args[1]||"10m";
+let ms=600000;
 
-    const member = message.mentions.members.first();
-    if (!member) return message.reply("Please mention a user.");
+if(duration.endsWith("m")) ms=parseInt(duration)*60000;
+if(duration.endsWith("h")) ms=parseInt(duration)*3600000;
 
-    const time = args[1] || "10m";
+await member.timeout(ms);
 
-    let ms = 600000;
+const embed=new EmbedBuilder()
+.setTitle("⏱️ Member Timed Out")
+.addFields(
+{name:"User",value:`${member}`,inline:true},
+{name:"Duration",value:duration,inline:true},
+{name:"Moderator",value:`${message.author}`,inline:true},
+{name:"Time",value:now}
+)
+.setColor("Orange").setTimestamp();
 
-    if (time.endsWith("m")) ms = parseInt(time) * 60000;
-    if (time.endsWith("h")) ms = parseInt(time) * 3600000;
+message.channel.send({embeds:[embed]});
 
-    await member.timeout(ms);
+const log=message.guild.channels.cache.get(TIMEOUT_LOG);
+if(log) log.send({embeds:[embed]});
+}
 
-    const embed = new EmbedBuilder()
-      .setTitle("⏱️ Member Timed Out")
-      .setDescription(`
-User: ${member}
-Duration: ${time}
-Moderator: ${message.author}
-`)
-      .setColor("Orange")
-      .setTimestamp();
+if(cmd==="untimeout"){
 
-    message.channel.send({ embeds: [embed] });
-  }
+if(!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers))
+return message.reply("❌ Permission denied.");
 
-  // ================= UNTIMEOUT =================
-  if (command === "untimeout") {
+const member=message.mentions.members.first();
+if(!member) return message.reply("Mention user.");
 
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
-      return message.reply("❌ You do not have permission.");
-    }
+await member.timeout(null);
 
-    const member = message.mentions.members.first();
-    if (!member) return message.reply("Please mention a user.");
+const embed=new EmbedBuilder()
+.setTitle("✅ Timeout Removed")
+.addFields(
+{name:"User",value:`${member}`,inline:true},
+{name:"Moderator",value:`${message.author}`,inline:true},
+{name:"Time",value:now}
+)
+.setColor("Green").setTimestamp();
 
-    await member.timeout(null);
+message.channel.send({embeds:[embed]});
 
-    const embed = new EmbedBuilder()
-      .setTitle("✅ Timeout Removed")
-      .setDescription(`
-User: ${member}
-Moderator: ${message.author}
-`)
-      .setColor("Green")
-      .setTimestamp();
+const log=message.guild.channels.cache.get(TIMEOUT_LOG);
+if(log) log.send({embeds:[embed]});
+}
 
-    message.channel.send({ embeds: [embed] });
-  }
+}catch(e){console.log(e);}
 
 });
+
+process.on("unhandledRejection",console.error);
+process.on("uncaughtException",console.error);
 
 client.login(process.env.TOKEN);
