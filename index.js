@@ -127,4 +127,18 @@ message.channel.send({embeds:[embed]});
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
+client.on("messageCreate", async message => {
+
+if(message.author.bot) return;
+
+if(message.content === ":test"){
+message.reply("🔥 DEVIL BOT WORKING");
+}
+
+if(message.content === ":ping"){
+message.reply("🏓 Pong !");
+}
+
+});
+
 client.login(process.env.TOKEN);
