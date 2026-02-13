@@ -115,11 +115,12 @@ Reason: ${reason}`
 
     const embed = new EmbedBuilder()
       .setTitle("✅ Timeout Removed")
-      .setDescription(
-`User: ${member}
+      .setDescription(.setDescription(
+'User: ${member}
 User ID: ${member.id}
-Moderator: ${message.author}`
-      )
+Moderator: ${message.author}'
+)
+        
       .setColor("Green")
       .setTimestamp();
 
