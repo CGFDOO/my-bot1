@@ -1,86 +1,142 @@
-const { 
-ChannelType, 
-PermissionFlagsBits,
+const {
 EmbedBuilder,
 ActionRowBuilder,
 ButtonBuilder,
-ButtonStyle
+ButtonStyle,
+ChannelType,
+PermissionsBitField
 } = require("discord.js");
 
-module.exports = (client)=>{
+let ticketCount = 0;
 
-const ADMIN_ROLE="1454199885460144189";
-const HIGH_ADMIN="1453946893053726830";
-const CATEGORY_ID="1453943996392013901";
+module.exports = (client) => {
 
-client.on("interactionCreate", async i=>{
+client.on("messageCreate", async (message) => {
 
-// فتح التكت
-if(i.customId==="create_ticket"){
+if (message.author.bot) return;
 
-let exist=i.guild.channels.cache.find(c=>c.name===`ticket-${i.user.id}`);
-if(exist) return i.reply({content:"❌ لديك تكت مفتوح بالفعل",ephemeral:true});
+// ✅ امر ارسال لوحة التكتات
+if (message.content === "!tickets") {
 
-let ch=await i.guild.channels.create({
-name:`ticket-${i.user.id}`,
-type:ChannelType.GuildText,
-parent:CATEGORY_ID,
-permissionOverwrites:[
-{ id:i.guild.id, deny:[PermissionFlagsBits.ViewChannel]},
-{ id:i.user.id, allow:[PermissionFlagsBits.ViewChannel]},
-{ id:ADMIN_ROLE, allow:[PermissionFlagsBits.ViewChannel]},
-{ id:HIGH_ADMIN, allow:[PermissionFlagsBits.ViewChannel]}
-]});
+const embed = new EmbedBuilder()
+.setTitle("🎫 نظام التكتات")
+.setDescription(
+"اختر نوع التذكرة من الأزرار بالأسفل:\n\n" +
+"🎧 دعم فني\n" +
+"⚠️ شكوى على إداري\n" +
+"🤝 طلب وسيط\n" +
+"🎁 استلام هدايا"
+)
+.setColor("Purple");
 
-const embed=new EmbedBuilder()
-.setTitle("🎫 Support Ticket")
-.setDescription(`User: ${i.user}\nID: ${i.user.id}`)
-.setColor("Purple")
-.setTimestamp();
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("support")
+.setLabel("دعم فني")
+.setEmoji("🎧")
+.setStyle(ButtonStyle.Primary),
 
-const row=new ActionRowBuilder().addComponents(
-new ButtonBuilder().setCustomId("claim").setLabel("استلام").setStyle(ButtonStyle.Success),
-new ButtonBuilder().setCustomId("add").setLabel("اضافة شخص").setStyle(ButtonStyle.Primary),
-new ButtonBuilder().setCustomId("close").setLabel("اغلاق").setStyle(ButtonStyle.Danger)
+new ButtonBuilder()
+.setCustomId("report")
+.setLabel("شكوى على إداري")
+.setEmoji("⚠️")
+.setStyle(ButtonStyle.Danger),
+
+new ButtonBuilder()
+.setCustomId("middleman")
+.setLabel("طلب وسيط")
+.setEmoji("🤝")
+.setStyle(ButtonStyle.Success),
+
+new ButtonBuilder()
+.setCustomId("gift")
+.setLabel("استلام هدايا")
+.setEmoji("🎁")
+.setStyle(ButtonStyle.Secondary),
 );
 
-ch.send({embeds:[embed],components:[row]});
-i.reply({content:`✅ تم فتح التكت ${ch}`,ephemeral:true});
+message.channel.send({ embeds:[embed], components:[row] });
+
 }
 
-// استلام التكت
-if(i.customId==="claim"){
+});
 
-if(!i.member.roles.cache.has(ADMIN_ROLE)) return;
+client.on("interactionCreate", async (interaction) => {
 
-await i.channel.permissionOverwrites.edit(ADMIN_ROLE,{ViewChannel:false});
-await i.channel.permissionOverwrites.edit(i.member.id,{ViewChannel:true});
+if (!interaction.isButton()) return;
 
-const embed=new EmbedBuilder()
-.setDescription(`✅ تم استلام التكت بواسطة ${i.user}`)
-.setColor("Green");
+if (["support","report","middleman","gift"].includes(interaction.customId)) {
 
-i.reply({embeds:[embed]});
+ticketCount++;
+
+let name = "ticket";
+let emoji = "🎫";
+
+if (interaction.customId === "support") {
+name = "دعم-فني";
+emoji = "🎧";
+}
+if (interaction.customId === "report") {
+name = "شكوى";
+emoji = "⚠️";
+}
+if (interaction.customId === "middleman") {
+name = "وسيط";
+emoji = "🤝";
+}
+if (interaction.customId === "gift") {
+name = "هدايا";
+emoji = "🎁";
 }
 
-// اضافة شخص
-if(i.customId==="add"){
+const channel = await interaction.guild.channels.create({
+name: `${name}-${ticketCount}`,
+type: ChannelType.GuildText,
+permissionOverwrites: [
+{
+id: interaction.guild.id,
+deny: [PermissionsBitField.Flags.ViewChannel],
+},
+{
+id: interaction.user.id,
+allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+},
+],
+});
 
-if(!i.member.roles.cache.has(ADMIN_ROLE)) return;
+const embed = new EmbedBuilder()
+.setTitle(`${emoji} تكت رقم ${ticketCount}`)
+.setDescription(`صاحب التكت: ${interaction.user}`)
+.setColor("Purple");
 
-i.reply({content:"منشن الشخص بعد الأمر !add @user",ephemeral:true});
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("claim")
+.setLabel("استلام")
+.setEmoji("✅")
+.setStyle(ButtonStyle.Success),
+
+new ButtonBuilder()
+.setCustomId("close")
+.setLabel("قفل")
+.setEmoji("🔒")
+.setStyle(ButtonStyle.Danger)
+);
+
+channel.send({ embeds:[embed], components:[row] });
+
+interaction.reply({ content:"✅ تم إنشاء التكت", ephemeral:true });
+
 }
 
-// اغلاق التكت
-if(i.customId==="close"){
+// زر استلام
+if (interaction.customId === "claim") {
+interaction.reply("✅ تم استلام التكت بواسطة الإدارة");
+}
 
-const embed=new EmbedBuilder()
-.setDescription("🔒 سيتم اغلاق التكت بعد 5 ثواني")
-.setColor("Red");
-
-await i.reply({embeds:[embed]});
-
-setTimeout(()=>{ i.channel.delete(); },5000);
+// زر قفل
+if (interaction.customId === "close") {
+await interaction.channel.delete();
 }
 
 });
