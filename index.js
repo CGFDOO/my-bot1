@@ -205,6 +205,6 @@ client.once("ready",()=>{
 console.log(`🔥 READY AS ${client.user.tag}`);
 });
 
-require("./ticketRating")(client);
+require("./ticketRating");
 
 client.login(process.env.TOKEN);
