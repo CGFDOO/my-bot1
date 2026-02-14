@@ -33,8 +33,6 @@ GatewayIntentBits.GuildMembers
 // ⚙️ CONFIG
 // ===============================
 
-const TOKEN = "PUT_TOKEN_HERE";
-
 const ADMIN_ROLE = "1454199885460144189";
 const SUPER_ADMIN_ROLE = "1453946893053726830";
 
@@ -323,6 +321,4 @@ interaction.reply({content:"✅ تمت إضافة العضو",ephemeral:true});
 }
 
 });
-
-client.login(TOKEN);
   
