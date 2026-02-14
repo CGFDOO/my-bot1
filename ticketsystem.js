@@ -51,7 +51,8 @@ module.exports = (client) => {
                 new ButtonBuilder().setCustomId('open_mid').setLabel('طلب وسيط').setEmoji('🤝').setStyle(ButtonStyle.Success),
                 new ButtonBuilder().setCustomId('open_gift').setLabel('استلام جائزة').setEmoji('🎁').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId('open_report').setLabel('شكوى').setEmoji('⚠️').setStyle(ButtonStyle.Danger),
-            );
+          
+                );
 
             await message.channel.send({ embeds: [mainEmbed], components: [row] });
         }
