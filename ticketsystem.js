@@ -1,3 +1,5 @@
+module.exports = (client) => {
+
 // ===============================
 // 🔥 ULTRA TICKET SYSTEM - MAZEN EDITION
 // discord.js v14
@@ -321,4 +323,4 @@ interaction.reply({content:"✅ تمت إضافة العضو",ephemeral:true});
 }
 
 });
-  
+ }; 
