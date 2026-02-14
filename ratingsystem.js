@@ -1,181 +1,152 @@
 const {
-Client,
-GatewayIntentBits,
 EmbedBuilder,
-PermissionsBitField,
 ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
 ModalBuilder,
 TextInputBuilder,
 TextInputStyle,
-Events
-}=require("discord.js");
+Events,
+PermissionsBitField
+} = require("discord.js");
 
-require("dotenv").config();
+module.exports = (client)=>{
 
-const client=new Client({
-intents:[
-GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMessages,
-GatewayIntentBits.GuildMembers,
-GatewayIntentBits.MessageContent
-]});
+/* ================== الإعدادات ================== */
 
-// ====== SETTINGS ======
-const prefix=":";
-const LOG_CHANNEL="1472023428658630686"; // روم لوق التقييم
-const TICKET_PREFIX="ticket"; // اسم رومات التكت
+// اكتب هنا ايدي كاتيجوري التكتات
+const TICKET_CATEGORY_ID = "1453943996392013901";
 
-// ===== DATABASE MEMORY =====
-const ticketUsers=new Map();
-const rated=new Set();
+// روم لوق التقييم
+const LOG_CHANNEL_ID = "1472023428658630686";
 
-// ===== EMBED STYLE =====
-const EMBED=(t,d)=>new EmbedBuilder()
+// رتبة الاداريين (عشان ما يبعتلهم تقييم)
+const STAFF_ROLE_ID = "PUT_STAFF_ROLE_ID_HERE";
+
+/* ================================================= */
+
+client.on(Events.MessageCreate, async message=>{
+
+if(!message.guild) return;
+if(message.author.bot) return;
+
+if(message.content === ":close"){
+
+// التأكد انه روم تكت
+if(message.channel.parentId !== TICKET_CATEGORY_ID) return;
+
+const members = message.channel.members;
+
+members.forEach(async member=>{
+
+if(member.user.bot) return;
+if(member.roles.cache.has(STAFF_ROLE_ID)) return;
+
+try{
+
+const embed = new EmbedBuilder()
 .setColor("#000000")
-.setTitle(t)
-.setDescription(d)
-.setTimestamp();
+.setTitle("⭐ تقييم الخدمة")
+.setDescription("نشكرك لاستخدامك التكت.\nاختر تقييمك من الأسفل.");
 
-// ===== ANTI CRASH =====
-process.on("uncaughtException",console.error);
-process.on("unhandledRejection",console.error);
-
-// =================================
-// TRACK MEMBERS داخل التكت
-// =================================
-client.on("messageCreate",async msg=>{
-
-if(msg.author.bot) return;
-if(!msg.guild) return;
-if(!msg.channel.name.startsWith(TICKET_PREFIX)) return;
-
-if(!ticketUsers.has(msg.channel.id))
-ticketUsers.set(msg.channel.id,new Set());
-
-ticketUsers.get(msg.channel.id).add(msg.author.id);
-
-});
-
-// =================================
-// CLOSE TICKET COMMAND
-// =================================
-client.on("messageCreate",async msg=>{
-
-if(!msg.content.startsWith(prefix)) return;
-if(msg.author.bot) return;
-
-const args=msg.content.slice(prefix.length).split(/ +/);
-const cmd=args.shift().toLowerCase();
-
-if(cmd!=="closeticket") return;
-
-if(!msg.member.permissions.has(PermissionsBitField.Flags.ManageChannels))
-return;
-
-const users=ticketUsers.get(msg.channel.id);
-if(!users) return msg.reply("No users tracked.");
-
-const row=new ActionRowBuilder().addComponents(
+const row = new ActionRowBuilder().addComponents(
 new ButtonBuilder().setCustomId("rate_1").setLabel("⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_2").setLabel("⭐⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_3").setLabel("⭐⭐⭐").setStyle(ButtonStyle.Secondary),
-new ButtonBuilder().setCustomId("rate_4").setLabel("⭐⭐⭐⭐").setStyle(ButtonStyle.Primary),
+new ButtonBuilder().setCustomId("rate_4").setLabel("⭐⭐⭐⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_5").setLabel("⭐⭐⭐⭐⭐").setStyle(ButtonStyle.Success)
 );
 
-for(const id of users){
+const row2 = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("add_note")
+.setLabel("إضافة ملاحظة")
+.setStyle(ButtonStyle.Primary)
+);
 
-const member=await msg.guild.members.fetch(id).catch(()=>null);
-if(!member) continue;
+await member.send({embeds:[embed],components:[row,row2]});
 
-// تجاهل الإداريين
-if(member.permissions.has(PermissionsBitField.Flags.Administrator)) continue;
-
-const user=member.user;
-
-const embed=EMBED(
-"⭐ Service Evaluation",
-  );
-
-user.send({embeds:[embed],components:[row]}).catch(()=>{});
+}catch{}
+});
 
 }
 
-msg.channel.send("✅ Rating sent.");
-
 });
 
-// =================================
-// HANDLE BUTTON RATING
-// =================================
-client.on(Events.InteractionCreate,async interaction=>{
+/* ================== استقبال الأزرار ================== */
+
+client.on(Events.InteractionCreate, async interaction=>{
 
 if(!interaction.isButton()) return;
-if(!interaction.customId.startsWith("rate_")) return;
 
-if(rated.has(interaction.user.id))
-return interaction.reply({content:"You already rated.",ephemeral:true});
+if(interaction.customId.startsWith("rate_")){
 
-rated.add(interaction.user.id);
+const stars = interaction.customId.split("_")[1];
 
-const rating=interaction.customId.split("_")[1];
+await interaction.reply({content:"✅ تم تسجيل تقييمك.",ephemeral:true});
 
-// فتح modal للملاحظات
-const modal=new ModalBuilder()
-.setCustomId(`feedback_${rating}`)
-.setTitle("Additional Feedback");
+const log = await client.channels.fetch(LOG_CHANNEL_ID).catch(()=>null);
+if(!log) return;
 
-const input=new TextInputBuilder()
-.setCustomId("extra")
-.setLabel("Add complaint or extra notes (optional)")
-.setStyle(TextInputStyle.Paragraph)
-.setRequired(false);
+const embed = new EmbedBuilder()
+.setColor("#000000")
+.setTitle("⭐ تقييم جديد")
+.addFields(
+{name:"العضو",value:`${interaction.user} (${interaction.user.id})`},
+{name:"عدد النجوم",value:`${stars} ⭐`},
+{name:"الوقت",value:`<t:${Math.floor(Date.now()/1000)}:F>`}
+);
 
-modal.addComponents(new ActionRowBuilder().addComponents(input));
+log.send({embeds:[embed]});
+
+}
+
+if(interaction.customId === "add_note"){
+
+const modal = new ModalBuilder()
+.setCustomId("note_modal")
+.setTitle("إضافة ملاحظة");
+
+const input = new TextInputBuilder()
+.setCustomId("note_text")
+.setLabel("اكتب ملاحظتك")
+.setStyle(TextInputStyle.Paragraph);
+
+modal.addComponents(
+new ActionRowBuilder().addComponents(input)
+);
 
 await interaction.showModal(modal);
 
+}
+
 });
 
-// =================================
-// HANDLE MODAL SUBMIT
-// =================================
-client.on(Events.InteractionCreate,async interaction=>{
+/* ================== استقبال الملاحظات ================== */
+
+client.on(Events.InteractionCreate, async interaction=>{
 
 if(!interaction.isModalSubmit()) return;
-if(!interaction.customId.startsWith("feedback_")) return;
+if(interaction.customId !== "note_modal") return;
 
-const rating=interaction.customId.split("_")[1];
-const extra=interaction.fields.getTextInputValue("extra")||"No extra notes";
+const note = interaction.fields.getTextInputValue("note_text");
 
-const guild=client.guilds.cache.first();
-const log=guild.channels.cache.get(LOG_CHANNEL);
+await interaction.reply({content:"✅ تم إرسال ملاحظتك.",ephemeral:true});
 
-const embed=EMBED(
-"📊 New Rating Received",
-`User: ${interaction.user}
-ID: ${interaction.user.id}
-Rating: ⭐ ${rating}
+const log = await client.channels.fetch(LOG_CHANNEL_ID).catch(()=>null);
+if(!log) return;
 
-Extra:
-${extra}`
+const embed = new EmbedBuilder()
+.setColor("#000000")
+.setTitle("📝 ملاحظة جديدة")
+.addFields(
+{name:"العضو",value:`${interaction.user} (${interaction.user.id})`},
+{name:"الملاحظة",value:note},
+{name:"الوقت",value:`<t:${Math.floor(Date.now()/1000)}:F>`}
 );
 
-if(log) log.send({embeds:[embed]});
-
-interaction.reply({
-content:"✅ Your rating has been submitted successfully.",
-ephemeral:true
-});
+log.send({embeds:[embed]});
 
 });
 
-// =================================
-client.once("ready",()=>{
-console.log("🔥 Ultimate Rating System Ready");
-});
-
-client.login(process.env.TOKEN);
-"Your ticket has been closed.\nPlease rate your experience using the buttons below."
+};
