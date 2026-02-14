@@ -5,208 +5,189 @@ const {
 } = require("discord.js");
 const transcript = require('discord-html-transcripts');
 
+// نظام الترقيم المتسلسل
+let ticketCounter = 1; 
+
 module.exports = (client) => {
 
-    // ==========================================
-    // ⚙️ ULTIMATE CONFIGURATION (MNC)
-    // ==========================================
     const CONFIG = {
-        HIGHER_ADMIN: "1453946893053726830", //
-        LOWER_ADMIN: "1454199885460144189", //
-        LOG_CHANNEL: "1453948413963141153", //
-        TRANSCRIPT_CHANNEL: "1472218573710823679", //
-        FEEDBACK_CHANNEL: "1472023428658630686", //
-        CATEGORY_ID: "1453943996392013901" //
+        HIGHER_ADMIN: "1453946893053726830",
+        LOWER_ADMIN: "1454199885460144189",
+        LOG_CHANNEL: "1453948413963141153",
+        TRANSCRIPT_CHANNEL: "1472218573710823679",
+        FEEDBACK_CHANNEL: "1472023428658630686",
+        CATEGORY_ID: "1453943996392013901" 
     };
 
     // 1. نظام إرسال الواجهة (Setup)
     client.on(Events.MessageCreate, async (message) => {
         if (message.content === "!setup-ultra" && message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-            const serverIcon = message.guild.iconURL({ size: 1024 });
-            const mainEmbed = new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setColor("#000000")
-                .setTitle("🛡️ مركز الدعم الفني المطور | MNC COMMUNITY")
-                .setThumbnail(serverIcon)
-                .setDescription(
-                    "**مرحباً بك في نظام التذاكر الأقوى لـ MNC. نرجو اتباع القوانين:**\n\n" +
-                    "**1️⃣ يمنع فتح التذاكر العبثية لتجنب الباند.**\n" +
-                    "**2️⃣ يرجى كتابة مشكلتك كاملة في النافذة.**\n" +
-                    "**3️⃣ الاحترام متبادل بين العضو والإدارة.**\n\n" +
-                    "**اختر القسم المناسب لفتح تذكرتك:**"
-                )
-                .addFields(
-                    { name: "🛠️ دعم فني", value: "**لحل المشاكل التقنية.**", inline: true },
-                    { name: "🤝 طلب وسيط", value: "**لضمان عمليات التبادل.**", inline: true },
-                    { name: "🎁 استلام جائزة", value: "**للمسابقات والفعاليات.**", inline: true },
-                    { name: "⚠️ شكوى على إداري", value: "**للبلاغات الرسمية.**", inline: true }
-                )
-                .setImage(serverIcon)
-                .setFooter({ text: "Security & Support System - MNC Community", iconURL: serverIcon });
+                .setTitle("🛡️ MNC COMMUNITY | SUPPORT CENTER")
+                .setThumbnail(message.guild.iconURL({ size: 128 }))
+                .setDescription("**مرحباً بك في مركز الدعم. فضلاً اختر القسم المناسب لفتح تذكرة:**")
+                .setFooter({ text: "MNC Management System" });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('open_tech').setLabel('دعم فني').setEmoji('🛠️').setStyle(ButtonStyle.Primary),
-                new
-                ButtonBuilder().setCustomId('open_mid').setLabel('طلب وسيط').setEmoji('🤝').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('open_gift').setLabel('استلام جائزة').setEmoji('🎁').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('open_report').setLabel('شكوى على إداري').setEmoji('⚠️').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('open_tech').setLabel('دعم فني').setStyle(ButtonStyle.Primary).setEmoji('🛠️'),
+                new ButtonBuilder().setCustomId('open_mid').setLabel('طلب
+                                                                     وسيط').setStyle(ButtonStyle.Success).setEmoji('🤝'),
+                new ButtonBuilder().setCustomId('open_gift').setLabel('استلام هدايا').setStyle(ButtonStyle.Secondary).setEmoji('🎁'),
+                new ButtonBuilder().setCustomId('open_report').setLabel('شكوى إداري').setStyle(ButtonStyle.Danger).setEmoji('⚠️'),
             );
 
-            await message.channel.send({ embeds: [mainEmbed], components: [row] });
+            await message.channel.send({ embeds: [embed], components: [row] });
         }
     });
 
     // 2. معالجة التفاعلات (Interactions)
     client.on(Events.InteractionCreate, async (interaction) => {
-        
-        // --- فتح الـ Modals لجمع البيانات ---
-        if (interaction.isButton() && interaction.customId.startsWith('open_')) {
-            const type = interaction.customId.split('_')[1];
-            const existing = interaction.guild.channels.cache.find(c => c.topic === interaction.user.id);
-            if (existing) return interaction.reply({ content: `**⚠️ لديك تذكرة مفتوحة بالفعل: ${existing}**`, ephemeral: true });
+        const { customId, guild, channel, user, member } = interaction;
 
-            const modal = new ModalBuilder().setCustomId(`modal_${type}`).setTitle('تأكيد بيانات التذكرة');
-            const input = new TextInputBuilder()
-                .setCustomId('reason_input')
-                .setLabel(type === 'report' ? "اذكر تفاصيل الشكوى والإداري" : "اشرح طلبك بالتفصيل")
-                .setStyle(TextInputStyle.Paragraph).setRequired(true).setMinLength(10);
-
+        if (interaction.isButton() && customId.startsWith('open_')) {
+            const type = customId.split('_')[1];
+            const modal = new ModalBuilder().setCustomId(`modal_${type}`).setTitle('بيانات التذكرة');
+            const input = new TextInputBuilder().setCustomId('q').setLabel("اكتب استفسارك أو طلبك هنا").setStyle(TextInputStyle.Paragraph).setRequired(true);
             modal.addComponents(new ActionRowBuilder().addComponents(input));
-            return await
-                interaction.showModal(modal);
+            return await interaction.showModal(modal);
         }
 
-        // --- التحكم داخل التيكت ---
         if (interaction.isButton()) {
-            const { customId, channel, user, member } = interaction;
-
+            // نظام الاستلام الشفاف
             if (customId === 'claim_sys') {
                 if (!member.roles.cache.has(CONFIG.HIGHER_ADMIN) && !member.roles.cache.has(CONFIG.LOWER_ADMIN)) return interaction.reply({ content: "للإدارة فقط", ephemeral: true });
+                
                 await channel.permissionOverwrites.edit(CONFIG.LOWER_ADMIN, { ViewChannel: false });
                 await channel.permissionOverwrites.edit(user.id, { ViewChannel: true, SendMessages: true });
-                return await interaction.reply({ embeds: [new EmbedBuilder().setColor("Green").setDescription(`**✅ تم استلام التذكرة بواسطة:** ${user}`)] });
-            }
 
-            if (customId === 'add_u_sys') {
-                const modal = new ModalBuilder().setCustomId('modal_add_u_sys').setTitle('إضافة عضو للتيكت');
-                const input = new TextInputBuilder().setCustomId('user_id').setLabel("اكتب ID العضو المُراد إضافته").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(input));
-                return await interaction.showModal(modal);
-            }
-
-            if (customId === 'close_req_sys') {
-                const confirmRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('del_now_sys').setLabel('Delete Now').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
-                    new ButtonBuilder().setCustomId('del_with_reason').setLabel('Delete With Reason').setStyle(ButtonStyle.Secondary).setEmoji('📝')
+                const claimedRow = new ActionRowBuilder().addComponents(
+                    new
+                    ButtonBuilder().setCustomId('claimed').setLabel(`مستلمة بواسطة ${user.username}`).setStyle(ButtonStyle.Success).setDisabled(true),
+                    new ButtonBuilder().setCustomId('add_u').setLabel('إضافة عضو').setStyle(ButtonStyle.Secondary).setEmoji('👤'),
+                    new ButtonBuilder().setCustomId('close_init').setLabel('إغلاق').setStyle(ButtonStyle.Danger).setEmoji('🔒')
                 );
-                return await interaction.reply({ content: "**⚠️ هل أنت متأكد؟ اختر نوع الحذف:**", components: [confirmRow], ephemeral: true });
+                return await interaction.update({ components: [claimedRow] });
             }
 
-            if (customId === 'del_now_sys') {
-                await interaction.reply("جاري الأرشفة والحذف...");
-                return processClosure(channel, user, "حذف فوري", client, CONFIG);
-            }
-
-            if (customId === 'del_with_reason') {
-                const modal = new ModalBuilder().setCustomId('modal_del_reason').setTitle('حذف بذكر السبب');
-                const input = new TextInputBuilder().setCustomId('d_reason').setLabel("سبب الحذف").setStyle(TextInputStyle.Short).setRequired(true);
+            if (customId === 'add_u') {
+                const modal = new ModalBuilder().setCustomId('modal_add').setTitle('إضافة مستخدم');
+                const input = new TextInputBuilder().setCustomId('uid').setLabel("ID المستخدم").setStyle(TextInputStyle.Short).setRequired(true);
                 modal.addComponents(new ActionRowBuilder().addComponents(input));
                 return await interaction.showModal(modal);
+            }
+
+            // القفل بـ 3 خطوات
+            if (customId === 'close_init') {
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('confirm_close').setLabel('Close Ticket').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId('cancel_close').setLabel('Cancel').setStyle(ButtonStyle.Secondary)
+                );
+                return await interaction.reply({ content: "**⚠️ هل أنت متأكد من رغبتك في إغلاق هذه التذكرة؟**", components: [row], ephemeral: true });
+            }
+
+            if (customId === 'cancel_close') return await interaction.update({ content: "**❌ تم إلغاء عملية الإغلاق.**", components: [] });
+
+            if (customId === 'confirm_close') {
+                const delRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('final_delete').setLabel('حذف نهائي وأرشفة').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
+                );
+                return await
+                    interaction.reply({ content: "🔒 **تم إغلاق التذكرة. اضغط على الزر أدناه للحذف.**", components: [delRow] });
+            }
+
+            if (customId === 'final_delete') {
+                await interaction.reply("جاري تنفيذ الأرشفة والحذف...");
+                return archiveAndFinish(channel, user, client, CONFIG);
             }
         }
 
-        // --- معالجة الـ Modal Submits ---
         if (interaction.isModalSubmit()) {
-            const { customId, fields, guild, user, channel } = interaction;
-
-            if (customId === 'modal_add_u_sys') {
-                const target = fields.getTextInputValue('user_id');
+            if (customId === 'modal_add') {
+                const target = interaction.fields.getTextInputValue('uid');
                 await channel.permissionOverwrites.edit(target, { ViewChannel: true, SendMessages: true });
-                return await interaction.reply({ content: `**👤 تمت إضافة <@${target}> بنجاح.**` });
+                return await interaction.reply({ content: `✅ تمت إضافة العضو <@${target}>.` });
             }
 
-            if (customId === 'modal_del_reason') {
-                const reason = fields.getTextInputValue('d_reason');
-                await interaction.reply("جاري الأرشفة...");
-                return
-                processClosure(channel, user, reason, client, CONFIG);
-            }
-
+            // إنشاء التيكت بالترقيم ticket-#
             if (customId.startsWith('modal_')) {
-                const info = fields.getTextInputValue('reason_input');
-                const type = customId.split('_')[1];
-                
+                const reason = interaction.fields.getTextInputValue('q');
+                const id = ticketCounter++;
                 const ticket = await guild.channels.create({
-                    name: `ticket-${user.username}`,
-                    type: ChannelType.GuildText,
+                    name: `ticket-${id}`, // الديسكورد هيعرضها كـ #ticket-1
                     parent: CONFIG.CATEGORY_ID,
                     topic: user.id,
                     permissionOverwrites: [
                         { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                        { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                        { id: CONFIG.HIGHER_ADMIN, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                        { id: CONFIG.LOWER_ADMIN, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+                        { id: user.id, allow: [PermissionFlagsBits.ViewChannel] },
+                        { id: CONFIG.HIGHER_ADMIN, allow: [PermissionFlagsBits.ViewChannel] },
+                        { id: CONFIG.LOWER_ADMIN, allow: [PermissionFlagsBits.ViewChannel] },
                     ],
                 });
 
-                const welcomeEmbed = new EmbedBuilder()
-                    .setTitle(`🎫 قسم: ${type === 'report' ? 'شكوى إداري' : 'عام'}`)
-                    .setColor("#2f3136")
-                    .setThumbnail(guild.iconURL())
-                    .setDescription(`**العضو:** ${user}\n**البيانات:**\n\`\`\`${info}\`\`\`\n**نرجو منك الانتظار لحين استلام الإدارة للتذكرة.**`);
+                const embed = new EmbedBuilder()
+                    .setTitle(`🎫 تذكرة جديدة #${id}`)
+                    .setDescription(`**صاحب التذكرة:** ${user}\n**الطلب:**\n\`\`\`${reason}\`\`\``)
+                    .setColor("#2f3136");
 
-                const ctrlRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('add_u_sys').setLabel('Add User').setStyle(ButtonStyle.Secondary).setEmoji('👤'),
-                    new ButtonBuilder().setCustomId('claim_sys').setLabel('Claim').setStyle(ButtonStyle.Success).setEmoji('✅'),
-                    new ButtonBuilder().setCustomId('close_req_sys').setLabel('Close').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('claim_sys').setLabel('استلام').setStyle(ButtonStyle.Success),
+                    new
+                    ButtonBuilder().setCustomId('close_init').setLabel('إغلاق').setStyle(ButtonStyle.Danger)
                 );
 
-                await
-                    ticket.send({ embeds: [welcomeEmbed], components: [ctrlRow] });
-                return await interaction.reply({ content: `✅ تم فتح تذكرتك بنجاح: ${ticket}`, ephemeral: true });
+                await ticket.send({ embeds: [embed], components: [row] });
+                return await interaction.reply({ content: `✅ تم فتح تذكرتك #${id}: ${ticket}`, ephemeral: true });
             }
         }
     });
 
-    // 3. وظيفة الإغلاق واللوجات والتقييم (The Engine)
-    async function processClosure(channel, admin, reason, client, config) {
+    async function archiveAndFinish(channel, admin, client, config) {
         const ownerId = channel.topic;
         const file = await transcript.createTranscript(channel);
+        await client.channels.cache.get(config.TRANSCRIPT_CHANNEL).send({ content: `📦 أرشيف تذكرة العضو: <@${ownerId}>`, files: [file] });
         
-        // أرشفة المحادثة
-        const arcChan = client.channels.cache.get(config.TRANSCRIPT_CHANNEL);
-        if (arcChan) await arcChan.send({ content: `📦 أرشيف تذكرة العضو: <@${ownerId}>`, files: [file] });
+        const logEmbed = new EmbedBuilder()
+            .setTitle("🗑️ تم حذف تذكرة")
+            .setColor("Red")
+            .addFields(
+                { name: "العضو", value: `<@${ownerId}>`, inline: true },
+                { name: "الإداري", value: `${admin}`, inline: true }
+            )
+            .setTimestamp();
+        await client.channels.cache.get(config.LOG_CHANNEL).send({ embeds: [logEmbed] });
 
-        // لوج البيانات
-        const logChan = client.channels.cache.get(config.LOG_CHANNEL);
-        if (logChan) {
-            const logEmbed = new EmbedBuilder().setTitle("🗑️ تم حذف التذكرة").setColor("Red").addFields({ name: "صاحب التذكرة", value: `<@${ownerId}>`, inline: true }, { name: "المنفذ", value: `${admin}`, inline: true }, { name: "السبب", value: reason }).setTimestamp();
-            await logChan.send({ embeds: [logEmbed] });
-        }
-
-        // إرسال التقييم
         const owner = await client.users.fetch(ownerId).catch(() => null);
         if (owner) {
-            const rateRow = new ActionRowBuilder().addComponents([1,2,3,4,5].map(n => new ButtonBuilder().setCustomId(`final_rate_${n}_${admin.id}`).setLabel(`${n} ⭐`).setStyle(ButtonStyle.Primary)));
-            await owner.send({ content: "**🌟 MNC COMMUNITY\nيرجى تقييم مستوى الخدمة التي تلقيتها:**", components: [rateRow] }).catch(() => {});
+            const rateRow = new ActionRowBuilder().addComponents([1,2,3,4,5].map(n => new ButtonBuilder().setCustomId(`r_${n}_${admin.id}`).setLabel(`${n} ⭐`).setStyle(ButtonStyle.Primary)));
+            await owner.send({ content: "**🌟 MNC COMMUNITY\nفضلاً قم بتقييم مستوى الخدمة التي تلقيتها:**", components: [rateRow] }).catch(() => {});
         }
         setTimeout(() => channel.delete(), 2000);
     }
 
-    // 4. نظام التقييم الذهبي (Feedback Center)
-    client.on(Events.InteractionCreate, async (interaction) => {
-        if (!interaction.isButton() || !interaction.customId.startsWith('final_rate_')) return;
-        const [_, __, stars, adminId] = interaction.customId.split('_');
-        const feedChan = client.channels.cache.get(CONFIG.FEEDBACK_CHANNEL);
-        
-        if (feedChan) {
-            const feedEmbed = new EmbedBuilder()
-                .setTitle("🌟 تقييم إداري جديد")
-                .setColor("Gold")
-                .setThumbnail(interaction.user.avatarURL())
-                .setDescription(`**تم تقييم الإداري:** <@${adminId}>\n**بواسطة العضو:** ${interaction.user}\n\n**التقييم المستلم:** ${"⭐".repeat(stars)}`)
-                .setTimestamp();
-            await feedChan.send({ embeds: [feedEmbed] });
-        }
-        await interaction.update({ content: "**❤️ شكراً جزيلاً لتقييمك يا بطل!**", components: [] });
+    // نظام التقييم الاحترافي (Modal التعليق)
+    client.on(Events.InteractionCreate, async (i) => {
+        if (!i.isButton() || !i.customId.startsWith('r_')) return;
+        const [_, stars, adminId] = i.customId.split('_');
+        const modal = new ModalBuilder().setCustomId(`fdbk_${stars}_${adminId}`).setTitle('إضافة تعليق');
+        modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('txt').setLabel("رأيك في الخدمة").setStyle(TextInputStyle.Short).setRequired(true)));
+        await i.showModal(modal);
+    });
+
+    client.on(Events.InteractionCreate, async (i) => {
+        if (!i.isModalSubmit() || !i.customId.startsWith('fdbk_')) return;
+        const [_, stars, adminId] = i.customId.split('_');
+        const feedEmbed = new EmbedBuilder()
+            .setTitle("🌟 تقييم إداري")
+            .setColor("Gold")
+            .setDescription(
+                `**الإداري:** <@${adminId}>\n` +
+                `**بواسطة العضو:** ${i.user}\n\n` +
+                `**التقييم:** ${"⭐".repeat(stars)}\n` +
+                `**التعليق:** ${i.fields.getTextInputValue('txt')}`
+            )
+            .setTimestamp();
+        await client.channels.cache.get(CONFIG.FEEDBACK_CHANNEL).send({ content: `إخطار التقييم: <@${adminId}> | ${i.user}`, embeds: [feedEmbed] });
+        await i.reply({ content: "✅ شكرًا لمشاركتنا رأيك، تم إرسال تقييمك بنجاح.", ephemeral: true });
     });
 };
