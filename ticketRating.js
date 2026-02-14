@@ -1,152 +1,300 @@
+// =====================================================
+// 🔥 ULTRA TICKET SYSTEM - FINAL BEAST VERSION
+// =====================================================
+
 const {
+Client,
+GatewayIntentBits,
+Partials,
 EmbedBuilder,
 ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
-ModalBuilder,
-TextInputBuilder,
-TextInputStyle,
 Events,
-PermissionsBitField
+PermissionsBitField,
+Collection
 } = require("discord.js");
 
-module.exports = (client)=>{
+//////////////////////////////////////////////////////
+// ⚙️ CONFIG
+//////////////////////////////////////////////////////
 
-/* ================== الإعدادات ================== */
+const config = {
 
-// اكتب هنا ايدي كاتيجوري التكتات
-const TICKET_CATEGORY_ID = "1453943996392013901";
+TOKEN: "PUT_BOT_TOKEN",
 
-// روم لوق التقييم
-const LOG_CHANNEL_ID = "1472023428658630686";
+// ايدي روم اللوج
+LOG_CHANNEL: "1472023428658630686",
 
-// رتبة الاداريين (عشان ما يبعتلهم تقييم)
-const STAFF_ROLE_ID = "1454199885460144189";
+// الكلمات اللي تدل انه روم تكت
+TICKET_NAMES: ["ticket", "claimed", "support"],
 
-/* ================================================= */
+// الرتب اللي تعتبر ادارة (مش هيتبعت لها تقييم)
+STAFF_ROLES: ["1454199885460144189"],
 
-client.on(Events.MessageCreate, async message=>{
+EMBED_COLOR: 0x000000
 
-if(!message.guild) return;
-if(message.author.bot) return;
+};
 
-if(message.content === ":close"){
+//////////////////////////////////////////////////////
+// 🚀 CLIENT
+//////////////////////////////////////////////////////
 
-// التأكد انه روم تكت
-if(message.channel.parentId !== TICKET_CATEGORY_ID) return;
+const client = new Client({
 
-const members = message.channel.members;
+intents: [
 
-members.forEach(async member=>{
+GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent,
+GatewayIntentBits.GuildMembers
 
-if(member.user.bot) return;
-if(member.roles.cache.has(STAFF_ROLE_ID)) return;
+],
 
-try{
+partials: [Partials.Channel]
+
+});
+
+//////////////////////////////////////////////////////
+// 🧠 MEMORY SYSTEM
+//////////////////////////////////////////////////////
+
+const ticketMembers = new Collection();
+const cooldown = new Collection();
+
+//////////////////////////////////////////////////////
+// ✅ READY
+//////////////////////////////////////////////////////
+
+client.once(Events.ClientReady, () => {
+
+console.log(`🔥 Logged as ${client.user.tag}`);
+
+});
+
+//////////////////////////////////////////////////////
+// 🧩 CHECK TICKET CHANNEL
+//////////////////////////////////////////////////////
+
+function isTicketChannel(channel) {
+
+if (!channel) return false;
+
+return config.TICKET_NAMES.some(name =>
+channel.name.toLowerCase().includes(name)
+);
+
+}
+
+//////////////////////////////////////////////////////
+// 👀 TRACK MEMBERS INSIDE TICKET
+//////////////////////////////////////////////////////
+
+client.on(Events.MessageCreate, async message => {
+
+if (!message.guild) return;
+if (message.author.bot) return;
+
+if (!isTicketChannel(message.channel)) return;
+
+let data = ticketMembers.get(message.channel.id) || new Set();
+
+data.add(message.author.id);
+
+ticketMembers.set(message.channel.id, data);
+
+});
+
+//////////////////////////////////////////////////////
+// 🔘 SEND CLOSE BUTTON
+//////////////////////////////////////////////////////
+
+client.on(Events.MessageCreate, async message => {
+
+if (!message.guild) return;
+if (message.author.bot) return;
+
+if (message.content === "!panel") {
 
 const embed = new EmbedBuilder()
-.setColor("#000000")
-.setTitle("⭐ تقييم الخدمة")
-.setDescription("نشكرك لاستخدامك التكت.\nاختر تقييمك من الأسفل.");
+.setColor(config.EMBED_COLOR)
+.setTitle("🎟️ Ticket Control")
+.setDescription("اضغط الزر لإغلاق التكت وإرسال التقييم.");
 
 const row = new ActionRowBuilder().addComponents(
+
+new ButtonBuilder()
+.setCustomId("close_ticket")
+.setLabel("Close Ticket")
+.setStyle(ButtonStyle.Danger)
+
+);
+
+message.channel.send({
+
+embeds: [embed],
+components: [row]
+
+});
+
+}
+
+});
+
+//////////////////////////////////////////////////////
+// ⭐ RATING BUTTONS
+//////////////////////////////////////////////////////
+
+function ratingButtons() {
+
+return new ActionRowBuilder().addComponents(
+
 new ButtonBuilder().setCustomId("rate_1").setLabel("⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_2").setLabel("⭐⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_3").setLabel("⭐⭐⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_4").setLabel("⭐⭐⭐⭐").setStyle(ButtonStyle.Secondary),
 new ButtonBuilder().setCustomId("rate_5").setLabel("⭐⭐⭐⭐⭐").setStyle(ButtonStyle.Success)
+
 );
 
-const row2 = new ActionRowBuilder().addComponents(
-new ButtonBuilder()
-.setCustomId("add_note")
-.setLabel("إضافة ملاحظة")
-.setStyle(ButtonStyle.Primary)
-);
+}
 
-await member.send({embeds:[embed],components:[row,row2]});
+//////////////////////////////////////////////////////
+// 🔘 INTERACTION HANDLER
+//////////////////////////////////////////////////////
 
-}catch{}
+client.on(Events.InteractionCreate, async interaction => {
+
+if (!interaction.isButton()) return;
+
+//////////////////////////////////////////////////////
+// CLOSE TICKET BUTTON
+//////////////////////////////////////////////////////
+
+if (interaction.customId === "close_ticket") {
+
+if (!isTicketChannel(interaction.channel)) {
+
+return interaction.reply({
+
+content: "❌ هذا ليس روم تكت.",
+ephemeral: true
+
 });
 
 }
 
+await interaction.deferReply({ ephemeral: true });
+
+let members = ticketMembers.get(interaction.channel.id);
+
+if (!members) members = new Set();
+
+const embed = new EmbedBuilder()
+
+.setColor(config.EMBED_COLOR)
+.setTitle("⭐ تقييم الخدمة")
+.setDescription("يرجى اختيار تقييمك.");
+
+//////////////////////////////////////////////////////
+// SEND DM RATING
+//////////////////////////////////////////////////////
+
+for (let userId of members) {
+
+try {
+
+const member = await interaction.guild.members.fetch(userId);
+
+if (!member) continue;
+
+if (config.STAFF_ROLES.some(r => member.roles.cache.has(r))) continue;
+
+await member.send({
+
+embeds: [embed],
+components: [ratingButtons()]
+
 });
 
-/* ================== استقبال الأزرار ================== */
+} catch (e) {}
 
-client.on(Events.InteractionCreate, async interaction=>{
+}
 
-if(!interaction.isButton()) return;
+//////////////////////////////////////////////////////
+// LOG
+//////////////////////////////////////////////////////
 
-if(interaction.customId.startsWith("rate_")){
+const log = interaction.guild.channels.cache.get(config.LOG_CHANNEL);
+
+if (log) {
+
+log.send(`📩 تم ارسال التقييم لروم ${interaction.channel.name}`);
+
+}
+
+await interaction.editReply("✅ تم إرسال التقييم.");
+
+}
+
+//////////////////////////////////////////////////////
+// RATING CLICK
+//////////////////////////////////////////////////////
+
+if (interaction.customId.startsWith("rate_")) {
 
 const stars = interaction.customId.split("_")[1];
 
-await interaction.reply({content:"✅ تم تسجيل تقييمك.",ephemeral:true});
+if (cooldown.has(interaction.user.id)) {
 
-const log = await client.channels.fetch(LOG_CHANNEL_ID).catch(()=>null);
-if(!log) return;
+return interaction.reply({
+
+content: "❌ تم تقييمك مسبقاً.",
+ephemeral: true
+
+});
+
+}
+
+cooldown.set(interaction.user.id, true);
 
 const embed = new EmbedBuilder()
-.setColor("#000000")
+
+.setColor(config.EMBED_COLOR)
 .setTitle("⭐ تقييم جديد")
 .addFields(
-{name:"العضو",value:`${interaction.user} (${interaction.user.id})`},
-{name:"عدد النجوم",value:`${stars} ⭐`},
-{name:"الوقت",value:`<t:${Math.floor(Date.now()/1000)}:F>`}
+
+{ name: "User", value: `${interaction.user}`, inline: true },
+{ name: "Stars", value: `${stars}`, inline: true }
+
 );
 
-log.send({embeds:[embed]});
+const guild = client.guilds.cache.first();
 
-}
+const log = guild.channels.cache.get(config.LOG_CHANNEL);
 
-if(interaction.customId === "add_note"){
+if (log) log.send({ embeds: [embed] });
 
-const modal = new ModalBuilder()
-.setCustomId("note_modal")
-.setTitle("إضافة ملاحظة");
+interaction.reply({
 
-const input = new TextInputBuilder()
-.setCustomId("note_text")
-.setLabel("اكتب ملاحظتك")
-.setStyle(TextInputStyle.Paragraph);
+content: "🔥 شكراً على التقييم.",
+ephemeral: true
 
-modal.addComponents(
-new ActionRowBuilder().addComponents(input)
-);
-
-await interaction.showModal(modal);
+});
 
 }
 
 });
 
-/* ================== استقبال الملاحظات ================== */
+//////////////////////////////////////////////////////
+// ERROR HANDLER
+//////////////////////////////////////////////////////
 
-client.on(Events.InteractionCreate, async interaction=>{
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
 
-if(!interaction.isModalSubmit()) return;
-if(interaction.customId !== "note_modal") return;
+//////////////////////////////////////////////////////
+// LOGIN
+//////////////////////////////////////////////////////
 
-const note = interaction.fields.getTextInputValue("note_text");
-
-await interaction.reply({content:"✅ تم إرسال ملاحظتك.",ephemeral:true});
-
-const log = await client.channels.fetch(LOG_CHANNEL_ID).catch(()=>null);
-if(!log) return;
-
-const embed = new EmbedBuilder()
-.setColor("#000000")
-.setTitle("📝 ملاحظة جديدة")
-.addFields(
-{name:"العضو",value:`${interaction.user} (${interaction.user.id})`},
-{name:"الملاحظة",value:note},
-{name:"الوقت",value:`<t:${Math.floor(Date.now()/1000)}:F>`}
-);
-
-log.send({embeds:[embed]});
-
-});
-
-};
+client.login(config.TOKEN);
