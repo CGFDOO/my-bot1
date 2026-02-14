@@ -205,6 +205,6 @@ client.once("ready",()=>{
 console.log(`🔥 READY AS ${client.user.tag}`);
 });
 
-require("./ticketsystem.js");
+require("./ticketsystem.js")(client);
 
 client.login(process.env.TOKEN);
