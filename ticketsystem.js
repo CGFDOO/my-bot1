@@ -46,7 +46,6 @@ module.exports = (client) => {
 
                           "MNC Community Management - Security & Support", iconURL: message.guild.iconURL() });
 
-            const row = new ActionRowBuilder().addComponents(
                 const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('open_tech').setLabel('دعم فني').setEmoji('🛠️').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId('open_mid').setLabel('طلب وسيط').setEmoji('🤝').setStyle(ButtonStyle.Success),
