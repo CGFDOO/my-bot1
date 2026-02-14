@@ -21,7 +21,7 @@ const TICKET_CATEGORY_ID = "1453943996392013901";
 const LOG_CHANNEL_ID = "1472023428658630686";
 
 // رتبة الاداريين (عشان ما يبعتلهم تقييم)
-const STAFF_ROLE_ID = "PUT_STAFF_ROLE_ID_HERE";
+const STAFF_ROLE_ID = "1454199885460144189";
 
 /* ================================================= */
 
