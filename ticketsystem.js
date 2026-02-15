@@ -57,9 +57,7 @@ module.exports = async (client) => {
         await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
 
         await interaction.followUp({ content: '✅ تم إنشاء Embed التكتات مع كل الأزرار والقوانين الجديدة بنجاح!', ephemeral: true });
-    }
 
-    client.on('interactionCreate', async interaction => {
 
         if (!interaction.isButton()) return;
 
