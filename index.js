@@ -1,4 +1,5 @@
-Const {Client,GatewayIntentBits,EmbedBuilder,PermissionsBitField} = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Partials } = require("discord.js");
+const ticketEngine = require("./ticketsystem.js");
 require("dotenv").config();
 
 const client=new Client({
@@ -200,11 +201,18 @@ console.log("ERROR:",err);
 }
 
 });
-
-client.once("ready",()=>{
-console.log(`🔥 READY AS ${client.user.tag}`);
+client.once("ready", () => {
+    console.log(`🔥 MNC TITAN READY AS ${client.user.tag}`);
 });
 
-require("./ticketsystem.js")(client);
+// نظام التفاعل مع الأزرار والنوافذ
+client.on("interactionCreate", async (interaction) => {
+    if (interaction.isButton()) {
+        if (interaction.customId.startsWith('ticket_')) {
+            const type = interaction.customId.split('_')[1];
+            await ticketEngine.create(interaction, type);
+        }
+    }
+});
 
 client.login(process.env.TOKEN);
