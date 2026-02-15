@@ -1,9 +1,9 @@
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 module.exports = async (client) => {
-     data: new SlashCommandBuilder()
+     const data = new SlashCommandBuilder()
         .setName('setup')
-        .setDescription('إعداد نظام التكتات بالكامل'));
+        .setDescription('Ticket system setup');
 
     client.on('interactionCreate', async (interaction) => {
    
