@@ -1,6 +1,8 @@
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 module.exports = async (client) => {
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
     data: new SlashCommandBuilder()
         .setName('setup')
         .setDescription('إعداد نظام التكتات بالكامل'),
@@ -233,13 +235,6 @@ module.exports = async (client) => {
             await interaction.update({ content: '❌ تم إلغاء حذف التكت.', components: [] });
         }
 
-    });
-
-const { EmbedBuilder } = require('discord.js');
-
-module.exports = async (client) => {
-
-    client.on('interactionCreate', async interaction => {
 
         if (!interaction.isButton()) return;
         const channel = interaction.channel;
