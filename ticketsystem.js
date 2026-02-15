@@ -346,7 +346,5 @@ client.cooldowns.add(interaction.user.id);
 
 });
 
-console.log('Ticket System Ready');
-
 }
 };
