@@ -1,12 +1,13 @@
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 module.exports = async (client) => {
+     data: new SlashCommandBuilder()
+        .setName('setup')
+        .setDescription('إعداد نظام التكتات بالكامل');
+
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
-    data: new SlashCommandBuilder()
-        .setName('setup')
-        .setDescription('إعداد نظام التكتات بالكامل'),
-
+   
         await interaction.reply({ content: '⏳ جاري إعداد نظام التكتات...', ephemeral: true });
 
         // إنشاء روم التكتات
@@ -233,9 +234,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         else if (interaction.customId === 'cancel_delete') {
             await interaction.update({ content: '❌ تم إلغاء حذف التكت.', components: [] });
-        }
-
-
+        
         if (!interaction.isButton()) return;
         const channel = interaction.channel;
         const member = interaction.member;
@@ -347,9 +346,6 @@ module.exports = async (client) => {
     // ===========================
     client.cooldowns = new Set();
 
-    client.on('interactionCreate', async interaction => {
-        if (!interaction.isChatInputCommand()) return;
-        if (client.cooldowns.has(interaction.user.id)) {
             return interaction.reply({ content: '⏳ انتظر قليلاً قبل تنفيذ أمر آخر.', ephemeral: true });
         }
         client.cooldowns.add(interaction.user.id);
