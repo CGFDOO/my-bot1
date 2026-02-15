@@ -4,142 +4,117 @@ const {
     PermissionFlagsBits, Collection 
 } = require('discord.js');
 
-/**
- * 👑 MNC ULTIMATE GOD-MODE SYSTEM (V4.2)
- * Designed for: MIDNIGHT CHAOS COMMUNITY (MNC)
- * Mirror Copy of: User Requested Layouts
- */
-
-// --- [ CONFIGURATION CENTER ] ---
-const CONFIG = {
-    STAFF_ROLE: 'ID_رتبة_الإدارة', // رتبة الإدارة والوسطاء
-    ADMIN_ROLE: 'ID_رتبة_الإدارة_العليا', // رتبة الإدارة العليا للشكاوى
-    CATEGORY_ID: 'ID_فئة_التذاكر', // فئة فتح التذاكر
-    ADMIN_LOG_ID: 'ID_روم_لوج_الإدارة', // لوج الإدارة الخاص
-    MEDIATOR_LOG_ID: 'ID_روم_تقييم_الوساطة' // روم تقييمات الوساطة العام
+// --- [ MNC TITAN CONFIGURATION ] ---
+const IDS = {
+    MEDIATOR_REVIEW: '1472439331443441828', // تقييم الوساطة للعام
+    ADMIN_REVIEW: '1472023428658630686',   // تقييم الإدارة الخاص
+    TICKET_LOGS: '1453948413963141153',    // لوج الاستلام والكلوز
+    TRANSCRIPT_ROM: '1472218573710823679', // روم التران سكربت
+    STAFF_ROLE: '1454199885460144189',    // إدارة صغرى
+    HIGHER_STAFF: '1453946893053726830',  // إدارة عليا
+    CATEGORY: '1453943996392013901'       // فئة التكتات
 };
 
-class MNCTitanEngine {
+let ticketCounter = 346; // بداية الترقيم المطلوبة
+
+class MNCTitanV5 {
     constructor() {
-        this.setupAntiCrash();
+        this.antiCrash();
     }
 
-    // 🛡️ أقوى نظام حماية لمنع التعليق والانهيار
-    setupAntiCrash() {
-        process.on('unhandledRejection', (reason, p) => { /* MNC Safe Guard */ });
-        process.on("uncaughtException", (err, origin) => { /* MNC Safe Guard */ });
+    antiCrash() {
+        process.on('unhandledRejection', (reason, p) => { }); 
+        process.on("uncaughtException", (err, origin) => { });
     }
 
-    // 📩 محرك الأقسام (نفس نصوص وتنسيق صورك حرفياً)
-    async getSettings(type) {
-        const data = {
-            mediator: {
-                title: 'طلب وسيط',
-                desc: '**هذا القسم مخصص لطلب وسيط لعملية تريد داخل السيرفر**\n' +
-                      '• تأكد أن الطرف الآخر جاهز ومتواجد قبل فتح التذكرة\n' +
-                      '• رجاءً عدم فتح أكثر من تذكرة أو إزعاج الفريق بالتذاكر المتكررة\n' +
-                      '• تحقق من درجة الوسيط، حيث أن لكل عملية مستوى أمان مختلف\n' +
-                      '• اكتب المعلومات المطلوبة بدقة في الأسئلة التالية',
-                color: '#2b2d31'
-            },
-            support: {
-                title: 'تذكرة الدعم الفني',
-                desc: '**شكراً لفتح تذكرة الدعم الفني.**\n' +
-                      '• يرجى شرح شكواك أو طلبك بشكل واضح ومفصل قدر الإمكان.\n' +
-                      '• أرفق أي صور أو روابط تساعدنا على فهم المشكلة.\n' +
-                      '• فريق الدعم سيراجع تذكرتك ويجيبك في أسرع وقت ممكن.',
-                color: '#2b2d31'
-            },
-            report: {
-                title: 'شكوى على إداري',
-                desc: '**قسم البلاغات الرسمية ضد طاقم الإدارة.**\n' +
-                      '• يجب تقديم دلائل ملموسة (سكرين شوت أو فيديو).\n' +
-                      '• التذكرة لا يراها إلا الإدارة العليا فقط لضمان السرية والعدل.',
-                color: '#ff0000'
-            },
-            gift: {
-                title: 'استلام هدايا',
-                desc: '**مبروك فوزك في MNC! أنت هنا لاستلام جائزتك.**\n' +
-                      '• يرجى إرسال لقطة شاشة تثبت فوزك في الفعالية.\n' +
-                      '• لا تقم بتكرار المنشن، سيتم الرد عليك حسب الترتيب.',
-                color: '#2b2d31'
-            },
-            creator: {
-                title: 'تقديم صانع محتوى',
-                desc: '**طلب الانضمام لفريق MNC للمبدعين.**\n' +
-                      '• أرسل رابط قناتك وإحصائيات التفاعل.\n' +
-                      '• سيتم مراجعة المحتوى من قبل المختصين والرد عليك.',
-                color: '#2b2d31'
-            }
-        };
-        return data[type];
-    }
-
-    // 🚀 محرك فتح التذاكر (MNC Core)
-    async createTicket(interaction, type) {
+    // محرك إنشاء التذاكر بالأقسام الـ 5
+    async create(interaction, type) {
         const { guild, user } = interaction;
-        const info = await this.getSettings(type);
+        ticketCounter++;
 
         const channel = await guild.channels.create({
-            name: `${type}-${user.username}`,
+            name: `ticket-${ticketCounter}-${user.username}`,
             type: ChannelType.GuildText,
-            parent: CONFIG.CATEGORY_ID,
+            parent: IDS.CATEGORY,
             permissionOverwrites: [
                 { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
                 { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                { id: CONFIG.STAFF_ROLE, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+                { id: IDS.STAFF_ROLE, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+                { id: IDS.HIGHER_STAFF, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
             ],
         });
 
-        const embed = new EmbedBuilder()
-            .setAuthor({ name: info.title, iconURL: user.displayAvatarURL() })
-            .setColor(info.color)
-            .setDescription(info.desc)
-            .addFields(
-                { name: '👤 صاحب الطلب:', value: `<@${user.id}>`, inline: true },
-                { name: '🎫 القسم:', value: info.title, inline: true }
-            )
-            .setFooter({ text: 'MNC COMMUNITY • Quality System' });
+        // 1. تنسيق ما قبل الإيمبد (حياك الله + ريزون)
+        let reasonName = "";
+        switch(type) {
+            case 'mediator': reasonName = "طلب وسيط"; break;
+            case 'support': reasonName = "الدعم الفني"; break;
+            case 'report': reasonName = "شكوى على إداري"; break;
+            case 'gift': reasonName = "استلام هدايا"; break;
+            case 'creator': reasonName = "تقديم على صانع محتوى"; break;
+        }
 
+        const contentMsg = `<@${user.id}> حياك الله\nReason: **${reasonName}**`;
+
+        // 2. تصميم الإيمبد الأبيض الموحد
+        const ticketEmbed = new EmbedBuilder().setColor('#ffffff');
+
+        if (type === 'mediator') {
+            ticketEmbed.setTitle('طلب وسيط')
+            .setDescription(
+                'هذا القسم مخصص لطلب الوسيط لعملية تريد داخل السيرفر\n' +
+                '・تأكد أن الطرف الاخر جاهز و متواجد قبل فتح التذكرة\n' +
+                '・رجاء عدم فتح اكثر من تذكرة أو ازعاج الفريق بالتذكرو المتكرره\n' +
+                '・تحقق من درجة الوسيط حيث أن كل لكل مستوي أمان مختلف\n' +
+                '・اكتب المعلومات المطلوبة بدقة في الاسئلة التالية'
+            )
+            .addFields(
+                { name: '**يوزر الشخص الي بتسوي معه تريد؟**', value: 'سيتم الرد بالأسفل', inline: false },
+                { name: '**ما تفاصيل التريد أو العرض والمقابل؟**', value: 'سيتم الرد بالأسفل', inline: false }
+            );
+        } else if (type === 'support') {
+            ticketEmbed.setTitle('تذكرة الدعم الفني')
+            .setDescription(
+                'شكرا لفتح تذكرة الدعم الفني\n' +
+                '・يرجى شرح شكواك أو مشكلتك أو طلبك بشكل واضح و مفصل قدر الإمكان\n' +
+                '・ارفق اي صور أو روابط أو أدلة تساعدنا على فهم المشكله\n' +
+                '・فريق الدعم سيراجع تذكرتك و يجييك في اسرع وقت ممكن\n\n' +
+                'يرجى التحلي بالصبر فترتيب الردود يتم على حسب الأولوية و وقت الفتح'
+            )
+            .addFields({ name: '**ما هي مشكلتك أو طلبك بالتفصيل؟**', value: 'يرجى الكتابة بالأسفل', inline: false });
+        }
+
+        // 3. أزرار التحكم بالترتيب المطلوب
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('claim_btn').setLabel('Claim').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('close_req').setLabel('Close').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('add_user').setLabel('Add User').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('add_user').setLabel('Add User').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('claim').setLabel('Claim').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('close').setLabel('Close').setStyle(ButtonStyle.Danger)
         );
 
-        await channel.send({ 
-            content: `حياك الله <@${user.id}> | Reason: **${info.title}**`,
-            embeds: [embed], 
-            components: [row] 
-        });
+        const deleteRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('delete_reason').setLabel('Delete With Reason').setStyle(ButtonStyle.Danger)
+        );
 
-        return interaction.reply({ content: `✅ تم فتح تذكرتك: ${channel}`, ephemeral: true });
+        await channel.send({ content: contentMsg, embeds: [ticketEmbed], components: [row, deleteRow] });
+        
+        return interaction.reply({ content: `✅ تم فتح التذكرة بنجاح: ${channel}`, ephemeral: true });
     }
 
-    // ⭐ نظام التقييم الثنائي الأسطوري (روم إدارة + روم وساطة)
-    async sendReview(interaction, mediatorId, items, stars, comment) {
-        const ticketId = interaction.channel.name.split('-')[1] || '0000';
-        
+    // 4. نظام التقييم الأسطوري الثنائي
+    async sendReview(interaction, mediator, stars, items, comment, isMediatorReview) {
         const reviewEmbed = new EmbedBuilder()
             .setColor('#2b2d31')
             .setDescription(
-                `✅ **تكت رقم ${ticketId} للوسيط <@${mediatorId}>**\n` +
+                `✅ **تكت رقم ${interaction.channel.name.split('-')[1]} للوسيط <@${mediator.id}>**\n` +
                 `- **العميل :** <@${interaction.user.id}>\n` +
                 `- **تقييم الوسيط :** ${'⭐'.repeat(stars)} **أسطوري**\n` +
                 `- **السلع المتبادلة :** ${items}\n` +
                 `- **تعليق إضافي من العميل :** ${comment || 'لا يوجد'}`
             );
 
-        // 1. لوج الإدارة الخاص
-        const adminLog = interaction.guild.channels.cache.get(CONFIG.ADMIN_LOG_ID);
-        if (adminLog) await adminLog.send({ content: `**[NEW REVIEW]** للوسيط <@${mediatorId}>`, embeds: [reviewEmbed] });
-
-        // 2. تقييم الوساطة العام
-        const publicLog = interaction.guild.channels.cache.get(CONFIG.MEDIATOR_LOG_ID);
-        if (publicLog) await publicLog.send({ embeds: [reviewEmbed] });
-        
-        return interaction.reply({ content: '✅ شكراً لتقييمك! تم تسجيل تقييمك بنجاح.', ephemeral: true });
+        const targetChannel = interaction.guild.channels.cache.get(isMediatorReview ? IDS.MEDIATOR_REVIEW : IDS.ADMIN_REVIEW);
+        if (targetChannel) await targetChannel.send({ embeds: [reviewEmbed] });
     }
 }
 
-module.exports = new MNCTitanEngine();
+module.exports = new MNCTitanV5();
