@@ -334,7 +334,7 @@ module.exports = async (client) => {
         }
 
     // ===================================
-// Cooldown System
+// نظام الـ Cooldown والحماية
 // ===================================
 
 if (client.cooldowns.has(interaction.user.id)) {
@@ -344,4 +344,6 @@ if (client.cooldowns.has(interaction.user.id)) {
 client.cooldowns.add(interaction.user.id);
 setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000);
 
-}; // القفلة الصحيحة للملف (بدون أي أقواس دائرية)
+}); // القفلة الأولى: بتقفل الـ Interaction (اللي بدأت في سطر 282)
+
+}; // القفلة الثانية: بتقفل الملف (اللي بدأ في سطر 277)
