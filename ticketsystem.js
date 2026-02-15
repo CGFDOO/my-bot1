@@ -1,193 +1,147 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextInputBuilder, ModalBuilder, TextInputStyle, InteractionType } = require("discord.js");
+const { 
+    ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, 
+    ComponentType, ModalBuilder, TextInputBuilder, TextInputStyle, 
+    PermissionsBitField, Events 
+} = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 
-// حفظ التكتات
-let tickets = {
-    openTickets: {},
-    ticketCount: 346 // نبدأ من 346 كما طلبت
+// إعداد ملف تخزين البيانات والترقيم
+const dataPath = path.join(__dirname, 'tickets.json');
+let db = { lastNumber: 345, openTickets: {} };
+if (fs.existsSync(dataPath)) db = JSON.parse(fs.readFileSync(dataPath));
+
+const save = () => fs.writeFileSync(dataPath, JSON.stringify(db, null, 4));
+
+// --- [ الإعدادات الرسمية ] ---
+const CONFIG = {
+    CATEGORY: "1453943996392013901",
+    STAFF: "1454199885460144189",
+    HIGH_STAFF: "1453946893053726830",
+    LOGS: "1453948413963141153",
+    TRANSCRIPT: "1472218573710823679",
+    MM_RATING: "1472439331443441828",
+    STAFF_RATING: "1472023428658630686"
 };
 
-// تقييم الوسيط لمنع التكرار
-let mediatorRatings = {};
+module.exports = (client) => {
 
-// تقييم الإدارة لمنع التكرار
-let adminRatings = {};
+    client.on(Events.MessageCreate, async (message) => {
+        if (message.author.bot || !message.content.startsWith(':')) return;
 
-// أمر Setup
-module.exports = async (client) => {
-
-    client.on("messageCreate", async message => {
-
-        if(message.content === ":setup" && message.guild) {
-            // إرسال الإيمبد الأساسي للتكتات
+        // أمر التسطيب :setup
+        if (message.content === ':setup') {
+            if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
             const embed = new EmbedBuilder()
-            .setColor("#ffffff")
-            .setTitle("🎫 Ticket System")
-            .setDescription(
-                "**قوانين التريد:**\n"+
-                "・ممنوع سحب على التذكرة\n"+
-                "・ممنوع فتح أكثر من تكت في نفس الوقت\n\n"+
-                "اضغط على أي زر لإنشاء التكت"
-            );
+                .setTitle("MNC COMMUNITY - Ticket System")
+                .setDescription("اختر نوع التذكرة التي ترغب في فتحها من الأسفل:")
+                .setColor("White");
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("new_ticket").setLabel("🎫 فتح تكت").setStyle(ButtonStyle.Primary)
+                new ButtonBuilder().setCustomId('open_mm').setLabel('طلب وسيط').setStyle(ButtonStyle.Primary).setEmoji('🟣'),
+                new ButtonBuilder().setCustomId('open_supp').setLabel('دعم فني').setStyle(ButtonStyle.Secondary).setEmoji('🔵'),
+                new ButtonBuilder().setCustomId('open_gift').setLabel('استلام هدايا').setStyle(ButtonStyle.Success).setEmoji('🟡'),
+                new ButtonBuilder().setCustomId('open_rep').setLabel('شكوى إداري').setStyle(ButtonStyle.Danger).setEmoji('🔴')
             );
 
-            message.channel.send({embeds:[embed],components:[row]});
+            message.channel.send({ embeds: [embed], components: [row] });
         }
 
-        if(message.content === ":done") {
-            // أمر لإرسال تقييم الوسيط بعد إغلاق التكت
-            message.channel.send("✅ تقييم الوسيط سيتم إرساله للطرفين في الخاص.");
+        // أمر تقييم الوسطاء :done
+        if (message.content === ':done') {
+            const ticket = db.openTickets[message.channel.id];
+            if (!ticket || ticket.type !== 'Middleman') return message.reply("❌ هذا الأمر مخصص لتذاكر الوسطاء فقط.");
+            
+            // نظام التقييم يرسل DM
+            const ratingEmbed = new EmbedBuilder()
+                .setTitle("⭐ تقييم الوساطة - MNC")
+                .setDescription("يرجى تقييم تجربة الوساطة الخاصة بك.")
+                .setColor("White");
+            
+            const user = await client.users.fetch(ticket.owner);
+            user.send({ embeds: [ratingEmbed] }).catch(() => {});
+            message.channel.send("✅ تم إرسال طلب التقييم للأطراف.");
         }
     });
 
-    // إنشاء التكت و التعامل مع الأزرار
-    client.on("interactionCreate", async interaction => {
+    client.on(Events.InteractionCreate, async (interaction) => {
+        // منع السبام واللاج
+        if (!interaction.isButton() && !interaction.isModalSubmit()) return;
 
-        if(interaction.isButton()){
+        // --- [ 1. فتح التذاكر ] ---
+        if (interaction.isButton() && interaction.customId.startsWith('open_')) {
+            const typeMap = { 'open_mm': 'Middleman', 'open_supp': 'Support', 'open_gift': 'Gift', 'open_rep': 'Report' };
+            const type = typeMap[interaction.customId];
 
-            const member = interaction.user;
+            // شرط التذكرتين
+            const userTickets = Object.values(db.openTickets).filter(t => t.owner === interaction.user.id);
+            if (userTickets.length >= 2) return interaction.reply({ content: "❌ لديك تذكرتان مفتوحتان بالفعل.", ephemeral: true });
 
-            if(interaction.customId === "new_ticket"){
-                const ticketNumber = tickets.ticketCount++;
-                const ticketName = `ticket-${ticketNumber}-${member.id}`;
-
-                const ticketChannel = await interaction.guild.channels.create({
-                    name: ticketName,
-                    type: 0, // Text channel
-                    parent: "1453943996392013901", // الكاتيجوري
-                    permissionOverwrites:[
-                        {id: member.id, allow: ["ViewChannel", "SendMessages"]},
-                        {id: interaction.guild.roles.everyone, deny: ["ViewChannel"]}
-                    ]
-                });
-
-                tickets.openTickets[ticketChannel.id] = {owner: member.id, number: ticketNumber};
-
-                // إيمبد التكت الأساسي
-                const embed = new EmbedBuilder()
-                .setColor("#ffffff")
-                .setTitle("🎫 Ticket Opened")
-                .setDescription(`مرحبا <@${member.id}>!\nالرجاء اختيار نوع التكت.`);
-
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("✅ Claim").setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 Close").setStyle(ButtonStyle.Danger),
-                    new ButtonBuilder().setCustomId("add_member").setLabel("➕ Add Member").setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId("delete_ticket").setLabel("🗑️ Delete").setStyle(ButtonStyle.Danger)
+            // مودال طلب الوسيط
+            if (type === 'Middleman') {
+                const modal = new ModalBuilder().setCustomId('mm_modal').setTitle('بيانات الوساطة');
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('p_user').setLabel('يوزر الطرف الآخر').setStyle(TextInputStyle.Short)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('details').setLabel('تفاصيل التريد').setStyle(TextInputStyle.Paragraph))
                 );
-
-                ticketChannel.send({content: `<@${member.id}>`, embeds:[embed], components:[row]});
-                await interaction.reply({content:`✅ تم إنشاء التكت: ${ticketChannel}`, ephemeral:true});
+                return interaction.showModal(modal);
             }
-
-            // Claim ticket
-            if(interaction.customId === "claim_ticket"){
-                const ticket = tickets.openTickets[interaction.channel.id];
-                if(!ticket) return interaction.reply({content:"❌ خطأ، التكت غير موجود", ephemeral:true});
-
-                // أخفاء الدور العادي
-                const STAFF_ROLE = "1454199885460144189";
-                interaction.channel.permissionOverwrites.edit(STAFF_ROLE,{ViewChannel:false});
-
-                await interaction.update({content:`✅ Ticket claimed by <@${member.id}>`});
-            }
-
-            // Close ticket مع خطوة التحقق
-            if(interaction.customId === "close_ticket"){
-                const modal = new ModalBuilder()
-                .setCustomId("close_modal")
-                .setTitle("Close Ticket");
-
-                const reasonInput = new TextInputBuilder()
-                .setCustomId("deleteReasonInput")
-                .setLabel("Reason for closing the ticket / سبب الإغلاق")
-                .setStyle(TextInputStyle.Short);
-
-                const row = new ActionRowBuilder().addComponents(reasonInput);
-                modal.addComponents(row);
-                await interaction.showModal(modal);
-            }
-
-            // Add member
-            if(interaction.customId === "add_member"){
-                await interaction.reply({content:"اكتب ID العضو لإضافته:",ephemeral:true});
-            }
-
-            // Delete ticket
-            if(interaction.customId === "delete_ticket"){
-                const ticket = tickets.openTickets[interaction.channel.id];
-                if(!ticket) return interaction.reply({content:"❌ التكت غير موجود", ephemeral:true});
-
-                delete tickets.openTickets[interaction.channel.id];
-                await interaction.channel.delete().catch(console.error);
-            }
+            
+            await handleTicketCreate(interaction, type);
         }
 
-        // التعامل مع المودال بعد Close
-        if(interaction.type === InteractionType.ModalSubmit){
-            if(interaction.customId === "close_modal"){
-                const reason = interaction.fields.getTextInputValue("deleteReasonInput");
-                await interaction.reply({content:`🗑️ Ticket closed. Reason: ${reason}`, ephemeral:true});
-                const ticket = tickets.openTickets[interaction.channel.id];
-                if(ticket) delete tickets.openTickets[interaction.channel.id];
-            }
+        // --- [ 2. نظام الـ Claim ] ---
+        if (interaction.customId === 'claim_btn') {
+            const ticket = db.openTickets[interaction.channel.id];
+            if (!interaction.member.roles.cache.has(CONFIG.STAFF)) return interaction.reply({ content: "للإدارة فقط.", ephemeral: true });
+
+            ticket.claimedBy = interaction.user.id;
+            save();
+
+            const disabledRow = ActionRowBuilder.from(interaction.message.components[0]);
+            disabledRow.components.find(c => c.data.custom_id === 'claim_btn').setDisabled(true);
+
+            await interaction.channel.permissionOverwrites.edit(CONFIG.STAFF, { ViewChannel: false });
+            await interaction.channel.permissionOverwrites.edit(interaction.user.id, { ViewChannel: true, SendMessages: true });
+
+            await interaction.update({ components: interaction.message.components });
+            interaction.channel.send({ content: `✅ **The ticket has been claimed successfully by** <@${interaction.user.id}>` });
         }
     });
 
-    ////////////////////////////////////////////////
-    // Mediator Rating
-    ////////////////////////////////////////////////
-    client.on("interactionCreate", async interaction => {
+    async function handleTicketCreate(interaction, type, modalData = null) {
+        db.lastNumber++;
+        const tNum = db.lastNumber;
+        const channelName = `ticket-${tNum}-${interaction.user.username}`;
+        
+        const channel = await interaction.guild.channels.create({
+            name: channelName,
+            parent: CONFIG.CATEGORY,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                { id: CONFIG.STAFF, allow: [PermissionsBitField.Flags.ViewChannel] }
+            ]
+        });
 
-        if(!interaction.isButton()) return;
-        if(!interaction.customId.startsWith("mediator_")) return;
+        db.openTickets[channel.id] = { owner: interaction.user.id, type: type, num: tNum };
+        save();
 
-        const split = interaction.customId.split("_");
-        const rating = split[1];
-        const ticketNumber = split[2];
-        const userId = interaction.user.id;
+        // رسالة الترحيب الخارجية
+        await channel.send({ content: `حياك الله <@${interaction.user.id}>\nREASON: **${type}**` });
 
-        if(!mediatorRatings[ticketNumber]) mediatorRatings[ticketNumber] = [];
-        if(mediatorRatings[ticketNumber].includes(userId)){
-            return interaction.reply({content:"❌ لقد قيمت الوسيط بالفعل / Already rated.",ephemeral:true});
-        }
+        const embed = new EmbedBuilder()
+            .setTitle(type === 'Middleman' ? 'طلب وسيط' : 'تذكرة جديدة')
+            .setDescription("يرجى الانتظار حتى يتم الرد عليك من قبل الفريق المختص.")
+            .setColor("White");
 
-        mediatorRatings[ticketNumber].push(userId);
-        await interaction.reply({content:`✅ شكرا لتقييمك الوسيط (${rating}⭐)`,ephemeral:true});
-    });
+        const btns = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('add_member').setLabel('ADD').setStyle(ButtonStyle.Primary).setEmoji('➕'),
+            new ButtonBuilder().setCustomId('claim_btn').setLabel('CLAIM').setStyle(ButtonStyle.Success).setEmoji('🛡️'),
+            new ButtonBuilder().setCustomId('close_req').setLabel('CLOSE').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+        );
 
-    ////////////////////////////////////////////////
-    // Admin Rating
-    ////////////////////////////////////////////////
-    client.on("interactionCreate", async interaction => {
-
-        if(!interaction.isButton()) return;
-        if(!interaction.customId.startsWith("admin_")) return;
-
-        const split = interaction.customId.split("_");
-        const rating = split[1];
-        const ticketNumber = split[2];
-        const userId = interaction.user.id;
-
-        if(!adminRatings[ticketNumber]) adminRatings[ticketNumber] = [];
-        if(adminRatings[ticketNumber].includes(userId)){
-            return interaction.reply({content:"❌ لقد قيمت الإدارة بالفعل / Already rated.",ephemeral:true});
-        }
-
-        adminRatings[ticketNumber].push(userId);
-        await interaction.reply({content:`✅ شكراً لتقييمك الإدارة (${rating}⭐)`, ephemeral:true});
-
-        // إرسال إلى روم تقييم الإدارة
-        const adminRoom = client.channels.cache.get("1472023428658630686");
-        if(adminRoom){
-            const resultEmbed = new EmbedBuilder()
-            .setColor("#ffffff")
-            .setTitle("⭐ Admin Rating Result")
-            .setDescription(`User: <@${userId}>\nRating: ${rating}⭐\nTicket: #${ticketNumber}`);
-            adminRoom.send({embeds:[resultEmbed]});
-        }
-    });
-
+        await channel.send({ embeds: [embed], components: [btns] });
+        interaction.reply({ content: `تم فتح التذكرة: ${channel}`, ephemeral: true });
+    }
 };
