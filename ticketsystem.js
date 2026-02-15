@@ -338,13 +338,12 @@ module.exports = async (client) => {
 // ===================================
 
 if (client.cooldowns.has(interaction.user.id)) {
-    return interaction.reply({ content: '⏳ انتظر قليلاً قبل تنفيذ أمر آخر', ephemeral: true });
-}
+        return interaction.reply({ content: 'Please wait a moment.', ephemeral: true });
+    }
 
-client.cooldowns.add(interaction.user.id);
+    client.cooldowns.add(interaction.user.id);
     setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
 
 });
 
-}
 };
