@@ -1815,3 +1815,40 @@ client.on("interactionCreate", async interaction => {
         if(logRoom) logRoom.send(`Ticket #${ticketChannel.name} deleted by <@${member.id}>. Reason: ${reason}`);
     }
 });
+
+////////////////////////////////////////////////
+//////////// FINAL TICKET CLEANUP /////////////
+////////////////////////////////////////////////
+
+// حذف التكت بعد التأكد من الخطوة الثانية
+async function finalizeTicketClose(ticketChannel, adminId, reason) {
+    const confirmEmbed = new EmbedBuilder()
+    .setColor("#ff0000")
+    .setTitle("✅ Ticket Closed Successfully")
+    .setDescription(`Ticket closed by <@${adminId}>\nReason: ${reason}`);
+
+    // إرسال الرسالة للعضو فقط
+    const member = ticketChannel.members.first();
+    if (member) {
+        member.send({embeds:[confirmEmbed]}).catch(()=>{});
+    }
+
+    // إرسال للغرف المخصصة للوق والتقييمات
+    const logChannel = client.channels.cache.get("1453948413963141153");
+    if (logChannel) {
+        const logEmbed = new EmbedBuilder()
+        .setColor("#ff0000")
+        .setTitle("Ticket Log")
+        .setDescription(`Ticket: ${ticketChannel.name}\nClosed by: <@${adminId}>\nReason: ${reason}`);
+        logChannel.send({embeds:[logEmbed]});
+    }
+
+    // حذف التكت من السيرفر بعد ثانية لتجنب مشاكل البوت
+    setTimeout(() => {
+        ticketChannel.delete().catch(console.error);
+    }, 1000);
+
+    // تحديث سجل التكتات المفتوحة
+    delete tickets.openTickets[ticketChannel.id];
+    saveTickets();
+}
