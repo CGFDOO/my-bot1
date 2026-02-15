@@ -342,6 +342,8 @@ module.exports = async (client) => {
             return interaction.reply({ content: '⏳ انتظر قليلاً قبل تنفيذ أمر آخر.', ephemeral: true });
         }
         client.cooldowns.add(interaction.user.id);
-        setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); // 2 ثانية
+        setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
+    }
+});
 
-    console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية.');
+console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية');
