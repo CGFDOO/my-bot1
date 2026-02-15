@@ -334,16 +334,14 @@ module.exports = async (client) => {
         }
 
     // ===================================
-// Cooldown عام للأوامر لتجنب تعليق البوت
+// Cooldown System
 // ===================================
 
 if (client.cooldowns.has(interaction.user.id)) {
-        return interaction.reply({ content: 'Please wait a moment.', ephemeral: true });
-    }
+    return interaction.reply({ content: "Please wait a moment.", ephemeral: true });
+}
 
-    client.cooldowns.add(interaction.user.id);
-    setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
+client.cooldowns.add(interaction.user.id);
+setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000);
 
-});
-
-};
+}; // القفلة الصحيحة للملف (بدون أي أقواس دائرية)
