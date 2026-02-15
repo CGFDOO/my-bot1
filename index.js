@@ -220,5 +220,7 @@ client.on("interactionCreate", async (interaction) => {
     }
 });
 
+const ticketEngine = require("./ticketsystem.js");
+
 // السطر الأخير والأساسي لتشغيل البوت باستخدام التوكن
 client.login(process.env.TOKEN);
