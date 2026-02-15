@@ -60,8 +60,6 @@ module.exports = {
     }
 };
 
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-
 module.exports = async (client) => {
 
     client.on('interactionCreate', async interaction => {
