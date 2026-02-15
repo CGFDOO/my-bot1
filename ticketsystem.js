@@ -342,8 +342,10 @@ if (client.cooldowns.has(interaction.user.id)) {
 }
 
 client.cooldowns.add(interaction.user.id);
-setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
+    setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
 
-}); // دي قفلة الملف الأساسية
+}); // دي قفلة البوت
 
 console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية');
+
+}  // <--- ضيف القوس ده في الآخر خالص
