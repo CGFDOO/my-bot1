@@ -332,7 +332,6 @@ module.exports = async (client) => {
         } catch (err) {
             console.log('Error setting permissions on ticket creation:', err);
         }
-    });
 
     // ===================================
 // Cooldown عام للأوامر لتجنب تعليق البوت
