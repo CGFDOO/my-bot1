@@ -95,10 +95,6 @@ module.exports = async (client) => {
             ]
         });
 
-        // Embed داخلي للتكت
-        const ticketEmbed = new EmbedBuilder()
-            .setTitle(`🎫 ${ticketType.name}`)
-            .setDescription(
 `حياك الله 👋
 هذا التكت مخصص لـ ${ticketType.name}.
 
