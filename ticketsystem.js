@@ -344,9 +344,8 @@ if (client.cooldowns.has(interaction.user.id)) {
 client.cooldowns.add(interaction.user.id);
     setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
 
-}); // قفلة البوت
+});
 
-console.log('✅ Ticket System Ready');
+console.log('Ticket System Ready');
 
-}; // القفلة الأولى
-}  // <--- ضيف القوس ده (القفلة التانية اللي ناقصة)
+};
