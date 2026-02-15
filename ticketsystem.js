@@ -5,7 +5,6 @@ module.exports = async (client) => {
         .setName('setup')
         .setDescription('إعداد نظام التكتات بالكامل'),
 
-
         await interaction.reply({ content: '⏳ جاري إعداد نظام التكتات...', ephemeral: true });
 
         // إنشاء روم التكتات
@@ -235,7 +234,6 @@ module.exports = async (client) => {
         }
 
     });
-};
 
 const { EmbedBuilder } = require('discord.js');
 
@@ -364,4 +362,5 @@ module.exports = async (client) => {
     });
 
     console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية.');
+});
 };
