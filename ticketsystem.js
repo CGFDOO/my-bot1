@@ -23,14 +23,6 @@ if (fs.existsSync(ticketDataFile)) {
     tickets = JSON.parse(fs.readFileSync(ticketDataFile));
 }
 
-// IDs
-const STAFF_ROLE = "1454199885460144189";
-const ADMIN_ROLE = "1453946893053726830";
-const LOGS_CHANNEL = "1453948413963141153";
-const TRANSCRIPT_CHANNEL = "1472218573710823679";
-const MIDDLEMAN_RATING_CHANNEL = "1472439331443441828";
-const STAFF_RATING_CHANNEL = "1472023428658630686";
-
 // Emojis
 const EMOJI = {
     CLOSE: "🛡️",
