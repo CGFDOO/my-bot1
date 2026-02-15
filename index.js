@@ -207,5 +207,6 @@ client.on("messageCreate", async message => {
 client.once("ready", () => {
     console.log(`🔥 MNC TITAN READY AS ${client.user.tag}`);
 });
+const ticketEngine = require("./ticketsystem.js");
 
 client.login(process.env.TOKEN);
