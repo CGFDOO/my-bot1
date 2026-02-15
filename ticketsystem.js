@@ -334,16 +334,17 @@ module.exports = async (client) => {
         }
     });
 
-    // ===========================
-    // Cooldown عام للأوامر لتجنب تعليق البوت
-    // ===========================
-    client.cooldowns = new Set();
+    // ===================================
+// Cooldown عام للأوامر لتجنب تعليق البوت
+// ===================================
 
-            return interaction.reply({ content: '⏳ انتظر قليلاً قبل تنفيذ أمر آخر.', ephemeral: true });
-        }
-        client.cooldowns.add(interaction.user.id);
-        setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
-    }
-});
+if (client.cooldowns.has(interaction.user.id)) {
+    return interaction.reply({ content: '⏳ انتظر قليلاً قبل تنفيذ أمر آخر', ephemeral: true });
+}
+
+client.cooldowns.add(interaction.user.id);
+setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
+
+}); // دي قفلة الملف الأساسية
 
 console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية');
