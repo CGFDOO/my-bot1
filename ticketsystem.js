@@ -343,6 +343,5 @@ module.exports = async (client) => {
         }
         client.cooldowns.add(interaction.user.id);
         setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); // 2 ثانية
-    });
 
     console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية.');
