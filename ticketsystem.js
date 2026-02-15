@@ -5,8 +5,7 @@ module.exports = async (client) => {
         .setName('setup')
         .setDescription('إعداد نظام التكتات بالكامل');
 
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    client.on('interactionCreate', async (interaction) => {
    
         await interaction.reply({ content: '⏳ جاري إعداد نظام التكتات...', ephemeral: true });
 
