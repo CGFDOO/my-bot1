@@ -121,9 +121,6 @@ module.exports = async (client) => {
         // رد على العضو أن التكت اتعمل
         await interaction.reply({ content: `✅ تم إنشاء التكت الخاص بك: ${ticketChannel}`, ephemeral: true });
 
-    });
-
-};
 
     client.on('interactionCreate', async interaction => {
 
