@@ -344,5 +344,8 @@ if (client.cooldowns.has(interaction.user.id)) {
 client.cooldowns.add(interaction.user.id);
     setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000); 
 
-}
-};
+}); // دي قفلة البوت
+
+console.log('✅ Ticket System Ready');
+
+}; // دي قفلة الملف (مهمة جداً)
