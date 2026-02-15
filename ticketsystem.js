@@ -19,7 +19,7 @@ module.exports = async (client) => {
                 { id: interaction.guild.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
             ]
         });
-
+});
         // Embed الأساسي للتكتات + القوانين الواقعية
         const ticketEmbed = new EmbedBuilder()
             .setTitle('🎟️ نظام التكتات')
