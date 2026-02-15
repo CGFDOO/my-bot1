@@ -45,7 +45,7 @@ module.exports = async (client) => {
             .setColor('#FFFFFF');
 
         // Buttons لكل نوع تكت + إيموجي جديد
-        const ticketButtons = new ActionRowBuilder()
+        const setupButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder().setCustomId('ticket_support').setLabel('دعم فني').setStyle(ButtonStyle.Primary).setEmoji('🛠️'),
                 new ButtonBuilder().setCustomId('ticket_mediator').setLabel('طلب وسيط').setStyle(ButtonStyle.Primary).setEmoji('🛡️'),
@@ -54,7 +54,7 @@ module.exports = async (client) => {
                 new ButtonBuilder().setCustomId('ticket_admin').setLabel('شكوى على إداري').setStyle(ButtonStyle.Danger).setEmoji('⚠️')
             );
 
-        await ticketChannel.send({ embeds: [ticketEmbed], components: [ticketButtons] });
+        await ticketChannel.send({ embeds: [ticketEmbed], components: [setupButtons] });
 
         await interaction.followUp({ content: '✅ تم إنشاء Embed التكتات مع كل الأزرار والقوانين الجديدة بنجاح!', ephemeral: true });
 
