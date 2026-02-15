@@ -201,20 +201,19 @@ console.log("ERROR:",err);
 }
 
 });
-client.once("ready", () => {
-    console.log(`🔥 MNC TITAN READY AS ${client.user.tag}`);
-});
-// --- نظام التفاعل مع الأزرار والنوافذ (MNC TITAN) ---
+// --- (MNC TITAN) نظام التفاعل مع الأزرار والنوافذ ---
 client.on("interactionCreate", async (interaction) => {
+    // التأكد إن التفاعل عبارة عن ضغطة زرار
     if (interaction.isButton()) {
-        // لو الزرار بيبدأ بكلمة ticket_
+        
+        // لو الزرار بيبدأ بكلمة ticket_ عشان يفتح التكت
         if (interaction.customId.startsWith('ticket_')) {
             const type = interaction.customId.split('_')[1];
-            // بينادي ملف التكتات ويبعت له البيانات عشان يفتح التكت
+            // هنا الـ await جوه async فمش هيديك Error
             await ticketEngine.create(interaction, type); 
         }
         
-        // لو ضغط على زرار Claim (الاستلام)
+        // لو ضغط على زرار Claim (الاستلام) الشفاف
         if (interaction.customId === 'claim') {
             await ticketEngine.handleClaim(interaction);
         }
@@ -222,11 +221,4 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 // السطر الأخير والأساسي لتشغيل البوت باستخدام التوكن
-client.login(process.env.TOKEN);
-            const type = interaction.customId.split('_')[1];
-            await ticketEngine.create(interaction, type);
-        }
-    }
-});
-
 client.login(process.env.TOKEN);
