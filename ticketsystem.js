@@ -354,4 +354,3 @@ module.exports = async (client) => {
     console.log('✅ نظام التكتات مكتمل مع الحماية والسرعة العالية.');
 
     });
-};
