@@ -1,195 +1,193 @@
-// ticketsystem.js
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextInputBuilder, TextInputStyle, ModalBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextInputBuilder, ModalBuilder, TextInputStyle, InteractionType } = require("discord.js");
 
-module.exports = (client) => {
+// حفظ التكتات
+let tickets = {
+    openTickets: {},
+    ticketCount: 346 // نبدأ من 346 كما طلبت
+};
 
-  ////////////////////////////////////////////////
-  //////////////// CONFIG ////////////////////////
-  ////////////////////////////////////////////////
+// تقييم الوسيط لمنع التكرار
+let mediatorRatings = {};
 
-  const CATEGORY_ID = "1453943996392013901"; // كاتيجوري التكتات
-  const LOG_CHANNEL = "1453948413963141153"; // لوق التكتات
-  const MEDIATOR_RATING_CHANNEL = "1472439331443441828"; // تقييم الوسطاء
-  const ADMIN_RATING_CHANNEL = "1472023428658630686"; // تقييم الادارة
-  const TRANSCRIPT_CHANNEL = "1472218573710823679"; // التران سكربت
-  const STAFF_ROLE = "1454199885460144189"; // رتبة الإدارة الصغرى
-  const ADMIN_ROLE = "1453946893053726830"; // رتبة الإدارة العليا
+// تقييم الإدارة لمنع التكرار
+let adminRatings = {};
 
-  let ticketCounter = 346; // تبدأ التكتات من رقم 346
-  let openTickets = {}; // لتتبع التكتات المفتوحة
-  let mediatorRatings = {};
-  let adminRatings = {};
+// أمر Setup
+module.exports = async (client) => {
 
-  ////////////////////////////////////////////////
-  //////////////// CREATE TICKET //////////////////
-  ////////////////////////////////////////////////
+    client.on("messageCreate", async message => {
 
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isButton()) return;
+        if(message.content === ":setup" && message.guild) {
+            // إرسال الإيمبد الأساسي للتكتات
+            const embed = new EmbedBuilder()
+            .setColor("#ffffff")
+            .setTitle("🎫 Ticket System")
+            .setDescription(
+                "**قوانين التريد:**\n"+
+                "・ممنوع سحب على التذكرة\n"+
+                "・ممنوع فتح أكثر من تكت في نفس الوقت\n\n"+
+                "اضغط على أي زر لإنشاء التكت"
+            );
 
-    const userId = interaction.user.id;
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("new_ticket").setLabel("🎫 فتح تكت").setStyle(ButtonStyle.Primary)
+            );
 
-    // منع فتح أكثر من تكت في نفس الوقت
-    if (Object.values(openTickets).some(t => t.userId === userId)) {
-      return interaction.reply({ content: "❌ **You already have an open ticket**", ephemeral: true });
-    }
+            message.channel.send({embeds:[embed],components:[row]});
+        }
 
-    // إنشاء تكت جديد
-    if (interaction.customId.startsWith("open_ticket_")) {
-      ticketCounter++;
-      const ticketNumber = ticketCounter;
-      const channelName = `ticket-${ticketNumber}-${interaction.user.username}`.toLowerCase();
+        if(message.content === ":done") {
+            // أمر لإرسال تقييم الوسيط بعد إغلاق التكت
+            message.channel.send("✅ تقييم الوسيط سيتم إرساله للطرفين في الخاص.");
+        }
+    });
 
-      const ticketChannel = await interaction.guild.channels.create({
-        name: channelName,
-        type: 0, // GUILD_TEXT
-        parent: CATEGORY_ID,
-        permissionOverwrites: [
-          { id: interaction.guild.roles.everyone, deny: ['ViewChannel'] },
-          { id: userId, allow: ['ViewChannel', 'SendMessages'] },
-          { id: STAFF_ROLE, allow: ['ViewChannel', 'SendMessages'] }
-        ]
-      });
+    // إنشاء التكت و التعامل مع الأزرار
+    client.on("interactionCreate", async interaction => {
 
-      openTickets[ticketChannel.id] = { userId, ticketNumber };
+        if(interaction.isButton()){
 
-      // إرسال الإيمبد الأساسي
-      const mainEmbed = new EmbedBuilder()
-        .setColor("#ffffff")
-        .setTitle(`🎫 Ticket #${ticketNumber}`)
-        .setDescription(`حياك الله <@${userId}>!\nPlease choose a ticket type.`);
+            const member = interaction.user;
 
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder().setCustomId("support").setLabel("💬 Support").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("gift").setLabel("🎁 Gift").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("mediator").setLabel("⚖️ Mediator").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("content").setLabel("🎨 Content Creator").setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId("complaint").setLabel("❌ Admin Complaint").setStyle(ButtonStyle.Danger)
-        );
+            if(interaction.customId === "new_ticket"){
+                const ticketNumber = tickets.ticketCount++;
+                const ticketName = `ticket-${ticketNumber}-${member.id}`;
 
-      await ticketChannel.send({ content: `<@${userId}>`, embeds: [mainEmbed], components: [row] });
+                const ticketChannel = await interaction.guild.channels.create({
+                    name: ticketName,
+                    type: 0, // Text channel
+                    parent: "1453943996392013901", // الكاتيجوري
+                    permissionOverwrites:[
+                        {id: member.id, allow: ["ViewChannel", "SendMessages"]},
+                        {id: interaction.guild.roles.everyone, deny: ["ViewChannel"]}
+                    ]
+                });
 
-      await interaction.reply({ content: `✅ **Ticket created: <#${ticketChannel.id}>**`, ephemeral: true });
-    }
+                tickets.openTickets[ticketChannel.id] = {owner: member.id, number: ticketNumber};
 
-    ////////////////////////////////////////////////
-    //////////////// CLAIM TICKET //////////////////
-    ////////////////////////////////////////////////
+                // إيمبد التكت الأساسي
+                const embed = new EmbedBuilder()
+                .setColor("#ffffff")
+                .setTitle("🎫 Ticket Opened")
+                .setDescription(`مرحبا <@${member.id}>!\nالرجاء اختيار نوع التكت.`);
 
-    if (interaction.customId === "claim_ticket") {
-      const ticket = openTickets[interaction.channel.id];
-      if (!ticket) return;
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("✅ Claim").setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 Close").setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId("add_member").setLabel("➕ Add Member").setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId("delete_ticket").setLabel("🗑️ Delete").setStyle(ButtonStyle.Danger)
+                );
 
-      // اخفاء الإدارة العادية
-      interaction.channel.permissionOverwrites.edit(STAFF_ROLE, { ViewChannel: false });
+                ticketChannel.send({content: `<@${member.id}>`, embeds:[embed], components:[row]});
+                await interaction.reply({content:`✅ تم إنشاء التكت: ${ticketChannel}`, ephemeral:true});
+            }
 
-      await interaction.update({ content: `✅ **Ticket claimed by <@${userId}>**` });
-      const logChannel = client.channels.cache.get(LOG_CHANNEL);
-      if (logChannel) logChannel.send(`✅ Ticket #${ticket.ticketNumber} claimed by <@${userId}>`);
-    }
+            // Claim ticket
+            if(interaction.customId === "claim_ticket"){
+                const ticket = tickets.openTickets[interaction.channel.id];
+                if(!ticket) return interaction.reply({content:"❌ خطأ، التكت غير موجود", ephemeral:true});
 
-    ////////////////////////////////////////////////
-    //////////////// CLOSE TICKET //////////////////
-    ////////////////////////////////////////////////
+                // أخفاء الدور العادي
+                const STAFF_ROLE = "1454199885460144189";
+                interaction.channel.permissionOverwrites.edit(STAFF_ROLE,{ViewChannel:false});
 
-    if (interaction.customId === "close_ticket") {
-      const ticket = openTickets[interaction.channel.id];
-      if (!ticket) return;
+                await interaction.update({content:`✅ Ticket claimed by <@${member.id}>`});
+            }
 
-      // تحقق بخطوتين
-      await interaction.reply({ content: "Are you sure you want to close this ticket? / هل أنت متأكد؟", ephemeral: true });
+            // Close ticket مع خطوة التحقق
+            if(interaction.customId === "close_ticket"){
+                const modal = new ModalBuilder()
+                .setCustomId("close_modal")
+                .setTitle("Close Ticket");
 
-      // مباشرة غلق التكت بعد تأكيد (يمكن تعديل للتفاعل مع زراير confirm/cancel)
-      setTimeout(async () => {
-        await interaction.channel.delete().catch(console.error);
-        delete openTickets[interaction.channel.id];
+                const reasonInput = new TextInputBuilder()
+                .setCustomId("deleteReasonInput")
+                .setLabel("Reason for closing the ticket / سبب الإغلاق")
+                .setStyle(TextInputStyle.Short);
 
-        const logChannel = client.channels.cache.get(LOG_CHANNEL);
-        if (logChannel) logChannel.send(`🗑️ Ticket #${ticket.ticketNumber} closed by <@${userId}>`);
-      }, 3000);
-    }
+                const row = new ActionRowBuilder().addComponents(reasonInput);
+                modal.addComponents(row);
+                await interaction.showModal(modal);
+            }
 
-    ////////////////////////////////////////////////
-    //////////////// MEDIATOR TICKET //////////////
-    ////////////////////////////////////////////////
+            // Add member
+            if(interaction.customId === "add_member"){
+                await interaction.reply({content:"اكتب ID العضو لإضافته:",ephemeral:true});
+            }
 
-    if (interaction.customId === "mediator") {
-      const ticket = openTickets[interaction.channel.id];
-      if (!ticket) return;
+            // Delete ticket
+            if(interaction.customId === "delete_ticket"){
+                const ticket = tickets.openTickets[interaction.channel.id];
+                if(!ticket) return interaction.reply({content:"❌ التكت غير موجود", ephemeral:true});
 
-      const mediatorEmbed = new EmbedBuilder()
-        .setColor("#ffffff")
-        .setTitle("⚖️ Mediator Request")
-        .setDescription(
-          `هذا القسم مخصص لطلب الوسيط لعملية تريد داخل السيرفر\n` +
-          "・تأكد أن الطرف الاخر جاهز\n" +
-          "・رجاء عدم فتح اكثر من تذكرة\n" +
-          "・تحقق من درجة الوسيط\n" +
-          "・اكتب المعلومات المطلوبة بدقة"
-        );
+                delete tickets.openTickets[interaction.channel.id];
+                await interaction.channel.delete().catch(console.error);
+            }
+        }
 
-      await interaction.channel.send({ embeds: [mediatorEmbed] });
-    }
-
-    ////////////////////////////////////////////////
-    //////////////// ADMIN RATING //////////////////
-    ////////////////////////////////////////////////
-
-    if (interaction.customId.startsWith("admin_")) {
-      const [_, rating, ticketNumber] = interaction.customId.split("_");
-      if (!adminRatings[ticketNumber]) adminRatings[ticketNumber] = [];
-      if (adminRatings[ticketNumber].includes(userId)) {
-        return interaction.reply({ content: "❌ You already rated this admin", ephemeral: true });
-      }
-      adminRatings[ticketNumber].push(userId);
-
-      await interaction.reply({ content: `✅ Thank you for rating the admin (${rating}⭐)`, ephemeral: true });
-
-      const adminRoom = client.channels.cache.get(ADMIN_RATING_CHANNEL);
-      if (adminRoom) {
-        const resultEmbed = new EmbedBuilder()
-          .setColor("#ffffff")
-          .setTitle("⭐ Admin Rating Result")
-          .setDescription(`User: <@${userId}>\nRating: ${rating}⭐\nTicket: #${ticketNumber}`);
-        adminRoom.send({ embeds: [resultEmbed] });
-      }
-    }
+        // التعامل مع المودال بعد Close
+        if(interaction.type === InteractionType.ModalSubmit){
+            if(interaction.customId === "close_modal"){
+                const reason = interaction.fields.getTextInputValue("deleteReasonInput");
+                await interaction.reply({content:`🗑️ Ticket closed. Reason: ${reason}`, ephemeral:true});
+                const ticket = tickets.openTickets[interaction.channel.id];
+                if(ticket) delete tickets.openTickets[interaction.channel.id];
+            }
+        }
+    });
 
     ////////////////////////////////////////////////
-    //////////////// MEDIATOR RATING //////////////
+    // Mediator Rating
     ////////////////////////////////////////////////
+    client.on("interactionCreate", async interaction => {
 
-    if (interaction.customId.startsWith("mediator_")) {
-      const [_, rating, ticketNumber] = interaction.customId.split("_");
-      if (!mediatorRatings[ticketNumber]) mediatorRatings[ticketNumber] = [];
-      if (mediatorRatings[ticketNumber].includes(userId)) {
-        return interaction.reply({ content: "❌ You already rated the mediator", ephemeral: true });
-      }
-      mediatorRatings[ticketNumber].push(userId);
+        if(!interaction.isButton()) return;
+        if(!interaction.customId.startsWith("mediator_")) return;
 
-      await interaction.reply({ content: `✅ Thank you for rating the mediator (${rating}⭐)`, ephemeral: true });
+        const split = interaction.customId.split("_");
+        const rating = split[1];
+        const ticketNumber = split[2];
+        const userId = interaction.user.id;
 
-      const mediatorRoom = client.channels.cache.get(MEDIATOR_RATING_CHANNEL);
-      if (mediatorRoom) {
-        const resultEmbed = new EmbedBuilder()
-          .setColor("#ffffff")
-          .setTitle("⭐ Mediator Rating Result")
-          .setDescription(`User: <@${userId}>\nRating: ${rating}⭐\nTicket: #${ticketNumber}`);
-        mediatorRoom.send({ embeds: [resultEmbed] });
-      }
-    }
+        if(!mediatorRatings[ticketNumber]) mediatorRatings[ticketNumber] = [];
+        if(mediatorRatings[ticketNumber].includes(userId)){
+            return interaction.reply({content:"❌ لقد قيمت الوسيط بالفعل / Already rated.",ephemeral:true});
+        }
+
+        mediatorRatings[ticketNumber].push(userId);
+        await interaction.reply({content:`✅ شكرا لتقييمك الوسيط (${rating}⭐)`,ephemeral:true});
+    });
 
     ////////////////////////////////////////////////
-    //////////////// ADD MEMBER ////////////////////
+    // Admin Rating
     ////////////////////////////////////////////////
+    client.on("interactionCreate", async interaction => {
 
-    if (interaction.customId === "add_member") {
-      const memberId = "ID_HERE"; // يمكن استبدالها بالمدخل من الزر
-      await interaction.channel.permissionOverwrites.edit(memberId, { ViewChannel: true, SendMessages: true });
-      const logChannel = client.channels.cache.get(LOG_CHANNEL);
-      if (logChannel) logChannel.send(`<@${memberId}> has been added to ticket by <@${userId}>`);
-    }
-  });
+        if(!interaction.isButton()) return;
+        if(!interaction.customId.startsWith("admin_")) return;
+
+        const split = interaction.customId.split("_");
+        const rating = split[1];
+        const ticketNumber = split[2];
+        const userId = interaction.user.id;
+
+        if(!adminRatings[ticketNumber]) adminRatings[ticketNumber] = [];
+        if(adminRatings[ticketNumber].includes(userId)){
+            return interaction.reply({content:"❌ لقد قيمت الإدارة بالفعل / Already rated.",ephemeral:true});
+        }
+
+        adminRatings[ticketNumber].push(userId);
+        await interaction.reply({content:`✅ شكراً لتقييمك الإدارة (${rating}⭐)`, ephemeral:true});
+
+        // إرسال إلى روم تقييم الإدارة
+        const adminRoom = client.channels.cache.get("1472023428658630686");
+        if(adminRoom){
+            const resultEmbed = new EmbedBuilder()
+            .setColor("#ffffff")
+            .setTitle("⭐ Admin Rating Result")
+            .setDescription(`User: <@${userId}>\nRating: ${rating}⭐\nTicket: #${ticketNumber}`);
+            adminRoom.send({embeds:[resultEmbed]});
+        }
+    });
 
 };
