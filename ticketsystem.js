@@ -5,7 +5,6 @@ module.exports = async (client) => {
         .setName('setup')
         .setDescription('إعداد نظام التكتات بالكامل'),
 
-    async execute(interaction, client) {
 
         await interaction.reply({ content: '⏳ جاري إعداد نظام التكتات...', ephemeral: true });
 
@@ -58,9 +57,6 @@ module.exports = async (client) => {
 
         await interaction.followUp({ content: '✅ تم إنشاء Embed التكتات مع كل الأزرار والقوانين الجديدة بنجاح!', ephemeral: true });
     }
-};
-
-module.exports = async (client) => {
 
     client.on('interactionCreate', async interaction => {
 
