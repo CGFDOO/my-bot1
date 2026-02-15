@@ -3,7 +3,7 @@ const { SlashCommandBuilder, ChannelType, PermissionFlagsBits, EmbedBuilder, Act
 module.exports = async (client) => {
      data: new SlashCommandBuilder()
         .setName('setup')
-        .setDescription('إعداد نظام التكتات بالكامل');
+        .setDescription('إعداد نظام التكتات بالكامل'));
 
     client.on('interactionCreate', async (interaction) => {
    
