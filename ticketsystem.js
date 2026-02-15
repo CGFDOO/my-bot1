@@ -274,7 +274,7 @@ module.exports = async (client) => {
             return interaction.reply({ content: '⚠️ لا يمكنك استخدام هذا الزر.', ephemeral: true });
         }
 
-    });
+    
 
 };
 
