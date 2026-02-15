@@ -98,9 +98,9 @@ module.exports = async (client) => {
 `حياك الله 👋
 هذا التكت مخصص لـ ${ticketType.name}.
 
-يرجى كتابة التفاصيل المطلوبة أدناه:`
-            )
-            .setColor(ticketType.color);
+101   يرجى كتابة التفاصيل المطلوبة أدناه`
+102   
+103   .setColor(ticketType.color)
 
         // Buttons داخل التكت: Claim / Close / Add / Delete
         const ticketButtons = new ActionRowBuilder()
