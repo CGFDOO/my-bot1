@@ -333,17 +333,5 @@ module.exports = async (client) => {
             console.log('Error setting permissions on ticket creation:', err);
         }
 
-    // ===================================
-// نظام الـ Cooldown والحماية
-// ===================================
-
-if (client.cooldowns.has(interaction.user.id)) {
-    return interaction.reply({ content: "Please wait a moment.", ephemeral: true });
-}
-
-client.cooldowns.add(interaction.user.id);
-setTimeout(() => client.cooldowns.delete(interaction.user.id), 2000);
-
-}); // القفلة الأولى: بتقفل الـ Interaction (اللي بدأت في سطر 282)
-
-}; // القفلة الثانية: بتقفل الملف (اللي بدأ في سطر 277)
+    console.log('✅ Ticket System Ready');
+};
