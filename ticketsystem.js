@@ -332,8 +332,7 @@ module.exports = async (client) => {
         } catch (err) {
         console.log('Error setting permissions on ticket creation:', err);
     }
-}); // <--- القوس ده اللي كان ناقصك ويقفل الحدث
+}); // دي القفلة اللي كانت ناقصة لسطر 322
 
-console.log('✅ Ticket System Ready');
-
-}; // <--- ده بيقفل الملف كله
+console.log('✅ MNC Ticket System Ready');
+}; // دي قفلة الملف كله (سطر 277)
