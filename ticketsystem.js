@@ -330,8 +330,10 @@ module.exports = async (client) => {
                 ManageChannels: true
             });
         } catch (err) {
-            console.log('Error setting permissions on ticket creation:', err);
-        }
+        console.log('Error setting permissions on ticket creation:', err);
+    }
+}); // <--- القوس ده اللي كان ناقصك ويقفل الحدث
 
-    console.log('✅ Ticket System Ready');
-};
+console.log('✅ Ticket System Ready');
+
+}; // <--- ده بيقفل الملف كله
