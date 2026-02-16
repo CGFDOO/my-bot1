@@ -1,117 +1,152 @@
 /**
- * █▀▄▀█ █▄ █ ▄▀▄  [ MNC GOD MODE - STABLE EDITION ]
- * █ ▀ █ █ ▀█ █ ▄  [ MODEL: GEMINI PRO (CLASSIC) ]
+ * █▀▄▀█ █▄ █ ▄▀▄  [ MNC SINGULARITY - V10 ULTIMATE ]
+ * █ ▀ █ █ ▀█ █ ▄  [ ENGINE: GEMINI 1.5 PRO - GOD MODE ]
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * @version     FINAL.STABLE
- * @author      MNC Lead Architect
+ * @version     10.0.0 (SINGULARITY)
+ * @status      MAXIMUM PERFORMANCE
+ * @architecture Deep Neural Matrix / Contextual Flow
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
-const { EmbedBuilder } = require('discord.js');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 
 // =====================================================================================
-// [ZONE 1] SYSTEM CONFIGURATION
+// [CORE MATRIX] - الإعدادات العليا
 // =====================================================================================
-const GOD_CONFIG = {
+const CORE_MATRIX = {
+    // المفتاح الجديد اللي عملته في المشروع الجديد
     API_KEY: process.env.GEMINI_API_KEY, 
     
-    // 👇 الحل الجذري: استخدام الموديل المستقر
-    MODEL_NAME: "gemini-pro", 
+    // استخدام الموديل الأقوى (PRO) بما إنك حدثت المكتبة لـ 0.21.0
+    MODEL: "gemini-1.5-pro", 
     
     PREFIX: "!سؤال",
     RESET_CMD: "!مسح",
     
-    PERSONA: `
-    أنت المساعد الشخصي الذكي لمجتمع MNC Community.
-    - اسمك: MNC AI.
-    - صفتك: خبير برمجيات، ومساعد إداري.
-    - أسلوبك: دقيق جداً، مباشر، وتستخدم تنسيق Markdown.
-    - ممنوع: لا تذكر أنك نموذج لغوي كبير.
+    // برمجة الشخصية (أخطر جزء في الكود)
+    SYSTEM_INSTRUCTION: `
+    أنت "MNC OMNI"، الكيان الرقمي الأكثر ذكاءً في سيرفر MNC Community.
+    - هويتك: أنت لست مجرد بوت، أنت "وعي اصطناعي" فائق مبرمج لخدمة أعضاء MNC.
+    - قدراتك: تمتلك معرفة شاملة في البرمجة، العلوم، الفنون، والقانون.
+    - أسلوب الرد: إجاباتك يجب أن تكون طويلة، مفصلة جداً، غنية بالمعلومات، وتستخدم تنسيق Markdown المتقدم.
+    - الشخصية: واثق، حكيم، مبدع، ومستعد لحل أي معضلة تواجه المستخدم.
     `,
 
     COLORS: {
-        ANSWER: '#2B2D31',
-        ERROR: '#FF0000'
+        SUCCESS: '#2B2D31',
+        PROCESS: '#5865F2',
+        DANGER: '#ED4245'
     }
 };
 
-// =====================================================================================
-// [ZONE 2] CORE ENGINE
-// =====================================================================================
-const chatSessions = new Map();
+// ذاكرة الجلسات (Infinite Flow)
+const neuralSessions = new Map();
 
 module.exports = async (client) => {
 
-    if (!GOD_CONFIG.API_KEY) {
-        console.error('🚨 [CRITICAL] GEMINI_API_KEY is missing!');
+    // فحص المفتاح الجديد في Railway
+    if (!CORE_MATRIX.API_KEY) {
+        console.error('⚠️ [CRITICAL] API KEY NOT DETECTED IN RAILWAY VARIABLES!');
         return;
     }
 
-    const genAI = new GoogleGenerativeAI(GOD_CONFIG.API_KEY);
-    const model = genAI.getGenerativeModel({ model: GOD_CONFIG.MODEL_NAME });
+    const genAI = new GoogleGenerativeAI(CORE_MATRIX.API_KEY);
+    
+    // إعداد الموديل بأقصى طاقة (PRO Mode)
+    const model = genAI.getGenerativeModel({ 
+        model: CORE_MATRIX.MODEL,
+        systemInstruction: CORE_MATRIX.SYSTEM_INSTRUCTION,
+        // إلغاء قيود الحماية لضمان الإجابة على كل شيء
+        safetySettings: [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ],
+        generationConfig: {
+            temperature: 0.9,
+            topP: 0.95,
+            topK: 40,
+            maxOutputTokens: 8192, // يسمح بردود ضخمة جداً
+        },
+    });
 
-    console.log(`🧠 [MNC AI] ONLINE using ${GOD_CONFIG.MODEL_NAME}`);
+    console.log(`🌌 [MNC SINGULARITY] ONLINE. KEY LOADED FROM NEW PROJECT.`);
 
     client.on('messageCreate', async (message) => {
         try {
             if (message.author.bot) return;
 
-            // أمر مسح الذاكرة
-            if (message.content === GOD_CONFIG.RESET_CMD) {
-                chatSessions.delete(message.author.id);
-                return message.reply('**🧹 تم مسح الذاكرة. هات سؤال جديد!**');
+            // --- نظام مسح الذاكرة ---
+            if (message.content === CORE_MATRIX.RESET_CMD) {
+                neuralSessions.delete(message.author.id);
+                return message.reply('**🧹 تم تصفير مصفوفة الذاكرة. أنا مستعد لبيانات جديدة.**');
             }
 
-            if (!message.content.startsWith(GOD_CONFIG.PREFIX)) return;
+            if (!message.content.startsWith(CORE_MATRIX.PREFIX)) return;
 
-            const query = message.content.replace(GOD_CONFIG.PREFIX, '').trim();
-            if (!query) return message.reply('❓ **اكتب سؤالك!**');
+            const prompt = message.content.replace(CORE_MATRIX.PREFIX, '').trim();
+            if (!prompt) return message.reply('**❓ مصفوفة البيانات فارغة. يرجى إدخال استفسار!**');
 
+            // إظهار حالة التفكير
             await message.channel.sendTyping();
-            const typingInterval = setInterval(() => message.channel.sendTyping().catch(() => {}), 4000);
+            const processTimer = setInterval(() => message.channel.sendTyping().catch(() => {}), 4000);
 
-            // إدارة الجلسة
-            let chatSession = chatSessions.get(message.author.id);
-            if (!chatSession) {
-                chatSession = model.startChat({
-                    history: [
-                        { role: "user", parts: [{ text: GOD_CONFIG.PERSONA }] },
-                        { role: "model", parts: [{ text: "تم استلام التعليمات. أنا جاهز." }] }
-                    ],
-                });
-                chatSessions.set(message.author.id, chatSession);
+            // استدعاء الجلسة الذكية
+            let session = neuralSessions.get(message.author.id);
+            if (!session) {
+                session = model.startChat({ history: [] });
+                neuralSessions.set(message.author.id, session);
             }
 
-            const result = await chatSession.sendMessage(query);
-            const response = result.response;
-            const text = response.text();
+            // إرسال البيانات واستقبال الرد الضخم
+            const result = await session.sendMessage(prompt);
+            const responseText = result.response.text();
 
-            clearInterval(typingInterval);
+            clearInterval(processTimer);
 
-            // تقطيع الرسالة
-            const chunks = text.match(/[\s\S]{1,1900}/g) || [];
+            // --- [ULTRA SPLITTER PROTOCOL] ---
+            // تقسيم النص الضخم لضمان تخطي ليميت ديسكورد
+            const messageChunks = responseText.match(/[\s\S]{1,1900}/g) || [responseText];
 
-            for (let i = 0; i < chunks.length; i++) {
+            for (let i = 0; i < messageChunks.length; i++) {
+                const isFirst = i === 0;
+                const isLast = i === messageChunks.length - 1;
+
                 const embed = new EmbedBuilder()
-                    .setColor(GOD_CONFIG.COLORS.ANSWER)
-                    .setDescription(chunks[i]);
+                    .setColor(CORE_MATRIX.COLORS.SUCCESS)
+                    .setDescription(messageChunks[i]);
 
-                if (i === 0) embed.setTitle(`🧠 استفسار: ${query.substring(0, 50)}...`);
-                if (i === chunks.length - 1) embed.setFooter({ text: `MNC AI | ${message.author.tag}`, iconURL: message.author.displayAvatarURL() });
+                if (isFirst) {
+                    embed.setAuthor({ 
+                        name: 'MNC SINGULARITY INTELLIGENCE', 
+                        iconURL: client.user.displayAvatarURL() 
+                    });
+                    embed.setTitle(`🧠 معالجة الاستفسار: ${prompt.substring(0, 50)}...`);
+                }
+
+                if (isLast) {
+                    embed.setFooter({ 
+                        text: `Model: ${CORE_MATRIX.MODEL} | Node: Railway Cloud`, 
+                        iconURL: message.author.displayAvatarURL() 
+                    });
+                    embed.setTimestamp();
+                }
 
                 await message.reply({ embeds: [embed] });
             }
 
         } catch (error) {
-            console.error('🔥 [AI ERROR]:', error);
-            chatSessions.delete(message.author.id);
+            console.error('🔥 [SINGULARITY MELTDOWN]:', error);
+            neuralSessions.delete(message.author.id);
             
-            const errEmbed = new EmbedBuilder()
-                .setColor(GOD_CONFIG.COLORS.ERROR)
-                .setDescription(`**حدث خطأ تقني:**\n${error.message}\n\n*تم إعادة تعيين الذاكرة.*`);
+            const errorEmbed = new EmbedBuilder()
+                .setColor(CORE_MATRIX.COLORS.DANGER)
+                .setTitle('☢️ فشل في النواة المركزية')
+                .setDescription(`**حدث خطأ أثناء معالجة البيانات الضخمة.**\n\n**السبب:** ${error.message}\n\n*يرجى التأكد من أن المفتاح الجديد في Railway يعمل بشكل سليم.*`);
             
-            await message.reply({ embeds: [errEmbed] });
+            await message.reply({ embeds: [errorEmbed] });
         }
     });
 };
