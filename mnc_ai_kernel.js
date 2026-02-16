@@ -1,48 +1,24 @@
-/**
- * █▀▄▀█ █▄ █ ▄▀▄  [ MNC OMEGA-STABLE - V11 ]
- * █ ▀ █ █ ▀█ █ ▄  [ THE FINAL MISSION-CRITICAL BUILD ]
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- */
-
 const { EmbedBuilder } = require('discord.js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const MNC_CORE = {
-    // المفتاح اللي في Railway
-    API_KEY: process.env.GEMINI_API_KEY, 
-    // الموديل المستقر والأسرع
-    MODEL: "gemini-1.5-flash", 
-    PREFIX: "!سؤال",
-    SYSTEM: "أنت MNC OMNI، المساعد الفائق لسيرفر MNC. إجاباتك ضخمة، مفصلة جداً، واحترافية وتستخدم تنسيق Markdown."
-};
-
 module.exports = async (client) => {
-    if (!MNC_CORE.API_KEY) return console.error('🚨 [ERROR] GEMINI_API_KEY MISSING IN RAILWAY!');
-
-    const genAI = new GoogleGenerativeAI(MNC_CORE.API_KEY);
+    // 1. الربط المباشر بالمفتاح من Railway
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     
-    // إعداد الموديل مع تحديد فئات الأمان المدعومة فقط (لحل خطأ 400)
-    const model = genAI.getGenerativeModel({ 
-        model: MNC_CORE.MODEL,
-        systemInstruction: MNC_CORE.SYSTEM,
-        safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
-    });
+    // 2. استخدام الموديل الأكثر استقراراً في العالم حالياً
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     client.on('messageCreate', async (message) => {
-        if (message.author.bot || !message.content.startsWith(MNC_CORE.PREFIX)) return;
+        // تجاهل البوتات والأوامر غير الصحيحة
+        if (message.author.bot || !message.content.startsWith('!سؤال')) return;
 
-        const input = message.content.slice(MNC_CORE.PREFIX.length).trim();
+        const input = message.content.replace('!سؤال', '').trim();
         if (!input) return message.reply('**❓ اكتب سؤالك يا وحش!**');
 
         await message.channel.sendTyping();
 
         try {
-            // طلب الإجابة مباشرة
+            // أسرع وأبسط طريقة للطلب لضمان تخطي أخطاء الـ 404 و 400
             const result = await model.generateContent(input);
             const response = result.response.text();
 
@@ -54,15 +30,20 @@ module.exports = async (client) => {
                     .setColor('#2B2D31')
                     .setDescription(chunks[i]);
                 
-                if (i === 0) embed.setAuthor({ name: 'MNC OMEGA CORE', iconURL: client.user.displayAvatarURL() });
-                if (i === chunks.length - 1) embed.setFooter({ text: 'MNC Intelligence System | V11 Stable' });
+                if (i === 0) embed.setAuthor({ name: 'MNC TERMINATOR SYSTEM', iconURL: client.user.displayAvatarURL() });
+                if (i === chunks.length - 1) embed.setFooter({ text: 'MNC Ultimate Intelligence | V12 Stable' });
 
                 await message.reply({ embeds: [embed] });
             }
 
         } catch (error) {
-            console.error('🔥 [OMEGA ERROR]:', error);
-            message.reply(`⚠️ **حدث خطأ في المعالجة:** \`${error.message}\``);
+            console.error('🔥 [TERMINATOR ERROR]:', error);
+            
+            let advice = "تأكد من المفتاح الجديد في Railway.";
+            if (error.message.includes('404')) advice = "جوجل لسه مش شايفة المشروع الجديد، استنى دقيقتين.";
+            if (error.message.includes('400')) advice = "فيه مشكلة في صياغة السؤال أو إعدادات الحماية.";
+
+            message.reply(`⚠️ **حدث خطأ:** \`${error.message}\`\n💡 **نصيحة:** ${advice}`);
         }
     });
 };
