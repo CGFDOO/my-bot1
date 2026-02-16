@@ -1,62 +1,70 @@
+/**
+ * █▀▄▀█ █▄ █ ▄▀▄  [ MNC SINGULARITY - V10.2 ]
+ * █ ▀ █ █ ▀█ █ ▄  [ THE FINAL STABLE REVISION ]
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ */
+
 const { EmbedBuilder } = require('discord.js');
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 
 const CORE_MATRIX = {
     API_KEY: process.env.GEMINI_API_KEY, 
-    // 👇 التعديل هنا: استخدام فلاش لضمان الاستقرار والسرعة
+    // هنستخدم فلاش لأنه الأكثر استقراراً للمشاريع الجديدة
     MODEL: "gemini-1.5-flash", 
     PREFIX: "!سؤال",
-    RESET_CMD: "!مسح",
-    SYSTEM_INSTRUCTION: "أنت MNC OMNI، المساعد الذكي لسيرفر MNC. إجاباتك مفصلة واحترافية.",
-    COLORS: { SUCCESS: '#2B2D31', DANGER: '#ED4245' }
+    SYSTEM: "أنت MNC OMNI، وعي رقمي فائق لسيرفر MNC. إجاباتك ضخمة، مفصلة جداً، واحترافية."
 };
 
-const neuralSessions = new Map();
-
 module.exports = async (client) => {
-    if (!CORE_MATRIX.API_KEY) return console.error('⚠️ API KEY MISSING IN RAILWAY!');
+    if (!CORE_MATRIX.API_KEY) return console.error('🚨 [ERROR] API KEY MISSING!');
 
     const genAI = new GoogleGenerativeAI(CORE_MATRIX.API_KEY);
+    
+    // إعداد الموديل مع ضبط الأمان "Zero-Restrict"
     const model = genAI.getGenerativeModel({ 
         model: CORE_MATRIX.MODEL,
-        systemInstruction: CORE_MATRIX.SYSTEM_INSTRUCTION,
-        safetySettings: [{ category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE }],
+        systemInstruction: CORE_MATRIX.SYSTEM,
+        safetySettings: Object.values(HarmCategory).map(cat => ({
+            category: cat,
+            threshold: HarmBlockThreshold.BLOCK_NONE
+        }))
     });
 
     client.on('messageCreate', async (message) => {
+        if (message.author.bot || !message.content.startsWith(CORE_MATRIX.PREFIX)) return;
+
+        const input = message.content.slice(CORE_MATRIX.PREFIX.length).trim();
+        if (!input) return message.reply('**❓ اكتب سؤالك يا وحش!**');
+
+        await message.channel.sendTyping();
+
         try {
-            if (message.author.bot) return;
-            if (message.content === CORE_MATRIX.RESET_CMD) {
-                neuralSessions.delete(message.author.id);
-                return message.reply('**🧹 تم تصفير الذاكرة. أنا جاهز!**');
-            }
-            if (!message.content.startsWith(CORE_MATRIX.PREFIX)) return;
+            // استخدام generateContent مباشرة لتجنب تعليقات الجلسة (Sessions)
+            const result = await model.generateContent(input);
+            const response = result.response.text();
 
-            const prompt = message.content.replace(CORE_MATRIX.PREFIX, '').trim();
-            if (!prompt) return message.reply('**❓ اكتب سؤالك!**');
+            // نظام تقطيع الردود الضخمة
+            const chunks = response.match(/[\s\S]{1,1900}/g) || [response];
 
-            await message.channel.sendTyping();
-            let session = neuralSessions.get(message.author.id);
-            if (!session) {
-                session = model.startChat({ history: [] });
-                neuralSessions.set(message.author.id, session);
-            }
-
-            const result = await session.sendMessage(prompt);
-            const responseText = result.response.text();
-
-            const chunks = responseText.match(/[\s\S]{1,1900}/g) || [responseText];
             for (let i = 0; i < chunks.length; i++) {
                 const embed = new EmbedBuilder()
-                    .setColor(CORE_MATRIX.COLORS.SUCCESS)
+                    .setColor('#2B2D31')
                     .setDescription(chunks[i]);
-                if (i === 0) embed.setTitle(`🧠 MNC Intelligence: ${prompt.substring(0, 40)}...`);
+                
+                if (i === 0) embed.setAuthor({ name: 'MNC SINGULARITY CORE', iconURL: client.user.displayAvatarURL() });
+                if (i === chunks.length - 1) embed.setFooter({ text: 'MNC Cloud System | Active' });
+
                 await message.reply({ embeds: [embed] });
             }
+
         } catch (error) {
-            console.error(error);
-            neuralSessions.delete(message.author.id);
-            message.reply(`⚠️ **خطأ في المعالجة:** ${error.message}`);
+            console.error('🔥 [CORE ERROR]:', error);
+            // لو طلع خطأ 404، هنعرف إن المفتاح محتاج دقيقة كمان عشان يتفعل في جوجل
+            if (error.message.includes('404')) {
+                message.reply('⚠️ **خطأ 404 من جوجل:** المفتاح الجديد لسه جوجل مش مفعلاه على الموديلات. استنى دقيقتين وجرب تاني، وهتلاقيه اشتغل فوراً.');
+            } else {
+                message.reply(`⚠️ **حدث خطأ:** ${error.message}`);
+            }
         }
     });
 };
