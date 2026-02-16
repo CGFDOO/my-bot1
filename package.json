@@ -9,6 +9,7 @@
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
     "discord-html-transcripts": "^3.1.5",
-    "@google/generative-ai": "^0.2.1"
+    "@google/generative-ai": "^0.17.1"
   }
 }
+
