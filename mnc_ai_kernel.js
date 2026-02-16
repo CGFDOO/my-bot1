@@ -1,28 +1,67 @@
+/**
+ * █▀▄▀█ █▄ █ ▄▀▄  [ MNC SUPREME-CORE - V13 ]
+ * █ ▀ █ █ ▀█ █ ▄  [ THE UNSTOPPABLE TERMINATOR ]
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * @version     13.0.0 (ULTIMATE)
+ * @engine      Gemini 1.5 Flash (Latest & Stable)
+ * @safety      Optimized Zero-Error Matrix
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ */
+
 const { EmbedBuilder } = require('discord.js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const SUPREME_CONFIG = {
+    // التقاط المفتاح من إعدادات Railway
+    API_KEY: process.env.GEMINI_API_KEY, 
+    // استخدام فلاش لضمان الاستقرار وتجنب أخطاء 404
+    MODEL: "gemini-1.5-flash", 
+    PREFIX: "!سؤال",
+    // شخصية البوت الجبارة
+    SYSTEM: "أنت MNC AI، الكيان الرقمي الأذكى في سيرفر MNC. إجاباتك أسطورية، ضخمة جداً، شاملة لكل التفاصيل، وتستخدم تنسيق Markdown باحترافية عالية."
+};
+
 module.exports = async (client) => {
-    // 1. الربط المباشر بالمفتاح من Railway
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // التأكد من وجود المفتاح في Variables
+    if (!SUPREME_CONFIG.API_KEY) {
+        console.error('🚨 [CRITICAL] GEMINI_API_KEY NOT FOUND IN RAILWAY!');
+        return;
+    }
+
+    const genAI = new GoogleGenerativeAI(SUPREME_CONFIG.API_KEY);
     
-    // 2. استخدام الموديل الأكثر استقراراً في العالم حالياً
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // إعداد الموديل مع إصلاح خطأ الـ 400 (Safety Settings)
+    const model = genAI.getGenerativeModel({ 
+        model: SUPREME_CONFIG.MODEL,
+        systemInstruction: SUPREME_CONFIG.SYSTEM,
+        // استخدمنا فقط الفئات التي تدعمها جوجل حالياً لتجنب خطأ 400
+        safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
+    });
+
+    console.log(`🌌 [MNC SUPREME] KERNEL V13 DEPLOYED. READY FOR ACTION.`);
 
     client.on('messageCreate', async (message) => {
-        // تجاهل البوتات والأوامر غير الصحيحة
-        if (message.author.bot || !message.content.startsWith('!سؤال')) return;
-
-        const input = message.content.replace('!سؤال', '').trim();
-        if (!input) return message.reply('**❓ اكتب سؤالك يا وحش!**');
-
-        await message.channel.sendTyping();
-
         try {
-            // أسرع وأبسط طريقة للطلب لضمان تخطي أخطاء الـ 404 و 400
+            if (message.author.bot || !message.content.startsWith(SUPREME_CONFIG.PREFIX)) return;
+
+            const input = message.content.slice(SUPREME_CONFIG.PREFIX.length).trim();
+            if (!input) return message.reply('**❓ مصفوفة البيانات فارغة. اسألني أي شيء يا بطل!**');
+
+            await message.channel.sendTyping();
+            const processTick = setInterval(() => message.channel.sendTyping().catch(() => {}), 4000);
+
+            // إرسال الطلب واستقبال الإجابة الضخمة
             const result = await model.generateContent(input);
             const response = result.response.text();
 
-            // نظام تقطيع الردود الضخمة
+            clearInterval(processTick);
+
+            // نظام تقطيع الردود الضخمة (لضمان وصول الردود الطويلة جداً)
             const chunks = response.match(/[\s\S]{1,1900}/g) || [response];
 
             for (let i = 0; i < chunks.length; i++) {
@@ -30,20 +69,15 @@ module.exports = async (client) => {
                     .setColor('#2B2D31')
                     .setDescription(chunks[i]);
                 
-                if (i === 0) embed.setAuthor({ name: 'MNC TERMINATOR SYSTEM', iconURL: client.user.displayAvatarURL() });
-                if (i === chunks.length - 1) embed.setFooter({ text: 'MNC Ultimate Intelligence | V12 Stable' });
+                if (i === 0) embed.setAuthor({ name: 'MNC SUPREME INTELLIGENCE', iconURL: client.user.displayAvatarURL() });
+                if (i === chunks.length - 1) embed.setFooter({ text: 'MNC Global Cloud | Singularity Active' });
 
                 await message.reply({ embeds: [embed] });
             }
 
         } catch (error) {
-            console.error('🔥 [TERMINATOR ERROR]:', error);
-            
-            let advice = "تأكد من المفتاح الجديد في Railway.";
-            if (error.message.includes('404')) advice = "جوجل لسه مش شايفة المشروع الجديد، استنى دقيقتين.";
-            if (error.message.includes('400')) advice = "فيه مشكلة في صياغة السؤال أو إعدادات الحماية.";
-
-            message.reply(`⚠️ **حدث خطأ:** \`${error.message}\`\n💡 **نصيحة:** ${advice}`);
+            console.error('🔥 [SUPREME ERROR]:', error);
+            message.reply(`⚠️ **حدث خطأ في النظام:** \`${error.message}\`\n💡 **نصيحة:** تأكد أن المفتاح في Railway هو الذي أنشأته في المشروع الجديد.`);
         }
     });
 };
