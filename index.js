@@ -207,4 +207,6 @@ console.log(`🔥 READY AS ${client.user.tag}`);
 
 require("./ticketsystem.js")(client);
 
+require('./mnc_secure_clear')(client);
+
 client.login(process.env.TOKEN);
