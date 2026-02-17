@@ -207,6 +207,4 @@ console.log(`🔥 READY AS ${client.user.tag}`);
 
 require("./ticketsystem.js")(client);
 
-require('./mnc_ai_kernel')(client);
-
 client.login(process.env.TOKEN);
