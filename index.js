@@ -209,6 +209,4 @@ require("./ticketsystem.js")(client);
 
 require('./mnc_secure_clear.js')(client);
 
-require('./mnc_security_plus.js')(client);
-
 client.login(process.env.TOKEN);
