@@ -1,6 +1,6 @@
 /**
  * █▀▄▀█ █▄ █ ▄▀▄  [ MNC ULTIMATE SYSTEM - V13.0 ]
- * █ ▀ █ █ ▀█ █ ▄  [ FINAL CORRECTED EDITION ]
+ * █ ▀ █ █ ▀█ █ ▄  [ OWNER-ONLY RATING EDITION ]
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
@@ -47,7 +47,7 @@ module.exports = async (client) => {
     const ticketTypes = new Map();     
     const ticketMediator = new Map();  
     
-    // V13 Logic Maps
+    // V13 Logic Maps (للوجات الشاملة)
     const ticketClaimer = new Map();   
     const ticketCloser = new Map();    
     const ticketAddedUsers = new Map(); 
@@ -107,7 +107,7 @@ module.exports = async (client) => {
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('btn_trade_input').setLabel('📝 تسجيل بيانات التريد').setStyle(ButtonStyle.Primary)
             );
-            return message.reply({ content: '**👇 Mediator: اضغط هنا لتسجيل بيانات العملية:**', components: [row] });
+            return message.reply({ content: '**👇 اضغط هنا لتسجيل بيانات العملية (متاح للأطراف):**', components: [row] });
         }
 
         // --- !req-high ---
@@ -127,11 +127,13 @@ module.exports = async (client) => {
             return message.channel.send({ content: `⚠️ **Approval Needed:** ${mentions}`, embeds: [embed], components: [row] });
         }
 
-        // --- !done ---
+        // --- !done (تعديل جذري: صاحب التكت فقط) ---
         if (command === 'done' && isMed && message.channel.name.startsWith('ticket-')) {
             ticketMediator.set(message.channel.id, message.author.id); 
 
             const ticketID = message.channel.id;
+            const ticketOwnerId = message.channel.topic; // صاحب التكت
+
             const row = new ActionRowBuilder().addComponents(
                 [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_med_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
             );
@@ -143,18 +145,18 @@ module.exports = async (client) => {
                 .setDescription(`**شكراً لاستخدامك وساطة MNC.**\nيرجى تقييم خدمة الوسيط **${message.author.username}**.\n\n**⭐ اضغط على الزر المناسب بالأسفل:**`)
                 .setThumbnail(message.author.displayAvatarURL());
 
-            // Fetch Members Fix
-            const members = await message.channel.members.fetch();
-            let sentCount = 0;
-
-            for (const [id, member] of members) {
-                if (!member.user.bot && member.id !== message.author.id) {
-                    await member.send({ embeds: [dmEmbed], components: [row] }).catch(() => {});
-                    sentCount++;
+            // ✅ الإرسال لصاحب التكت فقط (حصرياً)
+            try {
+                const ownerMember = await message.guild.members.fetch(ticketOwnerId);
+                if (ownerMember) {
+                    await ownerMember.send({ embeds: [dmEmbed], components: [row] });
+                    return message.channel.send(`✅ **تم إرسال طلب التقييم لصاحب التذكرة (${ownerMember.user.tag}) بنجاح.**`);
+                } else {
+                    return message.channel.send(`❌ **لم يتم العثور على صاحب التذكرة.**`);
                 }
+            } catch (e) {
+                return message.channel.send(`⚠️ **تعذر إرسال التقييم (الخاص مغلق).**`);
             }
-
-            return message.channel.send(`✅ **تم إرسال طلب التقييم لـ ${sentCount} عضو بنجاح.**`);
         }
 
         // --- !come ---
@@ -238,7 +240,7 @@ module.exports = async (client) => {
                 return channel.send('**done**');
             }
 
-            // ⭐ V13 Feature: Instant Add Log
+            // ⭐ لوج الإضافة الفوري (V13 Feature)
             if (customId === 'modal_add_user') {
                 const targetId = interaction.fields.getTextInputValue('uid');
                 await interaction.deferReply();
@@ -261,12 +263,12 @@ module.exports = async (client) => {
             if (customId === 'modal_delete_reason') {
                 const reason = interaction.fields.getTextInputValue('reason');
                 await interaction.reply(`**🗑️ Deleting Ticket.. Reason: ${reason}**`);
-                // V13 Feature: Full Delete Log
+                // V13: لوج الحذف الشامل
                 sendFinalDeleteLog(guild, channel, user, reason);
                 setTimeout(() => channel.delete().catch(() => {}), 4000);
             }
 
-            // ⭐ التقييم (تم تعديل النصوص والصور هنا)
+            // ⭐ لوج التقييم (تم تعديل النصوص والصور هنا)
             if (customId.startsWith('modal_rate_')) {
                 const mainGuild = client.guilds.cache.get(CONFIG.guildID); 
 
@@ -313,7 +315,7 @@ module.exports = async (client) => {
                 const logEmbed = new EmbedBuilder()
                     .setTitle(type === 'med' ? `🛡️ **MNC MIDDLEMAN REVIEW**` : `👨‍💼 **MNC STAFF REVIEW**`)
                     .setColor(type === 'med' ? '#F1C40F' : '#3498DB')
-                    // ✅ صورة السيرفر فوق
+                    // ✅ صورة السيرفر فوق (Thumbnail)
                     .setThumbnail(mainGuild ? mainGuild.iconURL() : null)
                     .addFields(
                         { name: '👤 العميل (المُقيِّم)', value: `<@${targetId}>`, inline: true },
@@ -324,7 +326,7 @@ module.exports = async (client) => {
                         { name: '⭐ التقييم', value: `${starEmojis} **(${stars}/5)**`, inline: true },
                         { name: '💬 التعليق', value: `\`\`\`${comment}\`\`\``, inline: false }
                     )
-                    // ✅ صورة العضو تحت
+                    // ✅ صورة العضو اللي قيم تحت (Footer)
                     .setFooter({ text: `Rated by: ${user.tag}`, iconURL: user.displayAvatarURL() })
                     .setTimestamp();
 
@@ -370,7 +372,10 @@ module.exports = async (client) => {
 
             if (customId === 'btn_claim') {
                 ticketClaimer.set(channel.id, user.id);
+                // ✅ إصلاح Claim: إخفاء التكت عن الجميع إلا المستلم والإدارة العليا
                 await channel.permissionOverwrites.edit(CONFIG.staffRole, { ViewChannel: false });
+                await channel.permissionOverwrites.edit(CONFIG.mediatorRole, { ViewChannel: false });
+                
                 await channel.permissionOverwrites.edit(user.id, { ViewChannel: true, SendMessages: true });
                 await channel.permissionOverwrites.edit(CONFIG.adminRole, { ViewChannel: true });
 
@@ -440,6 +445,7 @@ module.exports = async (client) => {
                 
                 sendLog(guild, 'Close', channel, user, ownerId);
 
+                // ⭐ تقييم الإدارة (صاحب التكت فقط)
                 const type = ticketTypes.get(channel.id);
                 if (type !== 'mediator') {
                     const ticketID = channel.id;
@@ -456,12 +462,11 @@ module.exports = async (client) => {
                         .setTitle('📊 تقييم الدعم الفني')
                         .setDescription(`**شكراً لتواصلك معنا.**\nيرجى تقييم تجربتك مع ${staffText} للمساعدة في تحسين الجودة.`);
 
-                    const members = await channel.members.fetch();
-                    for (const [id, member] of members) {
-                        if (!member.user.bot && !member.roles.cache.has(CONFIG.staffRole) && !member.roles.cache.has(CONFIG.adminRole)) {
-                            await member.send({ embeds: [dmEmbed], components: [rateRow] }).catch(() => {});
-                        }
-                    }
+                    // ✅ إرسال لصاحب التكت فقط
+                    try {
+                        const ownerMember = await guild.members.fetch(ownerId);
+                        if(ownerMember) await ownerMember.send({ embeds: [dmEmbed], components: [rateRow] });
+                    } catch(e) {}
                 }
             }
 
@@ -475,7 +480,6 @@ module.exports = async (client) => {
 
             if (customId === 'btn_delete') {
                 await interaction.reply('**🗑️ Deleting ticket in 5 seconds...**');
-                // V13 Logic
                 sendFinalDeleteLog(guild, channel, user, "Manual Delete");
                 setTimeout(() => channel.delete().catch(() => {}), 5000);
             }
@@ -620,7 +624,7 @@ module.exports = async (client) => {
         sendLog(guild, 'Open', channel, user, user.id);
     }
 
-    // ⭐ V13 Logic: Final Log
+    // ⭐ V13 Feature: Full Delete Log
     function sendFinalDeleteLog(guild, channel, executor, reason) {
         const claimer = ticketClaimer.get(channel.id) || 'None';
         const closer = ticketCloser.get(channel.id) || 'None';
