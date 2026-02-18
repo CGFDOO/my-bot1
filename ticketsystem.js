@@ -1,9 +1,3 @@
-/**
- * █▀▄▀█ █▄ █ ▄▀▄  [ MNC ULTIMATE SYSTEM - V15.0 ]
- * █ ▀ █ █ ▀█ █ ▄  [ MIDDLEMAN BOLD EDITION ]
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- */
-
 const { 
     Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, 
     ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, 
@@ -14,21 +8,20 @@ const { createTranscript } = require('discord-html-transcripts');
 module.exports = async (client) => {
 
     // ====================================================
-    // ⚙️ CONFIGURATION
+    // ⚙️ CONFIGURATION - نفس إعداداتك بالظبط
     // ====================================================
     const CONFIG = {
         prefix: '!',
         guildID: '1453877816142860350', 
         categoryID: '1453943996392013901',
         
-        // 👑 الأونرات
-        owners: ['1053440375773216828', '1377507332056940638'], 
-
+        // الرتب
         staffRole: '1454199885460144189',      
         adminRole: '1453946893053726830',      
         mediatorRole: '1454563893249703998',   
         highMediators: ['1454560063480922375', '1466937817639948349'], 
 
+        // القنوات
         logsChannel: '1453948413963141153',       
         transcriptChannel: '1472218573710823679', 
         mediatorRatingLog: '1472439331443441828', 
@@ -36,18 +29,20 @@ module.exports = async (client) => {
     };
 
     // ====================================================
-    // 💾 MEMORY
+    // 💾 MEMORY & COUNTERS (نظام العد والحفظ)
     // ====================================================
     if (!client.ticketCounter) client.ticketCounter = 346; 
+    
+    // Global Counters (عدادات السيرفر العامة)
     if (!client.globalMedRatings) client.globalMedRatings = 0;
     if (!client.globalStaffRatings) client.globalStaffRatings = 0;
 
-    const activeTrades = new Map();    
-    const ticketTypes = new Map();     
-    const ticketMediator = new Map();  
-    const ticketClaimer = new Map();   
-    const ticketActions = new Map();   
+    const activeTrades = new Map();    // TicketID -> Trade Text (الحفظ)
+    const ticketTypes = new Map();     // TicketID -> Type
+    const ticketMediator = new Map();  // TicketID -> Mediator ID
+    const ticketClaimer = new Map();   // TicketID -> Staff ID (عشان نعرف مين اللي استلم)
     
+    // Individual Counters (عداد لكل شخص)
     const mediatorCounts = new Map();  
     const staffCounts = new Map();     
 
@@ -60,32 +55,28 @@ module.exports = async (client) => {
         const args = message.content.slice(CONFIG.prefix.length).trim().split(/ +/);
         const command = args.shift().toLowerCase();
         
-        const isOwner = CONFIG.owners.includes(message.author.id);
-        const hasRole = (r) => message.member.roles.cache.has(r);
-        
-        const isHighMed = isOwner || CONFIG.highMediators.some(id => hasRole(id));
-        const isMed = isOwner || hasRole(CONFIG.mediatorRole) || isHighMed;
-        const isAdmin = isOwner || hasRole(CONFIG.adminRole) || isHighMed;
-        const isStaff = isOwner || hasRole(CONFIG.staffRole) || isAdmin;
+        const isHighMed = CONFIG.highMediators.some(id => message.member.roles.cache.has(id));
+        const isMed = message.member.roles.cache.has(CONFIG.mediatorRole) || isHighMed;
+        const isAdmin = message.member.roles.cache.has(CONFIG.adminRole) || isHighMed;
+        const isStaff = message.member.roles.cache.has(CONFIG.staffRole) || isAdmin;
 
-        // --- !setup-mnc ---
+        // --- !setup-mnc (نفس الكود العربي بتاعك) ---
         if (command === 'setup-mnc' && isAdmin) {
             message.delete().catch(() => {});
             const embed = new EmbedBuilder()
-                .setTitle('**# 📋 قوانين التكت لتجنب أي عقوبات**')
+                .setTitle('# 📋 قوانين التكت لتجنب أي عقوبات')
                 .setDescription(
-                    `**──────────────**\n` +
+                    `**--------------------------------------------------**\n` +
                     `**・ عند فتح تذكرة وعدم كتابة استفسارك أو مشكلتك فورا سيتم حذفها بدون أي تردد**\n` +
                     `**・ يمنع فتح أكثر من تذكرتين في نفس الوقت النظام سيقوم بحظر التذاكر المكررة تلقائيا**\n` +
                     `**・ يمنع منشن طاقم الإدارة العليا أو الصغرى الرد يتم حسب الأولوية ووقت فتح التذكرة.**\n` +
                     `**・ يرجى إرفاق كافة الأدلة الصور المتعلقة بمشكلتك لضمان سرعة الرد وحل المشكلة**\n` +
                     `**・ أي تجاوز أو إساءة في التعامل مع الفريق الإداري داخل التذكرة يعرضك للعقوبات**\n` +
                     `**・ تذكرتك لا يراها إلا الطاقم المختص؛ يرجى عدم مشاركة تفاصيل حساسة خارج التذكرة.**\n` +
-                    `**──────────────**\n` +
+                    `**--------------------------------------------------**\n` +
                     `**👇 اختر القسم المناسب لفتح تذكرتك:**`
                 )
-                .setColor('#FFFFFF')
-                .setThumbnail(message.guild.iconURL({ dynamic: true }));
+                .setColor('#FFFFFF');
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('create_mediator').setLabel('طلب وسيط').setEmoji('🛡️').setStyle(ButtonStyle.Secondary),
@@ -108,10 +99,17 @@ module.exports = async (client) => {
 
         // --- !req-high ---
         if (command === 'req-high' && isMed && message.channel.name.startsWith('ticket-')) {
-            const trade = activeTrades.get(message.channel.id) || "**⚠️ لم يتم تسجيل التريد بعد!**";
+            const trade = activeTrades.get(message.channel.id) || "⚠️ لم يتم تسجيل التريد بعد!";
+            
             const embed = new EmbedBuilder()
-                .setTitle('**⚖️ طلب موافقة وساطة عليا**')
-                .setDescription(`**──────────────**\n**👤 الوسيط الطالب:** ${message.author}\n\n**📦 تفاصيل التريد:**\n\`\`\`\n${trade}\n\`\`\`\n**──────────────**`)
+                .setTitle('⚖️ **طلب موافقة وساطة عليا**')
+                .setDescription(
+                    `**--------------------------------------------------**\n` +
+                    `**👤 الوسيط الطالب:** ${message.author}\n\n` +
+                    `**📦 تفاصيل التريد:**\n` +
+                    `\`\`\`\n${trade}\n\`\`\`\n` +
+                    `**--------------------------------------------------**`
+                )
                 .setColor('#F1C40F')
                 .setThumbnail(message.author.displayAvatarURL());
             
@@ -119,44 +117,32 @@ module.exports = async (client) => {
                 new ButtonBuilder().setCustomId('high_approve').setLabel('Accept').setStyle(ButtonStyle.Success),
                 new ButtonBuilder().setCustomId('high_reject').setLabel('Reject').setStyle(ButtonStyle.Danger)
             );
-            const mentions = CONFIG.highMediators.map(r => `<@&${r}>`).join(' ');
-            return message.channel.send({ content: `**⚠️ Approval Needed:** ${mentions}`, embeds: [embed], components: [row] });
-        }
-
-        // --- !done ---
-        if (command === 'done' && isMed && message.channel.name.startsWith('ticket-')) {
-            ticketMediator.set(message.channel.id, message.author.id); 
-
-            const ticketID = message.channel.id;
-            const row = new ActionRowBuilder().addComponents(
-                [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_med_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
-            );
             
-            const dmEmbed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
-                .setTitle('**🛡️ تقييم خدمة وساطة MNC**')
-                .setDescription(
-                    `**شكراً لاستخدامك خدماتنا.**\n` +
-                    `**نرجو منك تقييم تجربتك مع الوسيط ${message.author}.**\n\n` +
-                    `**⭐ اختر تقييمك من الأسفل:**`
-                )
-                .setThumbnail(message.author.displayAvatarURL());
-
-            const members = await message.channel.members.fetch();
-            let sentCount = 0;
-
-            for (const [id, member] of members) {
-                if (!member.user.bot && member.id !== message.author.id) {
-                    await member.send({ embeds: [dmEmbed], components: [row] }).catch(() => {});
-                    sentCount++;
-                }
-            }
-
-            return message.channel.send(`**✅ تم إرسال طلب التقييم لـ ${sentCount} عضو بنجاح.**`);
+            const mentions = CONFIG.highMediators.map(r => `<@&${r}>`).join(' ');
+            return message.channel.send({ content: `⚠️ **Approval Needed:** ${mentions}`, embeds: [embed], components: [row] });
         }
 
-        // --- !come ---
+        // --- !done (تحديث لتسجيل الوسيط) ---
+        if (command === 'done' && isMed && message.channel.name.startsWith('ticket-')) {
+            const ownerId = message.channel.topic;
+            ticketMediator.set(message.channel.id, message.author.id); // تسجيل الوسيط
+
+            const owner = await message.guild.members.fetch(ownerId).catch(() => null);
+            if (owner) {
+                const ticketID = message.channel.id;
+                
+                const row = new ActionRowBuilder().addComponents(
+                    [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_med_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
+                );
+                
+                await owner.send({ content: `⭐ **MNC Mediator Rating:**\n**يرجى تقييم خدمة الوسيط:**`, components: [row] }).catch(() => {
+                    return message.channel.send('❌ **خاص العضو مقفل، لم يتم إرسال التقييم.**');
+                });
+                return message.channel.send('✅ **تم إرسال طلب التقييم للعميل بنجاح.**');
+            }
+        }
+
+        // --- !come (نفس الكود الإنجليزي بتاعك) ---
         if (command === 'come' && isStaff) {
             const target = message.mentions.members.first();
             if (!target) return message.reply('**❌ Please mention a user.**');
@@ -167,14 +153,14 @@ module.exports = async (client) => {
             const dmEmbed = new EmbedBuilder()
                 .setColor('#2F3136')
                 .setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
-                .setTitle('**🚨 تم طلب استدعاءك!**')
+                .setTitle('🚨 **تم طلب استدعاءك!**')
                 .setDescription(
-                    `**──────────────**\n` +
+                    `**--------------------------------------------------**\n` +
                     `**👋 مرحباً ${target}**\n\n` +
                     `**⚠️ لقد قام طاقم الإدارة بطلب حضورك فوراً.**\n` +
                     `**📍 الروم:** <#${message.channel.id}>\n` +
                     `**🔗 رابط سريع:** [اضغط هنا للدخول](${invite.url})\n` +
-                    `**──────────────**`
+                    `**--------------------------------------------------**`
                 )
                 .setThumbnail(message.guild.iconURL())
                 .setFooter({ text: 'MNC Administration', iconURL: client.user.displayAvatarURL() })
@@ -184,8 +170,8 @@ module.exports = async (client) => {
                 new ButtonBuilder().setLabel('Go to Server').setStyle(ButtonStyle.Link).setURL(invite.url)
             );
             
-            await target.send({ content: `**🚨 استدعاء عاجل!**`, embeds: [dmEmbed], components: [row] }).catch(() => message.channel.send(`**❌ Could not DM ${target}.**`));
-            return message.channel.send(`**✅ Summon sent to ${target} with a new style.**`);
+            await target.send({ content: `🚨 **استدعاء عاجل!**`, embeds: [dmEmbed], components: [row] }).catch(() => message.channel.send(`❌ **Could not DM ${target}.**`));
+            return message.channel.send(`✅ **Summon sent to ${target} with a new style.**`);
         }
     });
 
@@ -230,25 +216,24 @@ module.exports = async (client) => {
                 return await createTicket(interaction, type, interaction.fields);
             }
 
+            // 1. حفظ التريد (مهم جداً للتقييم)
             if (customId === 'modal_trade_save') {
                 const trade = interaction.fields.getTextInputValue('trade_val');
-                activeTrades.set(channel.id, trade); 
+                activeTrades.set(channel.id, trade); // ✅ حفظنا التريد هنا
                 await interaction.reply({ content: `**✅ Trade Saved:**\n\`${trade}\`` });
                 return channel.send('**done**');
             }
 
-            // ⭐ رسالة الإضافة
+            // 2. إصلاح زر إضافة العضو (Fix)
             if (customId === 'modal_add_user') {
                 const targetId = interaction.fields.getTextInputValue('uid');
-                await interaction.deferReply();
+                await interaction.deferReply(); // عشان لو أخد وقت
                 try {
-                    const targetMember = await guild.members.fetch(targetId);
+                    const targetMember = await guild.members.fetch(targetId); // تأكد أن العضو موجود
                     await channel.permissionOverwrites.edit(targetMember.id, { ViewChannel: true, SendMessages: true });
-                    ticketActions.set(channel.id, { addedBy: user.id, addedUser: targetMember.id });
-
-                    return interaction.editReply({ content: `**✅ ${targetMember} has been added to the ticket by ${user}**` });
+                    return interaction.editReply({ content: `**✅ <@${targetId}> has been added to the ticket.**` });
                 } catch (e) {
-                    return interaction.editReply({ content: '**❌ Error: Invalid ID or User not found.**', ephemeral: true });
+                    return interaction.editReply({ content: '**❌ Error: Invalid ID or User not found in this server.**', ephemeral: true });
                 }
             }
 
@@ -260,17 +245,21 @@ module.exports = async (client) => {
                 setTimeout(() => channel.delete().catch(() => {}), 4000);
             }
 
-            // ⭐ لوج التقييم
+            // --- C. التقييم النهائي (Amazon Style & Counters) ---
             if (customId.startsWith('modal_rate_')) {
+                // RateID Format: modal_rate_USERID_STARS_TYPE_TICKETID
                 const parts = customId.split('_');
-                const targetId = parts[2];
+                const targetId = parts[2]; // العضو اللي بيقيم
                 const stars = parts[3];
-                const type = parts[4];
+                const type = parts[4]; // med OR staff
                 const ticketId = parts[5];
 
-                const comment = interaction.fields.getTextInputValue('comment') || 'بدون تعليق';
-                const trade = activeTrades.get(ticketId) || "**⚠️ لا توجد بيانات مسجلة**";
+                const comment = interaction.fields.getTextInputValue('comment') || 'No Comment';
                 
+                // استرجاع التريد المحفوظ
+                const trade = activeTrades.get(ticketId) || "⚠️ No Trade Details Saved";
+                
+                // تحديد من يتم تقييمه
                 let ratedUserId = null;
                 let userCount = 0;
                 let globalCount = 0;
@@ -284,7 +273,8 @@ module.exports = async (client) => {
                     }
                     client.globalMedRatings++;
                     globalCount = client.globalMedRatings;
-                } else {
+
+                } else { // Staff
                     ratedUserId = ticketClaimer.get(ticketId);
                     if (ratedUserId) {
                         const current = staffCounts.get(ratedUserId) || 0;
@@ -295,53 +285,53 @@ module.exports = async (client) => {
                     globalCount = client.globalStaffRatings;
                 }
 
-                const ratedMention = ratedUserId ? `<@${ratedUserId}>` : "**غير محدد**";
+                const ratedMention = ratedUserId ? `<@${ratedUserId}>` : "**Unknown Agent**";
                 const starEmojis = "⭐".repeat(parseInt(stars));
 
+                // --- تصميم أمازون الضخم ---
                 const logEmbed = new EmbedBuilder()
-                    .setTitle(type === 'med' ? `**🛡️ MNC MIDDLEMAN REVIEW**` : `**👨‍💼 MNC STAFF REVIEW**`)
+                    .setTitle(type === 'med' ? `🛡️ **MNC MEDIATOR REVIEW**` : `👨‍💼 **MNC STAFF REVIEW**`)
                     .setColor(type === 'med' ? '#F1C40F' : '#3498DB')
                     .setThumbnail(user.displayAvatarURL())
                     .addFields(
-                        { name: '**👤 العميل (المُقيِّم)**', value: `<@${targetId}>`, inline: true },
-                        { name: type === 'med' ? '**🛡️ الوسيط**' : '**👮‍♂️ الإداري**', value: ratedMention, inline: true },
-                        { name: '**📈 الإحصائيات**', value: `**ترتيب الإداري #${userCount}**\n**ترتيب السيرفر #${globalCount}**`, inline: false },
-                        { name: '**──────────────**', value: '\u200b' },
-                        { name: '**⭐ التقييم**', value: `**${starEmojis} (${stars}/5)**`, inline: true },
-                        { name: '**💬 التعليق**', value: `\`\`\`${comment}\`\`\``, inline: false }
+                        { name: '👤 Customer', value: `<@${targetId}>`, inline: true },
+                        { name: type === 'med' ? '🛡️ Mediator' : '👮‍♂️ Staff Agent', value: ratedMention, inline: true },
+                        { name: '📈 Statistics', value: `\`Agent Rating #${userCount}\`\n\`Server Rating #${globalCount}\``, inline: false },
+                        { name: '━━━━━━━━━━━━━━━━━━━━━━', value: '\u200b' },
+                        { name: '⭐ Rating', value: `${starEmojis} **(${stars}/5)**`, inline: true },
+                        { name: '💬 Feedback', value: `\`\`\`${comment}\`\`\``, inline: false }
                     )
-                    .setTimestamp();
+                    .setTimestamp()
+                    .setFooter({ text: `Ticket ID: ${ticketId}` });
 
+                // لو وسيط، نضيف التريد
                 if (type === 'med') {
-                    logEmbed.addFields(
-                        { name: '**──────────────**', value: '\u200b' },
-                        { name: '**📦 تفاصيل التريد**', value: `\`\`\`yaml\n${trade}\n\`\`\`` }
-                    );
+                    logEmbed.addFields({ name: '📦 Trade Details (Verified)', value: `\`\`\`yaml\n${trade}\n\`\`\`` });
                 }
 
                 const logChannelId = type === 'med' ? CONFIG.mediatorRatingLog : CONFIG.staffRatingLog;
                 const logCh = client.channels.cache.get(logChannelId);
                 
-                if(logCh) await logCh.send({ content: `**تقييم جديد!** ${ratedMention}`, embeds: [logEmbed] });
+                if(logCh) await logCh.send({ content: type === 'med' ? `**New Mediator Review!** ${ratedMention}` : `**New Staff Review!** ${ratedMention}`, embeds: [logEmbed] });
                 
-                return interaction.reply({ content: '**✅ تم استلام تقييمك. شكراً لك!**', ephemeral: true });
+                return interaction.reply({ content: '**✅ Feedback Received! Thank you.**', ephemeral: true });
             }
         }
 
-        // --- D. Buttons & Security ---
+        // --- D. Buttons ---
         if (interaction.isButton()) {
             
-            const isOwner = CONFIG.owners.includes(user.id);
-            const isStaffOrMed = isOwner || member.roles.cache.has(CONFIG.staffRole) || member.roles.cache.has(CONFIG.adminRole) || CONFIG.highMediators.some(id => member.roles.cache.has(id));
-            
-            if (['btn_claim', 'btn_close', 'btn_add_user', 'btn_delete', 'btn_reopen'].includes(customId)) {
-                if (!isStaffOrMed) {
-                    return interaction.reply({ content: '**❌ عذراً، هذه الأزرار خاصة بطاقم الإدارة والوسطاء فقط.**', ephemeral: true });
-                }
-            }
-
+            // 1. Claim (تسجيل من استلم)
             if (customId === 'btn_claim') {
+                const type = ticketTypes.get(channel.id);
+                if ((type === 'creator' || type === 'admin') && !member.roles.cache.has(CONFIG.adminRole)) {
+                    return interaction.reply({ content: '❌ **High Staff Only.**', ephemeral: true });
+                }
+                if (!member.roles.cache.has(CONFIG.staffRole) && !member.roles.cache.has(CONFIG.adminRole)) return;
+
+                // تسجيل المستلم
                 ticketClaimer.set(channel.id, user.id);
+
                 await channel.permissionOverwrites.edit(CONFIG.staffRole, { ViewChannel: false });
                 await channel.permissionOverwrites.edit(user.id, { ViewChannel: true, SendMessages: true });
                 await channel.permissionOverwrites.edit(CONFIG.adminRole, { ViewChannel: true });
@@ -354,6 +344,7 @@ module.exports = async (client) => {
                 sendLog(guild, 'Claim', channel, user, channel.topic);
             }
 
+            // 2. Close Flow
             if (customId === 'btn_close') {
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId('btn_confirm_close').setLabel('Confirm').setStyle(ButtonStyle.Danger),
@@ -369,6 +360,7 @@ module.exports = async (client) => {
             if (customId === 'btn_confirm_close') {
                 const ownerId = channel.topic;
                 await channel.permissionOverwrites.edit(ownerId, { ViewChannel: false });
+                
                 await interaction.update({ content: '**🔒 Ticket Closed.**', components: [] });
                 
                 const controlRow = new ActionRowBuilder().addComponents(
@@ -384,58 +376,38 @@ module.exports = async (client) => {
                 });
 
                 const attachment = await createTranscript(channel, { limit: -1, fileName: `MNC-${channel.name}.html` });
-                const claimerID = ticketClaimer.get(channel.id) ? `<@${ticketClaimer.get(channel.id)}>` : 'None';
-                const actionData = ticketActions.get(channel.id) || { addedBy: 'None', addedUser: 'None' };
-                const adder = actionData.addedBy !== 'None' ? `<@${actionData.addedBy}>` : 'None';
-                const added = actionData.addedUser !== 'None' ? `<@${actionData.addedUser}>` : 'None';
-
+                
                 const transcriptEmbed = new EmbedBuilder()
                     .setColor('#2ecc71')
-                    .setTitle('**📄 Ticket Transcript Log**')
-                    .setDescription('**تم إغلاق تذكرة وحفظ سجل المحادثة.**')
+                    .setTitle('📄 Ticket Transcript')
                     .addFields(
-                        { name: '**🎫 التذكرة**', value: `\`${channel.name}\``, inline: true },
-                        { name: '**👤 المالك**', value: `<@${ownerId}>`, inline: true },
-                        { name: '**🔒 القافل**', value: `<@${user.id}>`, inline: true },
-                        { name: '**🙋‍♂️ المستلم**', value: claimerID, inline: true },
-                        { name: '**➕ أضاف عضو**', value: adder, inline: true },
-                        { name: '**👤 العضو المضاف**', value: added, inline: true }
-                    )
-                    .setFooter({ text: 'MNC Logs System', iconURL: guild.iconURL() })
-                    .setTimestamp();
+                        { name: 'Ticket Owner', value: `<@${ownerId}>`, inline: true },
+                        { name: 'Ticket Name', value: channel.name, inline: true },
+                        { name: 'Closed By', value: `<@${user.id}>`, inline: true },
+                        { name: 'Claimed By', value: ticketClaimer.get(channel.id) ? `<@${ticketClaimer.get(channel.id)}>` : 'None', inline: true }
+                    );
 
                 const logCh = client.channels.cache.get(CONFIG.transcriptChannel);
-                if (logCh) {
-                    const msg = await logCh.send({ embeds: [transcriptEmbed], files: [attachment] });
-                    const linkRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setLabel('📥 Download Transcript').setStyle(ButtonStyle.Link).setURL(msg.attachments.first().url)
-                    );
-                    await msg.edit({ components: [linkRow] });
-                }
+                let logMsg = null;
+                if (logCh) logMsg = await logCh.send({ embeds: [transcriptEmbed], files: [attachment] });
                 
-                sendLog(guild, 'Close', channel, user, ownerId);
+                sendLog(guild, 'Close', channel, user, ownerId, logMsg ? logMsg.url : null);
 
+                // تقييم الإدارة (يرسل فقط لو مش وساطة)
                 const type = ticketTypes.get(channel.id);
                 if (type !== 'mediator') {
-                    const ticketID = channel.id;
-                    const rateRow = new ActionRowBuilder().addComponents(
-                        [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_staff_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
-                    );
-                    
-                    const claimer = ticketClaimer.get(ticketID);
-                    const staffText = claimer ? `<@${claimer}>` : "الطاقم الإداري";
-                    
-                    const dmEmbed = new EmbedBuilder()
-                        .setColor('#3498DB')
-                        .setAuthor({ name: guild.name, iconURL: guild.iconURL() })
-                        .setTitle('**📊 تقييم الدعم الفني**')
-                        .setDescription(`**شكراً لتواصلك معنا.**\n**يرجى تقييم تجربتك مع ${staffText} للمساعدة في تحسين الجودة.**`);
-
-                    const members = await channel.members.fetch();
-                    for (const [id, member] of members) {
-                        if (!member.user.bot && !member.roles.cache.has(CONFIG.staffRole) && !member.roles.cache.has(CONFIG.adminRole)) {
-                            await member.send({ embeds: [dmEmbed], components: [rateRow] }).catch(() => {});
-                        }
+                    const owner = await client.users.fetch(ownerId).catch(() => null);
+                    if (owner) {
+                        const ticketID = channel.id;
+                        const rateRow = new ActionRowBuilder().addComponents(
+                            [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_staff_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
+                        );
+                        
+                        // تخصيص الرسالة
+                        const claimer = ticketClaimer.get(ticketID);
+                        const staffText = claimer ? `<@${claimer}>` : "Staff";
+                        
+                        await owner.send({ content: `**📋 MNC Staff Rating:**\n**يرجى تقييم أداء الطاقم (${staffText}):**`, components: [rateRow] }).catch(() => {});
                     }
                 }
             }
@@ -464,7 +436,7 @@ module.exports = async (client) => {
                 const attachment = await createTranscript(channel, { limit: -1, fileName: `MNC-${channel.name}.html` });
                 const logCh = client.channels.cache.get(CONFIG.transcriptChannel);
                 if(logCh) await logCh.send({ 
-                    content: `**📝 Manual Transcript:** \`${channel.name}\` requested by <@${user.id}>`, 
+                    content: `📝 **Manual Transcript:** \`${channel.name}\` requested by <@${user.id}>`, 
                     files: [attachment] 
                 });
                 return interaction.reply({ content: '**✅ Transcript Sent.**', ephemeral: true });
@@ -483,11 +455,8 @@ module.exports = async (client) => {
             }
 
             if (['high_approve', 'high_reject'].includes(customId)) {
-                const isOwner = CONFIG.owners.includes(user.id);
-                const isHigh = isOwner || CONFIG.highMediators.some(r => member.roles.cache.has(r));
-                
-                if (!isHigh) {
-                    return interaction.reply({ content: '**❌ عذراً، هذا الزر لمسؤولي الوساطة العليا فقط.**', ephemeral: true });
+                if (!CONFIG.highMediators.some(r => member.roles.cache.has(r))) {
+                    return interaction.reply({ content: '❌ **Only High Staff.**', ephemeral: true });
                 }
                 const status = customId === 'high_approve' ? '✅ **Approved**' : '❌ **Rejected**';
                 await interaction.update({ content: `**${status} by <@${user.id}>**`, components: [], embeds: [interaction.message.embeds[0]] });
@@ -500,7 +469,7 @@ module.exports = async (client) => {
 
                 const parts = customId.split('_');
                 const stars = parts[2];
-                const type = parts[1];
+                const type = parts[1]; // med OR staff
                 const ticketId = parts[3];
 
                 const modalId = `modal_rate_${user.id}_${stars}_${type}_${ticketId}`;
@@ -532,6 +501,7 @@ module.exports = async (client) => {
 
         ticketTypes.set(channel.id, type);
         
+        // حفظ بيانات الوساطة عند الفتح (مهم جداً للتقييم لاحقاً)
         if (type === 'mediator') {
              const tUser = fields?.getTextInputValue('target_user') || 'N/A';
              const tDetails = fields?.getTextInputValue('trade_details') || 'N/A';
@@ -544,50 +514,50 @@ module.exports = async (client) => {
         let mentionText = `**حياك الله** <@${user.id}>`;
 
         if (type === 'mediator') {
-            embed.setTitle('**🛡️ طلب وسيط**')
+            embed.setTitle('🛡️ **طلب وسيط**')
                 .setDescription(
                     `**هذا القسم مخصص لطلب وسيط لعملية تريد داخل السيرفر**\n` +
-                    `**──────────────**\n` +
+                    `**--------------------------------------------------**\n` +
                     `**・ تأكد أن الطرف الآخر جاهز ومتواجد قبل فتح التذكرة**\n` +
                     `**・ رجاء عدم فتح أكثر من تذكرة أو إزعاج الفريق بالتذكرو المتكررة**\n` +
                     `**・ تحقق من درجة الوسيط، حيث أن لكل مستوى أمان مختلف**\n` +
                     `**・ اكتب المعلومات المطلوبة بدقة في الأسئلة التالية**\n` +
-                    `**──────────────**`
+                    `**--------------------------------------------------**`
                 )
                 .addFields(
-                    { name: '**👤 الطرف الثاني**', value: fields?.getTextInputValue('target_user') || 'N/A' },
-                    { name: '**──────────────**', value: '\u200b' },
-                    { name: '**📝 التفاصيل**', value: fields?.getTextInputValue('trade_details') || 'N/A' }
+                    { name: '👤 الطرف الثاني', value: fields?.getTextInputValue('target_user') || 'N/A' },
+                    { name: '📝 التفاصيل', value: fields?.getTextInputValue('trade_details') || 'N/A' }
                 );
         } else if (type === 'support') {
-            embed.setTitle('**🛠️ تذكرة الدعم الفني**')
+            embed.setTitle('🛠️ **تذكرة الدعم الفني**')
                 .setDescription(
                     `**شكراً لفتح تذكرة الدعم الفني.**\n` +
-                    `**──────────────**\n` +
+                    `**--------------------------------------------------**\n` +
                     `**・ يرجى شرح شكواك أو مشكلتك أو طلبك بشكل واضح ومفصل قدر الإمكان.**\n` +
                     `**・ ارفق أي صور أو روابط أو أدلة تساعدنا على فهم المشكلة.**\n` +
-                    `**・ فريق الدعم سيراجع تذكرتك ويجيبك في أسرع وقت ممكن.**\n` +
-                    `**──────────────**`
+                    `**・ فريق الدعم سيراجع تذكرتك ويجيبك في أسرع وقت ممكن.**\n\n` +
+                    `**يرجى التحلي بالصبر، فترتيب الردود يتم حسب الأولوية ووقت الفتح.**`
                 )
-                .addFields({ name: '**❓ المشكلة**', value: fields?.getTextInputValue('issue_details') || 'N/A' });
+                .addFields({ name: '❓ المشكلة', value: fields?.getTextInputValue('issue_details') || 'N/A' });
         } else if (type === 'gift') {
-            mentionText += `\n**✨ Please wait for staff response.**\n**──────────────**`;
-            embed.setTitle('**🎁 استلام هدايا**')
-                .setDescription(`**──────────────**\n**يرجى توضيح نوع الهدية أو الفعالية التي فزت بها.**\n**──────────────**`);
+            mentionText += `\n✨ **Please wait for staff response.**\n**-------------------------------------**`;
+            embed.setTitle('🎁 **استلام هدايا**')
+                .setDescription(`**--------------------------------------**\n**يرجى توضيح نوع الهدية أو الفعالية التي فزت بها.**\n**--------------------------------------**`);
         } else if (type === 'admin') {
-            mentionText += `\n**⚠️ Please wait for High Staff response.**\n**──────────────**`;
-            embed.setTitle('**⚠️ شكوى إداري**')
-                .setDescription(`**──────────────**\n**سيتم مراجعة الشكوى من قبل الإدارة العليا فقط.**\n**──────────────**`);
+            mentionText += `\n⚠️ **Please wait for High Staff response.**\n**-------------------------------------**`;
+            embed.setTitle('⚠️ **شكوى إداري**')
+                .setDescription(`**--------------------------------------**\n**سيتم مراجعة الشكوى من قبل الإدارة العليا فقط.**\n**--------------------------------------**`);
+            // إزالة الإدارة الصغرى
             await channel.permissionOverwrites.edit(CONFIG.staffRole, { ViewChannel: false });
             await channel.permissionOverwrites.edit(CONFIG.adminRole, { ViewChannel: true });
         } else if (type === 'creator') {
-             mentionText += `\n**✨ Please wait for Content Creator Managers.**`;
-             embed.setTitle('**🎥 تقديم صانع محتوى**')
+             mentionText += `\n✨ **Please wait for Content Creator Managers.**`;
+             embed.setTitle('🎥 **تقديم صانع محتوى**')
                 .addFields(
-                    { name: '**🔗 الروابط/اليوزرات**', value: fields?.getTextInputValue('links') || 'N/A' },
-                    { name: '**──────────────**', value: '\u200b' },
-                    { name: '**👥 المتابعين**', value: fields?.getTextInputValue('subs') || 'N/A' }
+                    { name: '🔗 الروابط/اليوزرات', value: fields?.getTextInputValue('links') || 'N/A' },
+                    { name: '👥 المتابعين', value: fields?.getTextInputValue('subs') || 'N/A' }
                 );
+            // إزالة الإدارة الصغرى
             await channel.permissionOverwrites.edit(CONFIG.staffRole, { ViewChannel: false });
             await channel.permissionOverwrites.edit(CONFIG.adminRole, { ViewChannel: true });
         }
@@ -609,20 +579,20 @@ module.exports = async (client) => {
         const embed = new EmbedBuilder()
             .setColor(action === 'Delete' ? '#FF0000' : '#2F3136')
             .setAuthor({ name: 'MNC LOGS', iconURL: guild.iconURL() })
-            .setTitle(`**${action} Ticket**`)
+            .setTitle(`${action} Ticket`)
             .addFields(
-                { name: '**Ticket Channel**', value: `\`${channel.name}\``, inline: true },
-                { name: '**Executor**', value: `<@${executor.id}>`, inline: true },
-                { name: '**Ticket Owner**', value: `<@${ownerId || 'Unknown'}>`, inline: true }
+                { name: 'Ticket Channel', value: `\`${channel.name}\``, inline: true },
+                { name: 'Executor', value: `<@${executor.id}>`, inline: true },
+                { name: 'Ticket Owner', value: `<@${ownerId || 'Unknown'}>`, inline: true }
             )
             .setTimestamp();
         
-        if (link) embed.addFields({ name: '**Transcript Link**', value: `[Click Here](${link})` });
-        if (reason) embed.addFields({ name: '**Reason**', value: reason });
+        if (link) embed.addFields({ name: 'Transcript Link', value: `[Click Here](${link})` });
+        if (reason) embed.addFields({ name: 'Reason', value: reason });
 
         const logChannel = guild.channels.cache.get(CONFIG.logsChannel);
         if (logChannel) logChannel.send({ embeds: [embed] });
     }
 
-    console.log('💎 MNC ULTIMATE SYSTEM V15.0 ONLINE!');
+    console.log('💎 MNC ULTIMATE SYSTEM V6.0 ONLINE!');
 };
