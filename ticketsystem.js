@@ -1,6 +1,6 @@
 /**
  * █▀▄▀█ █▄ █ ▄▀▄  [ MNC ULTIMATE SYSTEM - V13.0 ]
- * █ ▀ █ █ ▀█ █ ▄  [ LOGS MASTER - FIXED EDITION ]
+ * █ ▀ █ █ ▀█ █ ▄  [ LOGS MASTER + OWNER TARGET ONLY ]
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
@@ -21,7 +21,6 @@ module.exports = async (client) => {
         guildID: '1453877816142860350', 
         categoryID: '1453943996392013901',
         
-        // 👑 الأونرات
         owners: ['100000000000000000', '200000000000000000'], 
 
         staffRole: '1454199885460144189',      
@@ -36,25 +35,22 @@ module.exports = async (client) => {
     };
 
     // ====================================================
-    // 💾 MEMORY & HISTORY TRACKING (NaN Fixed)
+    // 💾 MEMORY & HISTORY (NaN Fixed)
     // ====================================================
     if (!client.ticketCounter) client.ticketCounter = 346; 
     
-    // ✅ الإصلاح الأول: منع ظهور NaN
+    // ✅ إصلاح NaN
     if (typeof client.globalMedRatings !== 'number') client.globalMedRatings = 0;
     if (typeof client.globalStaffRatings !== 'number') client.globalStaffRatings = 0;
     
-    // Maps for Live Tracking
     const activeTrades = new Map();    
     const ticketTypes = new Map();     
     const ticketMediator = new Map();  
     
-    // Maps for Logging (Summary)
     const ticketClaimer = new Map();   
     const ticketCloser = new Map();    
-    const ticketAddedUsers = new Map(); // Stores array of added users
+    const ticketAddedUsers = new Map(); 
     
-    // Stats
     const mediatorCounts = new Map();  
     const staffCounts = new Map();     
 
@@ -130,12 +126,13 @@ module.exports = async (client) => {
             return message.channel.send({ content: `⚠️ **Approval Needed:** ${mentions}`, embeds: [embed], components: [row] });
         }
 
-        // --- !done (تم إصلاح مشكلة الـ 0 عضو) ---
+        // --- !done (تم التعديل: إرسال لصاحب التكت فقط) ---
         if (command === 'done' && isMed && message.channel.name.startsWith('ticket-')) {
             ticketMediator.set(message.channel.id, message.author.id); 
 
             const ticketID = message.channel.id;
-            const ticketOwnerId = message.channel.topic; 
+            // ✅ صاحب التكت محفوظ في الـ topic
+            const ownerId = message.channel.topic;
 
             const row = new ActionRowBuilder().addComponents(
                 [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_med_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
@@ -148,22 +145,18 @@ module.exports = async (client) => {
                 .setDescription(`**شكراً لاستخدامك وساطة MNC.**\nيرجى تقييم خدمة الوسيط **${message.author.username}**.\n\n**⭐ اضغط على الزر المناسب بالأسفل:**`)
                 .setThumbnail(message.author.displayAvatarURL());
 
-            // ✅ الإصلاح الثاني: استخدام fetch لضمان جلب كل الأعضاء
-            const members = await message.channel.members.fetch();
-            let sentCount = 0;
-
-            for (const [id, member] of members) {
-                // إرسال لصاحب التكت والمضافين (تجاهل البوت والوسيط)
-                const isOwner = (id === ticketOwnerId);
-                const isAdded = message.channel.permissionOverwrites.cache.has(id); 
-
-                if (!member.user.bot && member.id !== message.author.id && (isOwner || isAdded)) {
-                    await member.send({ embeds: [dmEmbed], components: [row] }).catch(() => {});
-                    sentCount++;
+            // ✅ استهداف صاحب التكت فقط (Targeted Owner)
+            try {
+                const ownerMember = await message.guild.members.fetch(ownerId);
+                if (ownerMember) {
+                    await ownerMember.send({ embeds: [dmEmbed], components: [row] });
+                    return message.channel.send(`✅ **تم إرسال طلب التقييم لصاحب التذكرة (${ownerMember.user.tag}) بنجاح.**`);
+                } else {
+                    return message.channel.send(`❌ **لم يتم العثور على صاحب التذكرة.**`);
                 }
+            } catch (e) {
+                return message.channel.send(`⚠️ **تعذر إرسال التقييم (الخاص مغلق أو غادر السيرفر).**`);
             }
-
-            return message.channel.send(`✅ **تم إرسال طلب التقييم لـ ${sentCount} عضو (صاحب التكت والمضافين).**`);
         }
 
         // --- !come ---
@@ -247,7 +240,7 @@ module.exports = async (client) => {
                 return channel.send('**done**');
             }
 
-            // ⭐ V13 Feature: Instant Add Log & History
+            // ⭐ لوج الإضافة الفوري (V13 Feature)
             if (customId === 'modal_add_user') {
                 const targetId = interaction.fields.getTextInputValue('uid');
                 await interaction.deferReply();
@@ -255,15 +248,14 @@ module.exports = async (client) => {
                     const targetMember = await guild.members.fetch(targetId);
                     await channel.permissionOverwrites.edit(targetMember.id, { ViewChannel: true, SendMessages: true });
                     
-                    // 1. تسجيل في الذاكرة للوج الحذف
+                    // تسجيل في الذاكرة للوج الحذف
                     const addedList = ticketAddedUsers.get(channel.id) || [];
                     addedList.push({ user: targetMember.user.tag, adder: user.tag });
                     ticketAddedUsers.set(channel.id, addedList);
 
-                    // 2. إرسال لوج فوري
+                    // لوج فوري
                     sendLog(guild, 'Add User', channel, user, channel.topic, null, `Added User: <@${targetId}>`);
 
-                    // 3. رسالة الشات (نفس الصورة)
                     return interaction.editReply({ content: `✅ ${targetMember} **has been added to the ticket by:** ${user}` });
                 } catch (e) {
                     return interaction.editReply({ content: '**❌ Error: Invalid ID or User not found.**', ephemeral: true });
@@ -273,14 +265,12 @@ module.exports = async (client) => {
             if (customId === 'modal_delete_reason') {
                 const reason = interaction.fields.getTextInputValue('reason');
                 await interaction.reply(`**🗑️ Deleting Ticket.. Reason: ${reason}**`);
-                // V13: لوج الحذف الشامل
                 sendFinalDeleteLog(guild, channel, user, reason);
                 setTimeout(() => channel.delete().catch(() => {}), 4000);
             }
 
-            // ⭐ لوج التقييم (مع إصلاح زر الخاص و NaN)
+            // ⭐ لوج التقييم (NaN Fix + DM Fix)
             if (customId.startsWith('modal_rate_')) {
-                // ✅ الإصلاح الثالث: استخدام السيرفر الأساسي للوج (لأن الخاص مفيهوش سيرفر)
                 const mainGuild = client.guilds.cache.get(CONFIG.guildID); 
 
                 const parts = customId.split('_');
@@ -340,7 +330,6 @@ module.exports = async (client) => {
                     );
                 }
 
-                // استخدام mainGuild بدلاً من interaction.guild
                 if (mainGuild) {
                     const logChannelId = type === 'med' ? CONFIG.mediatorRatingLog : CONFIG.staffRatingLog;
                     const logCh = mainGuild.channels.cache.get(logChannelId);
@@ -363,7 +352,6 @@ module.exports = async (client) => {
                 }
             }
 
-            // حماية الوساطة العليا
             if (['high_approve', 'high_reject'].includes(customId)) {
                 if (!interaction.guild) return; 
                 const isHigh = isOwner || CONFIG.highMediators.some(r => member.roles.cache.has(r));
@@ -446,7 +434,7 @@ module.exports = async (client) => {
                 
                 sendLog(guild, 'Close', channel, user, ownerId);
 
-                // ⭐ تقييم الإدارة (صاحب التكت + المضافين فقط)
+                // ⭐ تقييم الإدارة (لصاحب التكت فقط)
                 const type = ticketTypes.get(channel.id);
                 if (type !== 'mediator') {
                     const ticketID = channel.id;
@@ -463,16 +451,11 @@ module.exports = async (client) => {
                         .setTitle('📊 تقييم الدعم الفني')
                         .setDescription(`**شكراً لتواصلك معنا.**\nيرجى تقييم تجربتك مع ${staffText} للمساعدة في تحسين الجودة.`);
 
-                    // ✅ استخدام Fetch لضمان الإرسال
-                    const members = await channel.members.fetch();
-                    for (const [id, member] of members) {
-                        const isOwner = (id === ownerId);
-                        const isAdded = channel.permissionOverwrites.cache.has(id);
-                        
-                        if (!member.user.bot && (isOwner || isAdded)) {
-                            await member.send({ embeds: [dmEmbed], components: [rateRow] }).catch(() => {});
-                        }
-                    }
+                    // ✅ إرسال لصاحب التكت فقط
+                    try {
+                        const ownerMember = await guild.members.fetch(ownerId);
+                        if(ownerMember) await ownerMember.send({ embeds: [dmEmbed], components: [rateRow] });
+                    } catch(e) {}
                 }
             }
 
@@ -641,7 +624,6 @@ module.exports = async (client) => {
         sendLog(guild, 'Open', channel, user, user.id);
     }
 
-    // ⭐ الدالة الخاصة بـ V13 للوج الحذف الشامل
     function sendFinalDeleteLog(guild, channel, executor, reason) {
         const claimer = ticketClaimer.get(channel.id) || 'None';
         const closer = ticketCloser.get(channel.id) || 'None';
