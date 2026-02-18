@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
 const GuildConfigSchema = new mongoose.Schema({
-    guildId: { type: String, required: true, unique: true },
-    ticketCount: { type: Number, default: 1 }, 
+    guildId: { type: String, required: true, unique: true }, // بصمة السيرفر
+    ticketCount: { type: Number, default: 1 }, // بيبدأ من 1 (وفي MNC هنعدله لـ 360 من الداشبورد)
     serverRatings: { type: Number, default: 0 },
     middlemanRatings: { type: Number, default: 0 },
-    ticketChannelId: String,
-    staffRoleId: String,
-    adminRoleId: String
+    ticketChannelId: String, // الروم اللي هيتبعت فيها الأيمبد
+    staffRoleId: String,     // رتبة الإدارة
+    adminRoleId: String      // رتبة الأدمين
 });
 
 module.exports = mongoose.model('GuildConfig', GuildConfigSchema);
