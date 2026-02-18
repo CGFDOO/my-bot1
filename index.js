@@ -209,4 +209,6 @@ require("./ticketsystem.js")(client);
 
 require('./mnc_secure_clear.js')(client);
 
+require('./aiChat.js')(client);
+
 client.login(process.env.TOKEN);
