@@ -1,6 +1,6 @@
 /**
  * █▀▄▀█ █▄ █ ▄▀▄  [ MNC ULTIMATE SYSTEM - V13.0 ]
- * █ ▀ █ █ ▀█ █ ▄  [ LOGS MASTER + OWNER TARGET ONLY ]
+ * █ ▀ █ █ ▀█ █ ▄  [ FINAL CORRECTED EDITION ]
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
@@ -35,18 +35,19 @@ module.exports = async (client) => {
     };
 
     // ====================================================
-    // 💾 MEMORY & HISTORY (NaN Fixed)
+    // 💾 MEMORY & LOGIC
     // ====================================================
     if (!client.ticketCounter) client.ticketCounter = 346; 
     
     // ✅ إصلاح NaN
     if (typeof client.globalMedRatings !== 'number') client.globalMedRatings = 0;
     if (typeof client.globalStaffRatings !== 'number') client.globalStaffRatings = 0;
-    
+
     const activeTrades = new Map();    
     const ticketTypes = new Map();     
     const ticketMediator = new Map();  
     
+    // V13 Logic Maps
     const ticketClaimer = new Map();   
     const ticketCloser = new Map();    
     const ticketAddedUsers = new Map(); 
@@ -126,14 +127,11 @@ module.exports = async (client) => {
             return message.channel.send({ content: `⚠️ **Approval Needed:** ${mentions}`, embeds: [embed], components: [row] });
         }
 
-        // --- !done (تم التعديل: إرسال لصاحب التكت فقط) ---
+        // --- !done ---
         if (command === 'done' && isMed && message.channel.name.startsWith('ticket-')) {
             ticketMediator.set(message.channel.id, message.author.id); 
 
             const ticketID = message.channel.id;
-            // ✅ صاحب التكت محفوظ في الـ topic
-            const ownerId = message.channel.topic;
-
             const row = new ActionRowBuilder().addComponents(
                 [1,2,3,4,5].map(i => new ButtonBuilder().setCustomId(`rate_med_${i}_${ticketID}`).setLabel(`${i} ⭐`).setStyle(ButtonStyle.Primary))
             );
@@ -145,18 +143,18 @@ module.exports = async (client) => {
                 .setDescription(`**شكراً لاستخدامك وساطة MNC.**\nيرجى تقييم خدمة الوسيط **${message.author.username}**.\n\n**⭐ اضغط على الزر المناسب بالأسفل:**`)
                 .setThumbnail(message.author.displayAvatarURL());
 
-            // ✅ استهداف صاحب التكت فقط (Targeted Owner)
-            try {
-                const ownerMember = await message.guild.members.fetch(ownerId);
-                if (ownerMember) {
-                    await ownerMember.send({ embeds: [dmEmbed], components: [row] });
-                    return message.channel.send(`✅ **تم إرسال طلب التقييم لصاحب التذكرة (${ownerMember.user.tag}) بنجاح.**`);
-                } else {
-                    return message.channel.send(`❌ **لم يتم العثور على صاحب التذكرة.**`);
+            // Fetch Members Fix
+            const members = await message.channel.members.fetch();
+            let sentCount = 0;
+
+            for (const [id, member] of members) {
+                if (!member.user.bot && member.id !== message.author.id) {
+                    await member.send({ embeds: [dmEmbed], components: [row] }).catch(() => {});
+                    sentCount++;
                 }
-            } catch (e) {
-                return message.channel.send(`⚠️ **تعذر إرسال التقييم (الخاص مغلق أو غادر السيرفر).**`);
             }
+
+            return message.channel.send(`✅ **تم إرسال طلب التقييم لـ ${sentCount} عضو بنجاح.**`);
         }
 
         // --- !come ---
@@ -240,7 +238,7 @@ module.exports = async (client) => {
                 return channel.send('**done**');
             }
 
-            // ⭐ لوج الإضافة الفوري (V13 Feature)
+            // ⭐ V13 Feature: Instant Add Log
             if (customId === 'modal_add_user') {
                 const targetId = interaction.fields.getTextInputValue('uid');
                 await interaction.deferReply();
@@ -248,12 +246,10 @@ module.exports = async (client) => {
                     const targetMember = await guild.members.fetch(targetId);
                     await channel.permissionOverwrites.edit(targetMember.id, { ViewChannel: true, SendMessages: true });
                     
-                    // تسجيل في الذاكرة للوج الحذف
                     const addedList = ticketAddedUsers.get(channel.id) || [];
                     addedList.push({ user: targetMember.user.tag, adder: user.tag });
                     ticketAddedUsers.set(channel.id, addedList);
 
-                    // لوج فوري
                     sendLog(guild, 'Add User', channel, user, channel.topic, null, `Added User: <@${targetId}>`);
 
                     return interaction.editReply({ content: `✅ ${targetMember} **has been added to the ticket by:** ${user}` });
@@ -265,11 +261,12 @@ module.exports = async (client) => {
             if (customId === 'modal_delete_reason') {
                 const reason = interaction.fields.getTextInputValue('reason');
                 await interaction.reply(`**🗑️ Deleting Ticket.. Reason: ${reason}**`);
+                // V13 Feature: Full Delete Log
                 sendFinalDeleteLog(guild, channel, user, reason);
                 setTimeout(() => channel.delete().catch(() => {}), 4000);
             }
 
-            // ⭐ لوج التقييم (NaN Fix + DM Fix)
+            // ⭐ التقييم (تم تعديل النصوص والصور هنا)
             if (customId.startsWith('modal_rate_')) {
                 const mainGuild = client.guilds.cache.get(CONFIG.guildID); 
 
@@ -309,18 +306,26 @@ module.exports = async (client) => {
                 const ratedMention = ratedUserId ? `<@${ratedUserId}>` : "**غير محدد**";
                 const starEmojis = "⭐".repeat(parseInt(stars));
 
+                // ✅ النصوص المطلوبة:
+                const personalText = type === 'med' ? 'عدد تقييمات الوسيط' : 'عدد تقييمات الإداري';
+                const serverText = 'عدد تقييمات السيرفر';
+
                 const logEmbed = new EmbedBuilder()
                     .setTitle(type === 'med' ? `🛡️ **MNC MIDDLEMAN REVIEW**` : `👨‍💼 **MNC STAFF REVIEW**`)
                     .setColor(type === 'med' ? '#F1C40F' : '#3498DB')
-                    .setThumbnail(user.displayAvatarURL())
+                    // ✅ صورة السيرفر فوق
+                    .setThumbnail(mainGuild ? mainGuild.iconURL() : null)
                     .addFields(
                         { name: '👤 العميل (المُقيِّم)', value: `<@${targetId}>`, inline: true },
                         { name: type === 'med' ? '🛡️ الوسيط' : '👮‍♂️ الإداري', value: ratedMention, inline: true },
-                        { name: '📈 الإحصائيات', value: `\`ترتيب الإداري #${userCount}\`\n\`ترتيب السيرفر #${globalCount}\``, inline: false },
+                        // ✅ النصوص المعدلة
+                        { name: '📈 الإحصائيات', value: `\`${personalText} #${userCount}\`\n\`${serverText} #${globalCount}\``, inline: false },
                         { name: '──────────────', value: '\u200b' },
                         { name: '⭐ التقييم', value: `${starEmojis} **(${stars}/5)**`, inline: true },
                         { name: '💬 التعليق', value: `\`\`\`${comment}\`\`\``, inline: false }
                     )
+                    // ✅ صورة العضو تحت
+                    .setFooter({ text: `Rated by: ${user.tag}`, iconURL: user.displayAvatarURL() })
                     .setTimestamp();
 
                 if (type === 'med') {
@@ -346,6 +351,7 @@ module.exports = async (client) => {
             const isOwner = CONFIG.owners.includes(user.id);
             const isStaffOrMed = isOwner || (member && (member.roles.cache.has(CONFIG.staffRole) || member.roles.cache.has(CONFIG.adminRole) || CONFIG.highMediators.some(id => member.roles.cache.has(id))));
             
+            // ✅ تم إزالة btn_trade_input للسماح للكل
             if (['btn_claim', 'btn_close', 'btn_add_user', 'btn_delete', 'btn_reopen'].includes(customId)) {
                 if (!isStaffOrMed) {
                     return interaction.reply({ content: '❌ **عذراً، هذه الأزرار للإدارة والوسطاء فقط.**', ephemeral: true });
@@ -434,7 +440,6 @@ module.exports = async (client) => {
                 
                 sendLog(guild, 'Close', channel, user, ownerId);
 
-                // ⭐ تقييم الإدارة (لصاحب التكت فقط)
                 const type = ticketTypes.get(channel.id);
                 if (type !== 'mediator') {
                     const ticketID = channel.id;
@@ -451,11 +456,12 @@ module.exports = async (client) => {
                         .setTitle('📊 تقييم الدعم الفني')
                         .setDescription(`**شكراً لتواصلك معنا.**\nيرجى تقييم تجربتك مع ${staffText} للمساعدة في تحسين الجودة.`);
 
-                    // ✅ إرسال لصاحب التكت فقط
-                    try {
-                        const ownerMember = await guild.members.fetch(ownerId);
-                        if(ownerMember) await ownerMember.send({ embeds: [dmEmbed], components: [rateRow] });
-                    } catch(e) {}
+                    const members = await channel.members.fetch();
+                    for (const [id, member] of members) {
+                        if (!member.user.bot && !member.roles.cache.has(CONFIG.staffRole) && !member.roles.cache.has(CONFIG.adminRole)) {
+                            await member.send({ embeds: [dmEmbed], components: [rateRow] }).catch(() => {});
+                        }
+                    }
                 }
             }
 
@@ -469,6 +475,7 @@ module.exports = async (client) => {
 
             if (customId === 'btn_delete') {
                 await interaction.reply('**🗑️ Deleting ticket in 5 seconds...**');
+                // V13 Logic
                 sendFinalDeleteLog(guild, channel, user, "Manual Delete");
                 setTimeout(() => channel.delete().catch(() => {}), 5000);
             }
@@ -499,17 +506,6 @@ module.exports = async (client) => {
                 const modal = new ModalBuilder().setCustomId('modal_add_user').setTitle('Add User');
                 modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('uid').setLabel('User ID').setStyle(TextInputStyle.Short).setRequired(true)));
                 return await interaction.showModal(modal);
-            }
-
-            if (['high_approve', 'high_reject'].includes(customId)) {
-                if (!interaction.guild) return; 
-                const isOwner = CONFIG.owners.includes(user.id);
-                const isHigh = isOwner || CONFIG.highMediators.some(r => member.roles.cache.has(r));
-                if (!isHigh) {
-                    return interaction.reply({ content: '❌ **عذراً، هذا الزر لمسؤولي الوساطة العليا فقط.**', ephemeral: true });
-                }
-                const status = customId === 'high_approve' ? '✅ **Approved**' : '❌ **Rejected**';
-                await interaction.update({ content: `**${status} by <@${user.id}>**`, components: [], embeds: [interaction.message.embeds[0]] });
             }
 
             if (customId.startsWith('rate_')) {
@@ -624,6 +620,7 @@ module.exports = async (client) => {
         sendLog(guild, 'Open', channel, user, user.id);
     }
 
+    // ⭐ V13 Logic: Final Log
     function sendFinalDeleteLog(guild, channel, executor, reason) {
         const claimer = ticketClaimer.get(channel.id) || 'None';
         const closer = ticketCloser.get(channel.id) || 'None';
@@ -672,5 +669,5 @@ module.exports = async (client) => {
         if (logChannel) logChannel.send({ embeds: [embed] });
     }
 
-    console.log('💎 MNC ULTIMATE SYSTEM V13.5 ONLINE!');
+    console.log('💎 MNC ULTIMATE SYSTEM V13.0 ONLINE!');
 };
