@@ -8,28 +8,29 @@ const ROLES = {
     SHIRO: ['1454435472628781090'] // رتب الولاد
 };
 
-// 🧠 تعليمات الشخصيات (السر هنا)
+// 🧠 تعليمات الشخصيات (نسخة المكس الخليجي/المصري)
 const BASE_PROMPT = `
-أنت ذكاء اصطناعي في سيرفر ديسكورد (MNC Community).
-اللغة: تتحدث خليطاً من "اللهجة المصرية العامية"، "اللهجة الخليجية"، و"Slang English".
-الأسلوب: مرح جداً، ذكي "فشخ"، تحب "القلش" و"التحفيل" (Roasting) بشكل مضحك وليس مهين.
-لا تكن رسمياً أبداً. اعتبر نفسك واحد من الشلة.
+أنت "MNC AI" في سيرفر ديسكورد.
+اللهجة: مكس جامد بين "العامية الخليجية" (سعودي/إماراتي) و"المصرية" وكلمات إنجليزية (Slang).
+أمثلة للكلام: "يا ريال"، "يا اسطى"، "شلونك"، "ايه الحوار ده"، "Bro"، "Slay"، "فديتك"، "يا وحش".
+الأسلوب: مرح جداً، ذكي، بيحب القلش والضحك، مش رسمي نهائي.
+ممنوع تتكلم فصحى. خليك طبيعي وعفوي جداً.
 `;
 
 const PERSONA_DARLA = `
 ${BASE_PROMPT}
 اسمك: "Darla" (دارلا).
 جنسك: بنت.
-شخصيتك: كيوت بس لسانك طويل، بتحبي تهزري وتكسفي اللي قدامك بذكاء.
-استخدمي كلمات زي: "يا خوي"، "يا قلبي"، "Bro"، "Slay"، "يا اسطى".
+شخصيتك: دلوعة بس لسانك طويل، "Savage" بس بضحك.
+كلماتك: "وي"، "يا خوي"، "يا قلبي"، "يا روحي"، "OMG".
 `;
 
 const PERSONA_SHIRO = `
 ${BASE_PROMPT}
 اسمك: "Shiro" (شيرو).
 جنسك: ولد.
-شخصيتك: "كول" جداً، صايع، وبتحب تعمل فيها فاهم كل حاجة.
-استخدمي كلمات زي: "يب"، "يا وحش"، "Dude"، "طال عمرك"، "أحيه".
+شخصيتك: "كول"، "صايع"، بيحب يعمل فيها فاهم، وجدع.
+كلماتك: "يب"، "يا وحش"، "طال عمرك"، "أحيه"، "Dude"، "أبشر".
 `;
 
 // ذاكرة المحادثات
@@ -38,7 +39,7 @@ const conversationHistory = new Map();
 module.exports = (client) => {
     // التأكد من المفتاح
     if (!process.env.GEMINI_API_KEY) {
-        console.warn("⚠️ تحذير: GEMINI_API_KEY مش موجود في ملف .env!");
+        console.error("❌ ERROR: مفتاح GEMINI_API_KEY مش موجود في Railway Variables!");
         return;
     }
 
@@ -46,10 +47,8 @@ module.exports = (client) => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     client.on('messageCreate', async (message) => {
-        // تجاهل البوتات
         if (message.author.bot) return;
 
-        // شروط الرد: منشن للبوت أو رد عليه
         const isMentioned = message.mentions.users.has(client.user.id);
         const isReplyToMe = message.reference && (await message.fetchReference()).author.id === client.user.id;
 
@@ -58,11 +57,10 @@ module.exports = (client) => {
         try {
             await message.channel.sendTyping();
 
-            // 1. تحديد الشخصية المطلوبة
-            let selectedPersona = PERSONA_SHIRO; // الافتراضي (لو مفيش رتب)
+            // 1. تحديد الشخصية
+            let selectedPersona = PERSONA_SHIRO;
             let personaName = "Shiro";
 
-            // فحص محتوى الرسالة (لو العضو طلب شخصية محددة)
             const content = message.content.toLowerCase();
             const askingForGirl = content.includes('darla') || content.includes('دارلا') || content.includes('بنت');
             const askingForBoy = content.includes('shiro') || content.includes('شيرو') || content.includes('ولد');
@@ -74,65 +72,55 @@ module.exports = (client) => {
                 selectedPersona = PERSONA_SHIRO;
                 personaName = "Shiro";
             } else {
-                // لو مطلبش، نشوف الرتب
                 const memberRoles = message.member.roles.cache;
-                const hasGirlRole = ROLES.DARLA.some(roleId => memberRoles.has(roleId));
-                const hasBoyRole = ROLES.SHIRO.some(roleId => memberRoles.has(roleId));
-
-                if (hasGirlRole) {
+                if (ROLES.DARLA.some(r => memberRoles.has(r))) {
                     selectedPersona = PERSONA_DARLA;
                     personaName = "Darla";
-                } else if (hasBoyRole) {
+                } else if (ROLES.SHIRO.some(r => memberRoles.has(r))) {
                     selectedPersona = PERSONA_SHIRO;
                     personaName = "Shiro";
                 }
-                // لو معاهوش رتب خالص، هيفضل الافتراضي (Shiro)
             }
 
-            // 2. تجهيز الذاكرة
+            // 2. الذاكرة
             let history = conversationHistory.get(message.channel.id) || [];
 
-            // بدء الشات مع التعليمات المحدثة
             const chat = model.startChat({
                 history: [
-                    { role: "user", parts: [{ text: selectedPersona }] }, // حقن الشخصية المختارة
-                    { role: "model", parts: [{ text: `تمام، أنا ${personaName} جاهز للرد بلهجتي المكس!` }] },
+                    { role: "user", parts: [{ text: selectedPersona }] },
+                    { role: "model", parts: [{ text: `تمام يا طويل العمر، أنا ${personaName} وجاهز للسوالف!` }] },
                     ...history
                 ],
             });
 
-            // 3. تنظيف الرسالة
             const userMessage = message.content.replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '').trim();
 
             if (!userMessage) {
-                const reply = personaName === "Darla" ? "هلا؟ آمرني يا عسل؟ 😉" : "أيوة يا ريس؟ سامعك 👂";
+                const reply = personaName === "Darla" ? "هلا؟ آمرني يا عسل؟ 😉" : "سم؟ وش بغيت يا وحش؟ 👂";
                 await message.reply(reply);
                 return;
             }
 
-            // 4. إرسال واستقبال الرد
             const result = await chat.sendMessage(userMessage);
             const response = result.response.text();
 
             await message.reply(response);
 
-            // 5. حفظ في الذاكرة
             history.push({ role: "user", parts: [{ text: userMessage }] });
             history.push({ role: "model", parts: [{ text: response }] });
 
-            // الاحتفاظ بآخر 10 ردود فقط لتوفير الذاكرة
             if (history.length > 15) history = history.slice(history.length - 15);
             conversationHistory.set(message.channel.id, history);
 
         } catch (error) {
-            console.error('AI Error:', error);
-            // رد عشوائي في حالة الخطأ
-            const errors = [
-                "المخ ضرب error يا زميلي 😵‍💫",
-                "لحظة ادراك.. السيرفر مهنج ولا أنا؟ 🤔",
-                "Wait.. I lost connection with the mothership 😂"
-            ];
-            await message.reply(errors[Math.floor(Math.random() * errors.length)]);
+            console.error('❌ AI ERROR تفاصيل الخطأ:', error); // ده هيطبع الخطأ في ريلواي
+            
+            // ردود لو حصل خطأ في الاتصال
+            if (error.message.includes('API key')) {
+                await message.reply("⚠️ يا كابتن المفتاح (API Key) غلط أو مش موجود! شيك على Railway.");
+            } else {
+                await message.reply("المخ ضرب error يا زميلي.. جوجل مهنج 😵‍💫");
+            }
         }
     });
 };
