@@ -11,27 +11,14 @@ const {
 } = require('discord.js');
 const { createTranscript } = require('discord-html-transcripts');
 
+const GuildConfig = require('./models/GuildConfig');
+
 module.exports = async (client) => {
 
     // ====================================================
     // ⚙️ CONFIGURATION
     // ====================================================
-    const CONFIG = {
-        prefix: '!',
-        guildID: '1453877816142860350', 
-        categoryID: '1453943996392013901',
-        
-        owners: ['100000000000000000', '200000000000000000'], 
-
-        staffRole: '1454199885460144189',      
-        adminRole: '1453946893053726830',      
-        mediatorRole: '1454563893249703998',   
-        highMediators: ['1454560063480922375', '1466937817639948349'], 
-
-        logsChannel: '1453948413963141153',       
-        transcriptChannel: '1472218573710823679', 
-        mediatorRatingLog: '1472439331443441828', 
-        staffRatingLog: '1472023428658630686',    
+    
     };
 
     // ====================================================
