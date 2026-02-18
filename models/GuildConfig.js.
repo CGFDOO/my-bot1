@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const GuildConfigSchema = new mongoose.Schema({
     guildId: { type: String, required: true, unique: true },
-    ticketCount: { type: Number, default: 360 }, // عشان يكمل من 360 للأبد
-    ticketChannelId: String, // الروم اللي فيها زرار التكت
-    staffRoleId: String,     // رتبة الإدارة اللي بتشوف التكتات
-    adminRoleId: String,     // رتبة الأدمين
+    ticketCount: { type: Number, default: 360 }, // بيكمل من 360 للأبد
+    ticketChannelId: String,
+    staffRoleId: String,
+    adminRoleId: String,
     prefix: { type: String, default: '!' }
 });
 
