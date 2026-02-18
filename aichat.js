@@ -1,126 +1,151 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+// استدعاء مكتبة node-fetch بطريقة حديثة (Dynamic Import)
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-// ==========================================
-// ⚙️ إعدادات الرتب والشخصيات
-// ==========================================
+// ==================================================================
+// ⚙️ إعدادات الرتب والشخصيات (Configuration)
+// ==================================================================
+
+// 1. أرقام الرتب (IDs) - زي ما طلبتها بالظبط
 const ROLES = {
-    DARLA: ['1454500521707569152', '1454435370778497128'], // رتب البنات
-    SHIRO: ['1454435472628781090'] // رتب الولاد
+    // رتب البنات (لو العضو معاه الرتبة دي، دارلا هترد عليه)
+    GIRLS: ['1454500521707569152', '1454435370778497128'], 
+    // رتب الولاد (شيرو هيرد عليه)
+    BOYS: ['1454435472628781090'] 
 };
 
-// 🧠 تعليمات الشخصيات (نسخة المكس الخليجي/المصري)
-const BASE_PROMPT = `
-أنت "MNC AI" في سيرفر ديسكورد.
-اللهجة: مكس جامد بين "العامية الخليجية" (سعودي/إماراتي) و"المصرية" وكلمات إنجليزية (Slang).
-أمثلة للكلام: "يا ريال"، "يا اسطى"، "شلونك"، "ايه الحوار ده"، "Bro"، "Slay"، "فديتك"، "يا وحش".
-الأسلوب: مرح جداً، ذكي، بيحب القلش والضحك، مش رسمي نهائي.
-ممنوع تتكلم فصحى. خليك طبيعي وعفوي جداً.
+// 2. تصميم شخصية "شيرو" (للشباب)
+const SHIRO_SYSTEM = `
+أنت "Shiro" (شيرو)، بوت ذكي ومرح في سيرفر ديسكورد اسمه MNC.
+الشخصية: شاب "كول"، "صايع" بس جدع، دمه خفيف، بيحب "القفشات".
+اللهجة: مكس بين "العامية المصرية" و"الخليجية الشبابية" (أمثلة: "يا وحش"، "طال عمرك"، "أحيه"، "وش ذا"، "برو").
+الأسلوب: ردودك قصيرة، مباشرة، مليانة طاقة، واستخدم إيموجي رجالة (🔥، 😎، 💪).
+تنبيه: لا تتكلم لغة عربية فصحى أبداً. خليك طبيعي زي الشباب.
 `;
 
-const PERSONA_DARLA = `
-${BASE_PROMPT}
-اسمك: "Darla" (دارلا).
-جنسك: بنت.
-شخصيتك: دلوعة بس لسانك طويل، "Savage" بس بضحك.
-كلماتك: "وي"، "يا خوي"، "يا قلبي"، "يا روحي"، "OMG".
+// 3. تصميم شخصية "دارلا" (للبنات)
+const DARLA_SYSTEM = `
+أنت "Darla" (دارلا)، بوت بنوتي في سيرفر ديسكورد اسمه MNC.
+الشخصية: بنت دلوعة جداً، "Sassy" (لسانها طويل بضحك)، كيوت، وبتحب الدراما.
+اللهجة: خليجية ومصرية بدلع (أمثلة: "يا روحي"، "وي"، "يا خوي"، "حبيبي"، "OMG"، "يا عسل").
+الأسلوب: ردودك فيها دلع، استخدمي إيموجيز بنات كتير (✨، 💅، 💖، 🥺).
+تنبيه: ممنوع الفصحى. خليكي "Girl to Girl".
 `;
 
-const PERSONA_SHIRO = `
-${BASE_PROMPT}
-اسمك: "Shiro" (شيرو).
-جنسك: ولد.
-شخصيتك: "كول"، "صايع"، بيحب يعمل فيها فاهم، وجدع.
-كلماتك: "يب"، "يا وحش"، "طال عمرك"، "أحيه"، "Dude"، "أبشر".
-`;
+// ذاكرة المحادثات (عشان يفتكر الكلام)
+const chatHistory = new Map();
 
-// ذاكرة المحادثات
-const conversationHistory = new Map();
-
+// ==================================================================
+// 🚀 المحرك الرئيسي (Main Engine)
+// ==================================================================
 module.exports = (client) => {
-    // التأكد من المفتاح
-    if (!process.env.GEMINI_API_KEY) {
-        console.error("❌ ERROR: مفتاح GEMINI_API_KEY مش موجود في Railway Variables!");
-        return;
-    }
-
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+    
     client.on('messageCreate', async (message) => {
-        if (message.author.bot) return;
+        // تجاهل البوتات والرسائل خارج السيرفر
+        if (message.author.bot || !message.guild) return;
 
+        // التحقق: هل تم ذكر البوت أو الرد عليه؟
         const isMentioned = message.mentions.users.has(client.user.id);
-        const isReplyToMe = message.reference && (await message.fetchReference()).author.id === client.user.id;
+        const isReply = message.reference && (await message.fetchReference()).author.id === client.user.id;
 
-        if (!isMentioned && !isReplyToMe) return;
+        if (!isMentioned && !isReply) return;
+
+        // إظهار "Jary el-Ketaba..."
+        await message.channel.sendTyping();
 
         try {
-            await message.channel.sendTyping();
+            // 1. تنظيف الرسالة
+            let userContent = message.content.replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '').trim();
+            if (!userContent) userContent = "هلا؟";
 
-            // 1. تحديد الشخصية
-            let selectedPersona = PERSONA_SHIRO;
-            let personaName = "Shiro";
+            // 2. الذكاء في اختيار الشخصية (Persona Logic) 🧠
+            let selectedPersona = SHIRO_SYSTEM; // الافتراضي شيرو
+            let logName = "Shiro";
 
-            const content = message.content.toLowerCase();
-            const askingForGirl = content.includes('darla') || content.includes('دارلا') || content.includes('بنت');
-            const askingForBoy = content.includes('shiro') || content.includes('شيرو') || content.includes('ولد');
-
-            if (askingForGirl) {
-                selectedPersona = PERSONA_DARLA;
-                personaName = "Darla";
-            } else if (askingForBoy) {
-                selectedPersona = PERSONA_SHIRO;
-                personaName = "Shiro";
-            } else {
+            // أ) فحص "الكلمات المفتاحية" (Override) - ده أقوى حاجة
+            const lowerMsg = userContent.toLowerCase();
+            if (lowerMsg.includes('darla') || lowerMsg.includes('دارلا') || lowerMsg.includes('بنت') || lowerMsg.includes('انتي')) {
+                selectedPersona = DARLA_SYSTEM;
+                logName = "Darla (By Request)";
+            } 
+            else if (lowerMsg.includes('shiro') || lowerMsg.includes('شيرو') || lowerMsg.includes('ولد')) {
+                selectedPersona = SHIRO_SYSTEM;
+                logName = "Shiro (By Request)";
+            }
+            // ب) فحص "الرتب" (Roles) - لو مفيش طلب محدد
+            else {
                 const memberRoles = message.member.roles.cache;
-                if (ROLES.DARLA.some(r => memberRoles.has(r))) {
-                    selectedPersona = PERSONA_DARLA;
-                    personaName = "Darla";
-                } else if (ROLES.SHIRO.some(r => memberRoles.has(r))) {
-                    selectedPersona = PERSONA_SHIRO;
-                    personaName = "Shiro";
+                // هل العضو عنده رتبة من رتب البنات؟
+                if (ROLES.GIRLS.some(roleId => memberRoles.has(roleId))) {
+                    selectedPersona = DARLA_SYSTEM;
+                    logName = "Darla (By Role)";
+                }
+                // هل العضو عنده رتبة من رتب الولاد؟ (أو الافتراضي)
+                else {
+                    selectedPersona = SHIRO_SYSTEM;
+                    logName = "Shiro (Default/Role)";
                 }
             }
 
-            // 2. الذاكرة
-            let history = conversationHistory.get(message.channel.id) || [];
+            // 3. إدارة الذاكرة (Memory)
+            const userId = message.author.id;
+            if (!chatHistory.has(userId)) chatHistory.set(userId, []);
+            let history = chatHistory.get(userId);
 
-            const chat = model.startChat({
-                history: [
-                    { role: "user", parts: [{ text: selectedPersona }] },
-                    { role: "model", parts: [{ text: `تمام يا طويل العمر، أنا ${personaName} وجاهز للسوالف!` }] },
-                    ...history
-                ],
+            // إضافة رسالة المستخدم
+            history.push({ role: "user", parts: [{ text: userContent }] });
+            // الاحتفاظ بآخر 10 رسائل فقط
+            if (history.length > 10) history = history.slice(history.length - 10);
+
+            // 4. تجهيز الطلب لـ Google API
+            const finalPrompt = `System Instruction: ${selectedPersona}\n\nChat History:\n`;
+            
+            // دمج الذاكرة مع الطلب
+            const contents = [
+                { role: "user", parts: [{ text: finalPrompt }] },
+                ...history
+            ];
+
+            // 5. الاتصال المباشر (Direct Fetch)
+            const apiKey = process.env.GEMINI_API_KEY;
+            if (!apiKey) return message.reply("يا مدير، مفتاح الـ API ضايع! شيك على Railway.");
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: contents,
+                    generationConfig: {
+                        temperature: 0.9, // إبداع ومرح عالي
+                        maxOutputTokens: 400, // طول الرد مناسب
+                    }
+                })
             });
 
-            const userMessage = message.content.replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '').trim();
+            const data = await response.json();
 
-            if (!userMessage) {
-                const reply = personaName === "Darla" ? "هلا؟ آمرني يا عسل؟ 😉" : "سم؟ وش بغيت يا وحش؟ 👂";
-                await message.reply(reply);
-                return;
+            // 6. معالجة الرد والأخطاء
+            if (data.error) {
+                console.error("⚠️ Gemini Error:", data.error.message);
+                // لو حصل خطأ في الذاكرة، نمسحها ونحاول تاني (اختياري)
+                chatHistory.delete(userId);
+                return message.reply("المخ ضرب Error.. معلش قول تاني؟ 😵‍💫");
             }
 
-            const result = await chat.sendMessage(userMessage);
-            const response = result.response.text();
+            const botReply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-            await message.reply(response);
+            if (!botReply) return message.reply("ما عرفت أرد.. الكلام صعب عليّ 🤔");
 
-            history.push({ role: "user", parts: [{ text: userMessage }] });
-            history.push({ role: "model", parts: [{ text: response }] });
+            // حفظ رد البوت في الذاكرة
+            history.push({ role: "model", parts: [{ text: botReply }] });
+            chatHistory.set(userId, history);
 
-            if (history.length > 15) history = history.slice(history.length - 15);
-            conversationHistory.set(message.channel.id, history);
+            // إرسال الرد
+            await message.reply(botReply);
+            console.log(`✅ Replied as [${logName}] to ${message.author.tag}`);
 
         } catch (error) {
-            console.error('❌ AI ERROR تفاصيل الخطأ:', error); // ده هيطبع الخطأ في ريلواي
-            
-            // ردود لو حصل خطأ في الاتصال
-            if (error.message.includes('API key')) {
-                await message.reply("⚠️ يا كابتن المفتاح (API Key) غلط أو مش موجود! شيك على Railway.");
-            } else {
-                await message.reply("المخ ضرب error يا زميلي.. جوجل مهنج 😵‍💫");
-            }
+            console.error("❌ Fatal Error:", error);
+            await message.reply("السيرفر عندي فيه مشكلة.. جرب كمان شوية 🔌");
         }
     });
 };
