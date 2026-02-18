@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const GuildConfigSchema = new mongoose.Schema({
     guildId: { type: String, required: true, unique: true },
-    ticketCount: { type: Number, default: 360 }, // بيكمل من 360 للأبد
+    ticketCount: { type: Number, default: 360 }, 
+    // إحصائيات التقييمات (الخزنة الدائمة)
+    serverRatings: { type: Number, default: 0 },
+    staffRatings: { type: Number, default: 0 },
+    middlemanRatings: { type: Number, default: 0 },
+    
     ticketChannelId: String,
     staffRoleId: String,
-    adminRoleId: String,
     prefix: { type: String, default: '!' }
 });
 
