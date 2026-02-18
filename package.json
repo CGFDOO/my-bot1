@@ -1,18 +1,17 @@
 {
   "name": "mnc-ultimate-bot",
   "version": "3.0.0",
-  "description": "MNC Advanced AI System",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
     "discord-html-transcripts": "^3.1.5",
-    "node-fetch": "^3.3.2"
-  },
-  "engines": {
-    "node": ">=16.9.0"
+    "node-fetch": "^2.6.7"
   }
 }
