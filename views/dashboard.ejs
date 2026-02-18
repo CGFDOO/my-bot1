@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>سيرفراتك - MNC</title>
+    <style>
+        body { font-family: sans-serif; background: #23272a; color: white; text-align: center; }
+        .server-list { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 50px; }
+        .server-card { background: #2c2f33; padding: 20px; margin: 10px; border-radius: 10px; width: 200px; }
+        .server-icon { width: 80px; height: 80px; border-radius: 50%; }
+        .btn { background: #7289da; color: white; padding: 10px; text-decoration: none; display: block; margin-top: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>اختر سيرفر للتحكم فيه 🤖</h1>
+    <div class="server-list">
+        <% guilds.forEach(guild => { %>
+            <div class="server-card">
+                <img class="server-icon" src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png">
+                <h3><%= guild.name %></h3>
+                <a href="/settings/<%= guild.id %>" class="btn">إدارة السيرفر</a>
+            </div>
+        <% }) %>
+    </div>
+</body>
+</html>
