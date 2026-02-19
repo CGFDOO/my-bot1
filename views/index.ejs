@@ -2,17 +2,28 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>MNC COMMUNITY Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNC Bot System</title>
     <style>
-        body { font-family: sans-serif; background: #2c2f33; color: white; text-align: center; padding-top: 100px; }
-        .btn { background: #7289da; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 20px; transition: 0.3s; }
-        .btn:hover { background: #5b6eae; box-shadow: 0 0 15px rgba(114, 137, 218, 0.5); }
+        body { background-color: #23272a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0; }
+        .box { text-align: center; background: #2c2f33; padding: 60px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-top: 5px solid #5865F2; }
+        h1 { margin-bottom: 20px; color: #ffffff; font-size: 2.5rem; }
+        p { color: #b9bbbe; margin-bottom: 40px; }
+        .btn-login { background: #5865F2; color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 18px; transition: 0.3s; display: inline-block; }
+        .btn-login:hover { background: #4752c4; transform: scale(1.05); box-shadow: 0 5px 15px rgba(88, 101, 242, 0.4); }
     </style>
 </head>
 <body>
-    <h1>مرحباً بك في لوحة تحكم MNC COMMUNITY 🚀</h1>
-    <p>تحكم في سيرفرك وتكتاتك من مكان واحد!</p>
-    <br><br>
-    <a href="/login" class="btn">تسجيل الدخول عبر ديسكورد</a>
+    <div class="box">
+        <h1>🤖 نظام التذاكر المتطور</h1>
+        <p>تحكم في إعدادات بوت التذاكر الخاص بك بسهولة وتكامل.</p>
+        
+        <% if (!user) { %>
+            <a href="/login" class="btn-login">🔑 تسجيل الدخول عبر ديسكورد</a>
+        <% } else { %>
+            <p>مرحباً بك، <strong><%= user.username %></strong></p>
+            <a href="/dashboard" class="btn-login">🚀 الذهاب للداشبورد</a>
+        <% } %>
+    </div>
 </body>
 </html>
