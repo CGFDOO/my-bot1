@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
 
-const GuildConfigSchema = new mongoose.Schema({
-    guildId: { type: String, required: true, unique: true }, // بصمة السيرفر
-    ticketCount: { type: Number, default: 1 }, // بيبدأ من 1 (وفي MNC هنخليه 360)
-    serverRatings: { type: Number, default: 0 },
-    middlemanRatings: { type: Number, default: 0 },
-    ticketChannelId: String, // الروم اللي صاحب السيرفر هيختارها
-    staffRoleId: String      // الرتبة اللي صاحب السيرفر هيختارها
+const configSchema = new mongoose.Schema({
+    guildId: { type: String, required: true, unique: true }, // أيدي السيرفر
+    ticketChannelId: { type: String, default: null },        // كاتيجوري التكتات
+    logsChannelId: { type: String, default: null },          // روم اللوجات
+    transcriptChannelId: { type: String, default: null },    // روم الترانسكريبت
+    staffRoleId: { type: String, default: null },            // رتبة الدعم
+    adminRoleId: { type: String, default: null },            // رتبة الإدارة العليا
+    ticketCount: { type: Number, default: 0 },               // عداد التكتات
+    middlemanRatings: { type: Number, default: 0 },          // تقييمات الوسطاء
+    serverRatings: { type: Number, default: 0 }              // تقييمات السيرفر
 });
 
-module.exports = mongoose.model('GuildConfig', GuildConfigSchema);
+module.exports = mongoose.model('GuildConfig', configSchema);
