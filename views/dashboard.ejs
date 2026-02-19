@@ -3,45 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - اختر السيرفر</title>
+    <title>MNC System | اختيار السيرفر</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #23272a; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; text-align: center; }
-        h1 { color: #7289da; margin-bottom: 40px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .card { background: #2c2f33; padding: 20px; border-radius: 10px; text-align: center; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .card:hover { transform: translateY(-5px); background: #35393e; }
-        .icon { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px; border: 3px solid #7289da; }
-        .btn { display: inline-block; padding: 10px 20px; background: #7289da; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; font-weight: bold; }
-        .btn:hover { background: #5b6eae; }
-        .logout { position: absolute; top: 20px; left: 20px; color: #f04747; text-decoration: none; font-weight: bold; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #121212; color: white; margin: 0; }
+        header { background: #1e1e24; padding: 20px 50px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #5865F2; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-info img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #5865F2; }
+        .logout-btn { background: #ed4245; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        .logout-btn:hover { background: #c9383b; }
+        
+        .container { padding: 50px; max-width: 1200px; margin: 0 auto; text-align: center; }
+        .servers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+        
+        .server-card {
+            background: #1e1e24;
+            padding: 30px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: white;
+            transition: 0.3s;
+            border: 1px solid #2b2b36;
+        }
+        .server-card:hover { transform: translateY(-5px); border-color: #5865F2; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .server-icon { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px; background: #2f3136; display: inline-flex; justify-content: center; align-items: center; font-size: 24px; color: #fff; }
+        .server-name { font-size: 18px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <a href="/logout" class="logout">تسجيل خروج 🚪</a>
-    
-    <div class="container">
-        <h1>🎛️ لوحة التحكم</h1>
-        <p>مرحباً، <%= user.username %>! اختر السيرفر للإعداد:</p>
-        <br>
 
-        <div class="grid">
+    <header>
+        <div class="user-info">
+            <% if (user.avatar) { %>
+                <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar">
+            <% } else { %>
+                <div class="server-icon" style="width:50px; height:50px; font-size:16px;">👤</div>
+            <% } %>
+            <h2>مرحباً، <%= user.username %></h2>
+        </div>
+        <a href="/logout" class="logout-btn">تسجيل الخروج</a>
+    </header>
+
+    <div class="container">
+        <h1>اختر السيرفر</h1>
+        <p style="color: #a3a6aa;">اختر السيرفر الذي تريد التحكم في إعداداته (تظهر السيرفرات التي تملك بها صلاحية الإدارة فقط).</p>
+
+        <div class="servers-grid">
             <% guilds.forEach(guild => { %>
-                <div class="card">
+                <a href="/settings/<%= guild.id %>" class="server-card">
                     <% if (guild.icon) { %>
-                        <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" class="icon" alt="icon">
+                        <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" class="server-icon" alt="<%= guild.name %>">
                     <% } else { %>
-                        <img src="https://cdn.discordapp.com/embed/avatars/0.png" class="icon" alt="icon">
+                        <div class="server-icon"><%= guild.name.charAt(0) %></div>
                     <% } %>
-                    <h3><%= guild.name %></h3>
-                    <a href="/settings/<%= guild.id %>" class="btn">إدارة السيرفر ⚙️</a>
-                </div>
+                    <div class="server-name"><%= guild.name %></div>
+                </a>
             <% }) %>
         </div>
-        
-        <% if (guilds.length === 0) { %>
-            <p>❌ أنت لست مسؤولاً (Admin) في أي سيرفر مشترك فيه البوت.</p>
-        <% } %>
     </div>
+
 </body>
 </html>
