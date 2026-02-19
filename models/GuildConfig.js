@@ -95,58 +95,27 @@ const guildConfigSchema = new mongoose.Schema({
     readOnlyStaffOnClaim: { type: Boolean, default: false },
     
     // ⌨️ الأوامر الإدارية والرتب المسموحة لها
-    cmdAdd: { type: String, default: '!add' },
-    cmdAddRoles: { type: [String], default: [] },
-    
-    cmdDone: { type: String, default: '!done' },
-    cmdDoneRoles: { type: [String], default: [] },
-    
-    cmdReqHigh: { type: String, default: '!req-high' },
-    cmdReqHighRoles: { type: [String], default: [] },
-    
-    cmdCome: { type: String, default: '!come' },
-    cmdComeRoles: { type: [String], default: [] },
-    
-    cmdTrade: { type: String, default: '!trade' },
-    cmdTradeRoles: { type: [String], default: [] },
-    
-    cmdClear: { type: String, default: '!clear' },
-    cmdClearRoles: { type: [String], default: [] },
-    
-    cmdLock: { type: String, default: '!lock' },
-    cmdLockRoles: { type: [String], default: [] },
-    
-    cmdUnlock: { type: String, default: '!unlock' },
-    cmdUnlockRoles: { type: [String], default: [] },
-    
-    cmdVmove: { type: String, default: '!vmove' },
-    cmdVmoveRoles: { type: [String], default: [] },
-    
-    cmdBan: { type: String, default: '!ban' },
-    cmdBanRoles: { type: [String], default: [] },
-    
-    cmdTimeout: { type: String, default: '!timeout' },
-    cmdTimeoutRoles: { type: [String], default: [] },
+    cmdAdd: { type: String, default: '!add' }, cmdAddRoles: { type: [String], default: [] },
+    cmdDone: { type: String, default: '!done' }, cmdDoneRoles: { type: [String], default: [] },
+    cmdReqHigh: { type: String, default: '!req-high' }, cmdReqHighRoles: { type: [String], default: [] },
+    cmdCome: { type: String, default: '!come' }, cmdComeRoles: { type: [String], default: [] },
+    cmdTrade: { type: String, default: '!trade' }, cmdTradeRoles: { type: [String], default: [] },
+    cmdClear: { type: String, default: '!clear' }, cmdClearRoles: { type: [String], default: [] },
+    cmdLock: { type: String, default: '!lock' }, cmdLockRoles: { type: [String], default: [] },
+    cmdUnlock: { type: String, default: '!unlock' }, cmdUnlockRoles: { type: [String], default: [] },
+    cmdVmove: { type: String, default: '!vmove' }, cmdVmoveRoles: { type: [String], default: [] },
+    cmdBan: { type: String, default: '!ban' }, cmdBanRoles: { type: [String], default: [] },
+    cmdTimeout: { type: String, default: '!timeout' }, cmdTimeoutRoles: { type: [String], default: [] },
     
     // 📁 جميع السجلات واللوجات الشاملة
-    transcriptChannelId: { type: String, default: null }, 
-    ticketLogChannelId: { type: String, default: null }, 
-    staffRatingChannelId: { type: String, default: null }, 
-    mediatorRatingChannelId: { type: String, default: null }, 
+    transcriptChannelId: { type: String, default: null }, ticketLogChannelId: { type: String, default: null }, staffRatingChannelId: { type: String, default: null }, mediatorRatingChannelId: { type: String, default: null }, 
+    logRoleCreateDeleteId: { type: String, default: null }, logMemberRoleUpdateId: { type: String, default: null }, logJoinLeaveId: { type: String, default: null }, logMsgDeleteId: { type: String, default: null }, logMsgUpdateId: { type: String, default: null }, logImgDeleteId: { type: String, default: null }, logVoiceId: { type: String, default: null }, 
+    logInviteId: { type: String, default: null }, logChannelThreadId: { type: String, default: null }, logBanId: { type: String, default: null }, logTimeoutId: { type: String, default: null }, logUnwarnId: { type: String, default: null },
     
-    logRoleCreateDeleteId: { type: String, default: null }, 
-    logMemberRoleUpdateId: { type: String, default: null }, 
-    logJoinLeaveId: { type: String, default: null }, 
-    logMsgDeleteId: { type: String, default: null }, 
-    logMsgUpdateId: { type: String, default: null }, 
-    logImgDeleteId: { type: String, default: null }, 
-    logVoiceId: { type: String, default: null }, 
-    
-    logInviteId: { type: String, default: null }, 
-    logChannelThreadId: { type: String, default: null }, 
-    logBanId: { type: String, default: null }, 
-    logTimeoutId: { type: String, default: null },
-    logUnwarnId: { type: String, default: null } 
+    // 🔥 العدادات الجديدة للتقييمات (تم تعديلها لتكون موحدة للسيرفر)
+    staffRatingsCount: { type: Map, of: Number, default: {} },      // عداد لكل إداري لوحده
+    mediatorRatingsCount: { type: Map, of: Number, default: {} },   // عداد لكل وسيط لوحده
+    totalServerRatings: { type: Number, default: 0 }                // عداد موحد متسلسل للسيرفر بالكامل
 });
 
 module.exports = mongoose.model('GuildConfig', guildConfigSchema);
