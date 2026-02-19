@@ -98,6 +98,32 @@ module.exports = (client) => {
         // ⚙️ 2. أزرار التحكم جوه التكت (Claim, Close, Add)
         // ==========================================
         if (interaction.isButton()) {
+
+                        // ⚖️ زراير الموافقة والرفض الخاصة بالتريد (!trade)
+            if (interaction.customId === 'trade_approve' || interaction.customId === 'trade_reject') {
+                // التحقق: هل الشخص اللي داس معاه رتبة الإدارة العليا أو الوساطة العليا؟
+                const isHighStaff = config.highAdminRoles.some(id => interaction.member.roles.cache.has(id)) || 
+                                    config.highMediatorRoles.some(id => interaction.member.roles.cache.has(id)) || 
+                                    interaction.member.permissions.has('Administrator');
+
+                if (!isHighStaff) {
+                    return interaction.reply({ content: '❌ **هذا الزر مخصص للإدارة والوساطة العليا فقط!**', ephemeral: true });
+                }
+
+                const oldEmbed = interaction.message.embeds[0];
+                const updatedEmbed = EmbedBuilder.from(oldEmbed);
+
+                if (interaction.customId === 'trade_approve') {
+                    updatedEmbed.setColor('#3ba55d').addFields({ name: 'حالة الطلب:', value: `✅ تمت الموافقة بواسطة <@${interaction.user.id}>` });
+                } else {
+                    updatedEmbed.setColor('#ed4245').addFields({ name: 'حالة الطلب:', value: `❌ تم الرفض بواسطة <@${interaction.user.id}>` });
+                }
+
+                // مسح الزراير بعد الضغط وتحديث الإيمبد
+                await interaction.update({ embeds: [updatedEmbed], components: [] });
+                return;
+            }
+            
             
             // ✅ زر الاستلام (Claim) + تعطيل الزر (شفاف)
             if (interaction.customId === 'ticket_claim') {
