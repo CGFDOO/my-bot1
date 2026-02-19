@@ -1,56 +1,72 @@
 const mongoose = require('mongoose');
 
-// تصميم شكل "الزرار" المخصص اللي هتعمله من الداشبورد
+// 🔘 تصميم زرار التكت والنوافذ (Modal)
 const ticketButtonSchema = new mongoose.Schema({
-    id: { type: String, required: true }, // e.g., btn_support
-    label: { type: String, required: true }, // اسم الزرار (مثلاً: زيزو أو دعم فني)
-    color: { type: String, default: 'Primary' }, // لون الزرار (Primary, Secondary, Success, Danger)
-    categoryId: { type: String, default: null }, // الكاتيجوري اللي التكت هيفتح فيه
-    welcomeMessage: { type: String, default: 'مرحباً بك في التكت' }, // رسالة الترحيب الخاصة بالزرار ده
-    requireModal: { type: Boolean, default: false }, // هل يفتح نافذة (Modal) يكتب فيها بيانات؟
-    modalTitle: { type: String, default: 'اكتب تفاصيلك' }, // عنوان النافذة
-    isMediator: { type: Boolean, default: false } // هل التكت ده للوساطة عشان يتبعتله تقييم وسطاء في الآخر؟
+    id: { type: String, required: true },
+    label: { type: String, required: true },
+    color: { type: String, default: 'Primary' },
+    categoryId: { type: String, default: null },
+    welcomeTitle: { type: String, default: 'مرحباً بك' },
+    welcomeMessage: { type: String, default: 'يرجى كتابة طلبك...' },
+    requireModal: { type: Boolean, default: false },
+    modalQuestions: { type: [String], default: [] },
+    isMediator: { type: Boolean, default: false }
 });
 
 const guildConfigSchema = new mongoose.Schema({
     guildId: { type: String, required: true, unique: true },
     
-    // 🎟️ إعدادات لوحة التكتات الأساسية (Panel)
-    panelChannelId: { type: String, default: null }, // الروم اللي هيتبعت فيها بانر التكتات
-    ticketEmbedTitle: { type: String, default: 'الدعم الفني والوساطة' },
-    ticketEmbedDesc: { type: String, default: 'اضغط على الزر لفتح تذكرة.' },
-    ticketEmbedColor: { type: String, default: '#0099ff' },
-    ticketCount: { type: Number, default: 0 },
+    // ⚙️ الإعدادات العامة والحماية
+    prefix: { type: String, default: '!' }, // البريفكس المخصص
+    antiLinks: { type: Boolean, default: false }, // منع الروابط
+    antiSpam: { type: Boolean, default: false }, // منع التكرار
+    autoRoleId: { type: String, default: null }, // رتبة الدخول التلقائية
+    welcomeChannelId: { type: String, default: null }, // روم الترحيب
+    welcomeMessage: { type: String, default: 'مرحباً بك في السيرفر!' },
     
-    // 🔘 الأزرار المخصصة اللي صاحب السيرفر هيصممها
+    // 🎟️ التكتات الأساسية
+    panelChannelId: { type: String, default: null },
+    ticketEmbedTitle: { type: String, default: 'MNC COMMUNITY' },
+    ticketEmbedDesc: { type: String, default: 'اضغط لفتح تذكرة' },
+    ticketEmbedColor: { type: String, default: '#0099ff' },
+    ticketEmbedImage: { type: String, default: null },
+    ticketCount: { type: Number, default: 0 },
     customButtons: [ticketButtonSchema], 
 
-    // 👨‍⚖️ نظام الإدارة والوساطة
-    staffRoleId: { type: String, default: null },
-    adminRoles: { type: [String], default: [] }, // مصفوفة عشان تستقبل أكتر من رتبة عليا
+    // 👨‍⚖️ الرتب (4 مستويات مفصولة)
+    adminRoleId: { type: String, default: null }, // إدارة صغرى
+    highAdminRoles: { type: [String], default: [] }, // إدارة عليا
+    mediatorRoleId: { type: String, default: null }, // وساطة صغرى
+    highMediatorRoles: { type: [String], default: [] }, // وساطة عليا
     
-    // 🔥 زراير التحكم في استلام التكت (Claim)
-    hideTicketOnClaim: { type: Boolean, default: true }, // إخفاء التكت عن باقي الإدارة
-    readOnlyStaffOnClaim: { type: Boolean, default: false }, // وضع المراقبة: الإدارة تشوف بس متكتبش
+    // 🔥 التحكم في استلام التكت
+    hideTicketOnClaim: { type: Boolean, default: true },
+    readOnlyStaffOnClaim: { type: Boolean, default: false },
     
     // ⌨️ الأوامر المخصصة
-    cmdDone: { type: String, default: '!done' },
-    cmdCome: { type: String, default: '!come' },
-    cmdApprove: { type: String, default: '!req-high' },
-    cmdTrade: { type: String, default: '!trade' },
+    cmdDone: { type: String, default: 'done' },
+    cmdReqHigh: { type: String, default: 'req-high' },
+    cmdCome: { type: String, default: 'come' },
+    cmdTrade: { type: String, default: 'trade' },
+    cmdClear: { type: String, default: 'clear' },
+    cmdLock: { type: String, default: 'lock' },
+    cmdUnlock: { type: String, default: 'unlock' },
+    cmdVmove: { type: String, default: 'vmove' },
     
-    // 📁 السجلات والتقييمات (منفصلة تماماً)
-    transcriptChannelId: { type: String, default: null },
-    ticketLogChannelId: { type: String, default: null }, // لوج التكتات الأساسي
-    staffRatingChannelId: { type: String, default: null }, // روم تقييم الإدارة
-    mediatorRatingChannelId: { type: String, default: null }, // روم تقييم الوسطاء
+    // 📁 اللوجات والتقييمات
+    transcriptChannelId: { type: String, default: null }, 
+    ticketLogChannelId: { type: String, default: null }, 
+    staffRatingChannelId: { type: String, default: null }, 
+    mediatorRatingChannelId: { type: String, default: null }, 
     
-    // 🛡️ لوجات حماية السيرفر (Audit Logs)
-    logRoleCreateId: { type: String, default: null },
-    logJoinLeaveId: { type: String, default: null },
-    logMsgDeleteId: { type: String, default: null },
-    logImgDeleteId: { type: String, default: null },
-    logVoiceId: { type: String, default: null }
+    // 🛡️ حماية ولوجات السيرفر (Audit Logs)
+    logRoleCreateDeleteId: { type: String, default: null }, 
+    logMemberRoleUpdateId: { type: String, default: null }, // مين عطى/سحب رتبة لمين
+    logJoinLeaveId: { type: String, default: null }, 
+    logMsgDeleteId: { type: String, default: null }, 
+    logMsgUpdateId: { type: String, default: null }, // تعديل الرسائل
+    logImgDeleteId: { type: String, default: null }, 
+    logVoiceId: { type: String, default: null } 
 });
 
 module.exports = mongoose.model('GuildConfig', guildConfigSchema);
