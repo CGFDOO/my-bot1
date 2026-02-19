@@ -3,16 +3,16 @@ const passport = require('passport');
 const { Strategy } = require('passport-discord');
 const session = require('express-session');
 const path = require('path');
-const GuildConfig = require('../models/GuildConfig'); // ربط الداتابيز
+const GuildConfig = require('../models/GuildConfig');
 
 module.exports = (client) => {
     const app = express();
     app.use(express.urlencoded({ extended: true }));
-    app.use(express.static(path.join(__dirname, 'public'))); // للملفات الثابتة لو احتجتها
+    app.use(express.static(path.join(__dirname, 'public')));
 
     // إعدادات الجلسة (Session)
     app.use(session({
-        secret: 'MNC_SECRET_KEY_V13',
+        secret: process.env.SESSION_SECRET || 'MNC_SECRET_KEY_V13',
         resave: false,
         saveUninitialized: false,
         cookie: { maxAge: 60000 * 60 * 24 } // يوم كامل
@@ -21,7 +21,7 @@ module.exports = (client) => {
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
 
-    // إعدادات Passport (تسجيل الدخول)
+    // إعدادات Passport (تسجيل الدخول عبر ديسكورد)
     passport.serializeUser((user, done) => done(null, user));
     passport.deserializeUser((obj, done) => done(null, obj));
 
@@ -58,18 +58,20 @@ module.exports = (client) => {
         res.render('dashboard', { user: req.user, guilds: adminGuilds });
     });
 
-    // 🟢 صفحة إعدادات سيرفر معين
+    // 🟢 عرض صفحة إعدادات السيرفر
     app.get('/settings/:guildID', async (req, res) => {
         if (!req.user) return res.redirect('/login');
         
         const guild = client.guilds.cache.get(req.params.guildID);
         if (!guild) return res.send(`
-            <h1>❌ البوت ليس في هذا السيرفر</h1>
-            <p>يجب عليك إضافة البوت للسيرفر أولاً لتتمكن من إعداده.</p>
-            <a href="https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot">اضغط هنا لإضافة البوت</a>
+            <div style="text-align:center; font-family:sans-serif; margin-top:50px; color:white; background:#121212; height:100vh; padding-top:20px;">
+                <h1>❌ البوت ليس في هذا السيرفر</h1>
+                <p>يجب عليك إضافة البوت للسيرفر أولاً لتتمكن من إعداده.</p>
+                <a href="https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot" style="background:#5865F2; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">اضغط هنا لإضافة البوت</a>
+            </div>
         `);
 
-        // التأكد إن المستخدم أدمن في السيرفر ده فعلاً
+        // التأكد إن المستخدم أدمن
         const userGuild = req.user.guilds.find(g => g.id === req.params.guildID);
         if (!userGuild || (userGuild.permissions & 0x8) !== 0x8) return res.send("❌ ليس لديك صلاحية للتحكم في هذا السيرفر!");
 
@@ -77,9 +79,9 @@ module.exports = (client) => {
         let config = await GuildConfig.findOne({ guildId: guild.id });
         if (!config) config = await GuildConfig.create({ guildId: guild.id });
 
-        // جلب الرومات والرتب عشان نعرضها في القائمة
+        // جلب الرومات والرتب
         const channels = guild.channels.cache
-            .filter(c => c.type === 0 || c.type === 4) // Text Channels & Categories
+            .filter(c => c.type === 0 || c.type === 4 || c.type === 2) // نصوص، أقسام، أو صوت
             .map(c => ({ id: c.id, name: c.name, type: c.type }));
             
         const roles = guild.roles.cache
@@ -89,20 +91,46 @@ module.exports = (client) => {
         res.render('settings', { guild, config, channels, roles, user: req.user });
     });
 
-    // 🟢 حفظ الإعدادات (لما يدوس حفظ)
+    // 🟢 حفظ الإعدادات الجديدة الشاملة
     app.post('/settings/:guildID', async (req, res) => {
         if (!req.user) return res.redirect('/login');
 
-        const { ticketCount, ticketChannelId, staffRoleId, adminRoleId, logsChannelId } = req.body;
+        const { 
+            ticketCount, categoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage,
+            staffRoleId, adminRoles, cmdDone, cmdCome, cmdApprove,
+            transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
+            logRoleCreateId, logJoinLeaveId, logMsgDeleteId, logImgDeleteId, logVoiceId
+        } = req.body;
+
+        // تظبيط الرتب العليا عشان لو اختار رتبة واحدة الداتابيز متضربش (بتحولها لمصفوفة أوتوماتيك)
+        let formattedAdminRoles = [];
+        if (adminRoles) {
+            formattedAdminRoles = Array.isArray(adminRoles) ? adminRoles : [adminRoles];
+        }
 
         await GuildConfig.findOneAndUpdate(
             { guildId: req.params.guildID },
             { 
-                ticketCount: parseInt(ticketCount), 
-                ticketChannelId, 
+                ticketCount: parseInt(ticketCount) || 0, 
+                categoryId, 
+                ticketEmbedTitle, 
+                ticketEmbedDesc, 
+                ticketEmbedColor, 
+                ticketEmbedImage,
                 staffRoleId, 
-                adminRoleId, 
-                logsChannelId 
+                adminRoles: formattedAdminRoles,
+                cmdDone, 
+                cmdCome, 
+                cmdApprove,
+                transcriptChannelId, 
+                ticketLogChannelId, 
+                staffRatingChannelId, 
+                mediatorRatingChannelId,
+                logRoleCreateId, 
+                logJoinLeaveId, 
+                logMsgDeleteId, 
+                logImgDeleteId, 
+                logVoiceId
             },
             { upsert: true }
         );
@@ -110,6 +138,7 @@ module.exports = (client) => {
         res.redirect(`/settings/${req.params.guildID}`);
     });
 
-    const PORT = process.env.PORT || 3000;
+    // تشغيل السيرفر على البورت
+    const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => console.log(`🌐 Dashboard Running on port ${PORT}`));
 };
