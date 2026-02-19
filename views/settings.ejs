@@ -25,6 +25,7 @@
         .save-btn:hover { background: #2d7d46; }
         .builder-box { border: 1px solid #5865F2; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #1e1e24; }
         .add-btn { background: #5865F2; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-family: 'Tajawal', sans-serif; }
+        .help-box { background: #2b2b36; border-right: 4px solid #f2a658; padding: 10px; margin-bottom: 15px; font-size: 14px; color: #ccc; }
         hr { border-color: #333; margin: 20px 0; }
         @media (max-width: 768px) { body { flex-direction: column; overflow: auto; } .mobile-header { display: flex; } .sidebar { position: fixed; right: -300px; top: 0; height: 100%; width: 250px; } .sidebar.open { right: 0; } .content { padding: 15px; } }
     </style>
@@ -39,8 +40,9 @@
     <div class="sidebar" id="sidebar">
         <h2>🛠️ لوحة التحكم</h2>
         <button class="tab-btn active" onclick="openTab(event, 'general')">⚙️ الإعدادات والترحيب</button>
+        <button class="tab-btn" onclick="openTab(event, 'warns_games')">⚠️ التحذيرات والألعاب</button>
         <button class="tab-btn" onclick="openTab(event, 'tickets_panel')">🎟️ بانر التكتات الخارجي</button>
-        <button class="tab-btn" onclick="openTab(event, 'tickets_builder')" style="border: 1px solid #f2a658;">🎛️ صانع الزراير والنوافذ</button>
+        <button class="tab-btn" onclick="openTab(event, 'tickets_builder')" style="border: 1px solid #f2a658;">🎛️ صانع التكت والنوافذ</button>
         <button class="tab-btn" onclick="openTab(event, 'roles')">👨‍⚖️ الرتب والتحكم</button>
         <button class="tab-btn" onclick="openTab(event, 'commands')">⌨️ الأوامر الشاملة</button>
         <button class="tab-btn" onclick="openTab(event, 'logs')">📁 جميع اللوجات</button>
@@ -53,10 +55,10 @@
         
         <form action="/settings/<%= guild.id %>" method="POST" id="mainForm">
             <input type="hidden" name="customButtonsData" id="customButtonsData">
-            <input type="hidden" name="autoRespondersData" id="autoRespondersData">
+            <input type="hidden" name="warnReasonsData" id="warnReasonsData">
 
             <div id="general" class="tab-content active">
-                <h3>⚙️ الإعدادات العامة</h3>
+                <h3>⚙️ الإعدادات العامة والحماية</h3>
                 <div class="form-group"><label>البريفكس (Prefix):</label><input type="text" name="prefix" value="<%= config.prefix %>"></div>
                 <div class="form-group"><label>🛡️ الحماية:</label>
                     <input type="checkbox" name="antiLinks" <%= config.antiLinks ? 'checked' : '' %>> منع الروابط | 
@@ -66,33 +68,65 @@
                 
                 <hr>
                 <h3>🖼️ نظام الترحيب المتطور (Welcome)</h3>
+                <div class="help-box">
+                    💡 <b>المتغيرات المتاحة للرسائل:</b><br>
+                    <code>[user]</code> = منشن للعضو | <code>[server]</code> = اسم السيرفر | <code>[memberCount]</code> = رقم العضو<br>
+                    <i>ملاحظة: البوت سيقوم تلقائياً بدمج صورة العضو مع صورة السيرفر في الترحيب!</i>
+                </div>
                 <div class="form-group"><label>روم الترحيب:</label><select name="welcomeChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.welcomeChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
-                <div class="form-group"><label>رسالة الترحيب (استخدم [user], [server], [memberCount]):</label><textarea name="welcomeMessage"><%= config.welcomeMessage %></textarea></div>
+                <div class="form-group"><label>الرسالة النصية (خارج الصورة):</label><textarea name="welcomeMessage"><%= config.welcomeMessage %></textarea></div>
                 <div class="form-group"><label>رابط صورة الخلفية (Background URL):</label><input type="text" name="welcomeBgImage" value="<%= config.welcomeBgImage %>" placeholder="https://..."></div>
-                <div class="form-group"><label>لون إطار الصورة (Avatar Border Hex):</label><input type="color" name="welcomeAvatarBorderColor" value="<%= config.welcomeAvatarBorderColor || '#ffffff' %>" style="height: 40px; padding:0;"></div>
+                <div class="form-group"><label>لون إطار صورة العضو (Hex Color):</label><input type="color" name="welcomeAvatarBorderColor" value="<%= config.welcomeAvatarBorderColor || '#ffffff' %>" style="height: 40px; padding:0;"></div>
+            </div>
+
+            <div id="warns_games" class="tab-content">
+                <h3>⚠️ لوحة التحكم بالتحذيرات (Warn Panel)</h3>
+                <div class="form-group"><label>روم إرسال لوحة التحذيرات (الزراير):</label><select name="warnPanelChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.warnPanelChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+                <div class="form-group"><label>روم سجل التحذيرات (اللوج):</label><select name="warnLogChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.warnLogChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group"><label>عنوان إيمبد التحذير:</label><input type="text" name="warnPanelTitle" value="<%= config.warnPanelTitle %>"></div>
+                    <div class="form-group"><label>لون الإيمبد:</label><input type="color" name="warnPanelColor" value="<%= config.warnPanelColor %>" style="height:40px; padding:0;"></div>
+                </div>
+                <div class="form-group"><label>وصف الإيمبد:</label><textarea name="warnPanelDesc"><%= config.warnPanelDesc %></textarea></div>
+                
+                <div class="form-group"><label>العقاب التلقائي بعد تجاوز الحد:</label>
+                    <select name="warnAction">
+                        <option value="timeout" <%= config.warnAction === 'timeout' ? 'selected' : '' %>>Timeout (كتم)</option>
+                        <option value="kick" <%= config.warnAction === 'kick' ? 'selected' : '' %>>Kick (طرد)</option>
+                        <option value="ban" <%= config.warnAction === 'ban' ? 'selected' : '' %>>Ban (حظر)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>الحد الأقصى للتحذيرات (رقم):</label><input type="number" name="warnMax" value="<%= config.warnMax %>"></div>
+
+                <div class="builder-box">
+                    <h4 style="margin-top:0; color:#ed4245;">📝 الأسباب الجاهزة للتحذير (تظهر في النافذة)</h4>
+                    <div id="warnReasonsContainer"></div>
+                    <button type="button" class="add-btn" onclick="addWarnReason()" style="background:#ed4245; margin-top:10px;">+ إضافة سبب</button>
+                </div>
 
                 <hr>
-                <h3>⚠️ نظام التحذيرات والاقتراحات</h3>
-                <div class="form-group"><label>روم اللوج للتحذيرات:</label><select name="warnLogChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.warnLogChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
-                <div class="form-group"><label>الحد الأقصى للتحذيرات (قبل العقاب):</label><input type="number" name="warnMax" value="<%= config.warnMax %>"></div>
-                <div class="form-group"><label>روم الاقتراحات (Suggestions):</label><select name="suggestionChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.suggestionChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+                <h3>🎮 نظام الألعاب (Games)</h3>
+                <div class="form-group"><label>تفعيل الألعاب (روليت، خمن، ريبليكا.. الخ):</label>
+                    <input type="checkbox" name="gamesEnabled" style="width: 20px; height: 20px;" <%= config.gamesEnabled ? 'checked' : '' %>>
+                </div>
+                <div class="form-group"><label>روم الألعاب (اختياري، لتحديد روم معينة):</label><select name="gamesChannelId"><option value="">-- كل الرومات --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.gamesChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
             </div>
 
             <div id="tickets_panel" class="tab-content">
-                <h3>🎟️ إعدادات بانر التكتات الخارجي (اللي بيظهر للناس)</h3>
+                <h3>🎟️ بانر التكتات الخارجي (اللي بيظهر للناس)</h3>
                 <div class="form-group"><label>الروم التي سيُرسل بها البانر:</label><select name="panelChannelId"><option value="">-- اختر الروم --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.panelChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+                <div class="form-group"><label>الكاتيجوري الاحتياطي (Default Category):</label><select name="defaultCategoryId"><option value="">-- اختر قسم --</option><% channels.filter(c=>c.type===4).forEach(c => { %><option value="<%= c.id %>" <%= config.defaultCategoryId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
                 <div class="form-group"><label>عنوان الإيمبد الخارجي:</label><input type="text" name="ticketEmbedTitle" value="<%= config.ticketEmbedTitle %>"></div>
                 <div class="form-group"><label>القوانين / الوصف الخارجي:</label><textarea name="ticketEmbedDesc"><%= config.ticketEmbedDesc %></textarea></div>
                 <div class="form-group"><label>لون الإيمبد:</label><input type="color" name="ticketEmbedColor" value="<%= config.ticketEmbedColor %>" style="height:40px; padding:0;"></div>
-                <div class="form-group"><label>رابط صورة للبانر (اختياري):</label><input type="text" name="ticketEmbedImage" value="<%= config.ticketEmbedImage %>"></div>
-                <div class="form-group"><label>الحد الأقصى للتكتات المفتوحة لكل عضو:</label><input type="number" name="maxTicketsPerUser" value="<%= config.maxTicketsPerUser %>"></div>
+                <div class="form-group"><label>الحد الأقصى للتكتات المفتوحة للعضو:</label><input type="number" name="maxTicketsPerUser" value="<%= config.maxTicketsPerUser %>"></div>
             </div>
 
             <div id="tickets_builder" class="tab-content">
-                <h3>🎛️ صانع أزرار التكتات وإيمبد الداخل والنوافذ</h3>
-                <p style="color:#a3a6aa; font-size:14px;">اصنع عدد لا نهائي من الأزرار. كل زر له إيمبد داخلي بقوانينه الخاصة، ونافذة بأسئلة تحددها أنت.</p>
-                
-                <div id="buttonsContainer"></div> <button type="button" class="add-btn" onclick="addNewButton()" style="width: 100%; margin-top: 15px; background: #f2a658;">➕ إضافة زر تكت جديد</button>
+                <h3>🎛️ صانع التكتات والنوافذ</h3>
+                <div id="buttonsContainer"></div>
+                <button type="button" class="add-btn" onclick="addNewButton()" style="width: 100%; margin-top: 15px; background: #f2a658;">➕ إضافة زر تكت جديد</button>
             </div>
 
             <div id="roles" class="tab-content">
@@ -103,18 +137,12 @@
                 <div class="form-group"><label>🌟 وساطة عليا:</label><select name="highMediatorRoles" multiple style="height:80px;"><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.highMediatorRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
                 
                 <hr>
-                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px;">
-                    <label>🕵️‍♂️ إخفاء التكت عن باقي الإدارة عند الاستلام (Claim):</label>
-                    <input type="checkbox" id="hideToggle" name="hideTicketOnClaim" style="width: 20px; height: 20px;" <%= config.hideTicketOnClaim ? 'checked' : '' %>>
-                </div>
-                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px;">
-                    <label>👀 وضع المراقبة (الإدارة ترى ولا تكتب):</label>
-                    <input type="checkbox" id="readOnlyToggle" name="readOnlyStaffOnClaim" style="width: 20px; height: 20px;" <%= config.readOnlyStaffOnClaim ? 'checked' : '' %>>
-                </div>
+                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px;"><label>🕵️‍♂️ إخفاء التكت عند الاستلام (Claim):</label><input type="checkbox" id="hideToggle" name="hideTicketOnClaim" style="width: 20px; height: 20px;" <%= config.hideTicketOnClaim ? 'checked' : '' %>></div>
+                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px;"><label>👀 وضع المراقبة (الإدارة ترى ولا تكتب):</label><input type="checkbox" id="readOnlyToggle" name="readOnlyStaffOnClaim" style="width: 20px; height: 20px;" <%= config.readOnlyStaffOnClaim ? 'checked' : '' %>></div>
             </div>
 
             <div id="commands" class="tab-content">
-                <h3>⌨️ تخصيص جميع الأوامر</h3>
+                <h3>⌨️ تخصيص الأوامر (تأكد أنها تبدأ بـ !)</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group"><label>تقييم الوسيط:</label><input type="text" name="cmdDone" value="<%= config.cmdDone %>"></div>
                     <div class="form-group"><label>استدعاء وساطة عليا:</label><input type="text" name="cmdReqHigh" value="<%= config.cmdReqHigh %>"></div>
@@ -132,12 +160,11 @@
             <div id="logs" class="tab-content">
                 <h3>📁 السجلات بدقة (Logs)</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group"><label>ترانسكريبت (حفظ التكت):</label><select name="transcriptChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.transcriptChannelId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
+                    <div class="form-group"><label>ترانسكريبت التكت:</label><select name="transcriptChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.transcriptChannelId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
                     <div class="form-group"><label>لوج التكتات الأساسي:</label><select name="ticketLogChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.ticketLogChannelId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
                     <div class="form-group"><label>تقييم الإدارة (تلقائي):</label><select name="staffRatingChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.staffRatingChannelId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
                     <div class="form-group"><label>تقييم الوسطاء:</label><select name="mediatorRatingChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.mediatorRatingChannelId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
-                    <div class="form-group"><label>لوج إنشاء/حذف الرتب:</label><select name="logRoleCreateDeleteId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.logRoleCreateDeleteId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
-                    <div class="form-group"><label>لوج إعطاء/سحب الرتب:</label><select name="logMemberRoleUpdateId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.logMemberRoleUpdateId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
+                    <div class="form-group"><label>لوج الرتب:</label><select name="logMemberRoleUpdateId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.logMemberRoleUpdateId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
                     <div class="form-group"><label>لوج دخول/خروج:</label><select name="logJoinLeaveId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.logJoinLeaveId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
                     <div class="form-group"><label>لوج حذف الرسائل:</label><select name="logMsgDeleteId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.logMsgDeleteId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
                     <div class="form-group"><label>لوج تعديل الرسائل:</label><select name="logMsgUpdateId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c=>{ %><option value="<%= c.id %>" <%= config.logMsgUpdateId===c.id?'selected':'' %>><%= c.name %></option><% }) %></select></div>
@@ -163,7 +190,6 @@
     </div>
 
     <script>
-        // 1. تحكم القوائم
         function toggleSidebar() { document.getElementById("sidebar").classList.toggle("open"); }
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
@@ -177,114 +203,83 @@
             document.getElementById("mainSaveBtn").style.display = (tabName === 'embedBuilder') ? "none" : "block";
         }
 
-        // 2. التحكم في زراير الكليم
         const hideToggle = document.getElementById('hideToggle');
         const readOnlyToggle = document.getElementById('readOnlyToggle');
         function checkToggles() {
-            if (hideToggle.checked) { readOnlyToggle.disabled = true; readOnlyToggle.checked = false; } 
-            else { readOnlyToggle.disabled = false; }
+            if (hideToggle.checked) { readOnlyToggle.disabled = true; readOnlyToggle.checked = false; } else { readOnlyToggle.disabled = false; }
         }
-        checkToggles();
-        hideToggle.addEventListener('change', checkToggles);
+        checkToggles(); hideToggle.addEventListener('change', checkToggles);
 
-        // 3. 🚀 البرمجة الديناميكية لصانع الزراير والنوافذ
-        // نجيب الداتا المتسيفة من السيرفر ونحولها لـ JSON عشان نرسمها
+        // --- نظام التحذيرات (الأسباب الجاهزة) ---
+        let warnReasons = <%- JSON.stringify(config.warnReasons || []) %>;
+        function renderWarnReasons() {
+            const container = document.getElementById('warnReasonsContainer');
+            container.innerHTML = '';
+            warnReasons.forEach((reason, index) => {
+                container.innerHTML += `
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="text" value="${reason}" onchange="warnReasons[${index}] = this.value" placeholder="سبب التحذير...">
+                        <button type="button" onclick="warnReasons.splice(${index}, 1); renderWarnReasons();" style="background:red; border:none; color:white; padding:10px; border-radius:5px; cursor:pointer;">✖</button>
+                    </div>
+                `;
+            });
+        }
+        function addWarnReason() { warnReasons.push('سبب جديد'); renderWarnReasons(); }
+        renderWarnReasons();
+
+        // --- نظام التكتات ---
         let buttonsData = <%- JSON.stringify(config.customButtons || []) %>;
-        const categoriesHTML = `<option value="">-- اختر قسم (Category) --</option>` + 
-            `<%- channels.filter(c=>c.type===4).map(c => `<option value="${c.id}">${c.name}</option>`).join('') %>`;
+        const categoriesHTML = `<option value="">-- اتبع الكاتيجوري الاحتياطي --</option><%- channels.filter(c=>c.type===4).map(c => `<option value="${c.id}">${c.name}</option>`).join('') %>`;
 
         function renderButtons() {
             const container = document.getElementById('buttonsContainer');
             container.innerHTML = '';
-            
             buttonsData.forEach((btn, btnIndex) => {
                 let fieldsHTML = '';
                 btn.modalFields.forEach((field, fieldIndex) => {
                     fieldsHTML += `
                         <div style="background: #23232a; padding: 10px; margin-top: 10px; border-right: 3px solid #f2a658;">
-                            <label>سؤال ${fieldIndex + 1}:</label>
-                            <input type="text" value="${field.label}" onchange="updateField(${btnIndex}, ${fieldIndex}, 'label', this.value)" placeholder="مثال: اسمك ايه؟">
-                            <button type="button" onclick="removeField(${btnIndex}, ${fieldIndex})" style="background:red; color:white; border:none; padding:5px; margin-top:5px; cursor:pointer;">مسح السؤال</button>
+                            <label>السؤال اللي هيظهر للناس:</label>
+                            <input type="text" value="${field.label}" onchange="updateField(${btnIndex}, ${fieldIndex}, 'label', this.value)">
+                            <button type="button" onclick="removeField(${btnIndex}, ${fieldIndex})" style="background:red; color:white; border:none; padding:5px; margin-top:5px; cursor:pointer;">مسح</button>
                         </div>
                     `;
                 });
 
                 container.innerHTML += `
                     <div class="builder-box">
-                        <h4 style="color:#5865F2; margin-top:0;">🔘 زرار (${btn.label || 'جديد'})</h4>
-                        
+                        <h4 style="color:#5865F2; margin-top:0;">🔘 زرار (${btn.label})</h4>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                            <div><label>الـ ID (انجليزي فقط):</label><input type="text" value="${btn.id}" onchange="updateBtn(${btnIndex}, 'id', this.value)"></div>
+                            <div><label>الـ ID:</label><input type="text" value="${btn.id}" onchange="updateBtn(${btnIndex}, 'id', this.value)"></div>
                             <div><label>اسم الزرار:</label><input type="text" value="${btn.label}" onchange="updateBtn(${btnIndex}, 'label', this.value)"></div>
-                            <div><label>لون الزرار:</label>
-                                <select onchange="updateBtn(${btnIndex}, 'color', this.value)">
-                                    <option value="Primary" ${btn.color==='Primary'?'selected':''}>أزرق (Primary)</option>
-                                    <option value="Success" ${btn.color==='Success'?'selected':''}>أخضر (Success)</option>
-                                    <option value="Danger" ${btn.color==='Danger'?'selected':''}>أحمر (Danger)</option>
-                                    <option value="Secondary" ${btn.color==='Secondary'?'selected':''}>رمادي (Secondary)</option>
-                                </select>
-                            </div>
-                            <div><label>يفتح في أي قسم؟</label>
-                                <select onchange="updateBtn(${btnIndex}, 'categoryId', this.value)">
-                                    ${categoriesHTML.replace(`value="${btn.categoryId}"`, `value="${btn.categoryId}" selected`)}
-                                </select>
-                            </div>
+                            <div><label>القسم المخصص للزرار (Category):</label><select onchange="updateBtn(${btnIndex}, 'categoryId', this.value)">${categoriesHTML.replace(`value="${btn.categoryId}"`, `value="${btn.categoryId}" selected`)}</select></div>
                         </div>
-
-                        <hr style="border-color:#444;">
-                        
-                        <h4 style="color:#3ba55d; margin-bottom:5px;">🎨 الإيمبد الداخلي للتكت (القوانين)</h4>
-                        <div><label>عنوان الإيمبد الداخلي:</label><input type="text" value="${btn.insideEmbedTitle}" onchange="updateBtn(${btnIndex}, 'insideEmbedTitle', this.value)"></div>
-                        <div style="margin-top:10px;"><label>وصف الإيمبد الداخلي (ضع القوانين هنا):</label><textarea onchange="updateBtn(${btnIndex}, 'insideEmbedDesc', this.value)">${btn.insideEmbedDesc}</textarea></div>
-                        <div style="margin-top:10px;"><label>لون الإيمبد الداخلي:</label><input type="color" value="${btn.insideEmbedColor}" onchange="updateBtn(${btnIndex}, 'insideEmbedColor', this.value)" style="height:40px; padding:0;"></div>
-
-                        <hr style="border-color:#444;">
-                        
-                        <div>
-                            <label style="display:inline-block;">🪟 تفعيل النافذة (Modal):</label>
-                            <input type="checkbox" ${btn.requireModal?'checked':''} onchange="updateBtn(${btnIndex}, 'requireModal', this.checked)">
-                            | <label style="display:inline-block; margin-right:10px;">🤝 زرار وساطة (يستخدم !done):</label>
-                            <input type="checkbox" ${btn.isMediator?'checked':''} onchange="updateBtn(${btnIndex}, 'isMediator', this.checked)">
-                        </div>
-                        
-                        <div style="display: ${btn.requireModal ? 'block' : 'none'}; margin-top: 15px; background: #18181b; padding: 15px; border-radius: 5px;">
-                            <label>عنوان النافذة:</label>
-                            <input type="text" value="${btn.modalTitle}" onchange="updateBtn(${btnIndex}, 'modalTitle', this.value)">
+                        <h4 style="color:#3ba55d;">🎨 الإيمبد الداخلي</h4>
+                        <div><label>العنوان:</label><input type="text" value="${btn.insideEmbedTitle}" onchange="updateBtn(${btnIndex}, 'insideEmbedTitle', this.value)"></div>
+                        <div><label>الوصف:</label><textarea onchange="updateBtn(${btnIndex}, 'insideEmbedDesc', this.value)">${btn.insideEmbedDesc}</textarea></div>
+                        <div><label>🪟 تفعيل النافذة:</label><input type="checkbox" ${btn.requireModal?'checked':''} onchange="updateBtn(${btnIndex}, 'requireModal', this.checked)"></div>
+                        <div style="display: ${btn.requireModal ? 'block' : 'none'}; background: #18181b; padding: 15px; border-radius: 5px;">
+                            <label>عنوان النافذة:</label><input type="text" value="${btn.modalTitle}" onchange="updateBtn(${btnIndex}, 'modalTitle', this.value)">
                             ${fieldsHTML}
-                            <button type="button" class="add-btn" onclick="addField(${btnIndex})" style="margin-top:10px; background:#3ba55d;">+ إضافة سؤال للنافذة</button>
+                            <button type="button" class="add-btn" onclick="addField(${btnIndex})" style="margin-top:10px;">+ سؤال للنافذة</button>
                         </div>
-
-                        <button type="button" onclick="removeBtn(${btnIndex})" style="background:red; color:white; border:none; padding:10px; width:100%; margin-top:15px; border-radius:5px; cursor:pointer;">🗑️ حذف هذا الزر بالكامل</button>
+                        <button type="button" onclick="removeBtn(${btnIndex})" style="background:red; color:white; border:none; padding:10px; width:100%; margin-top:15px; border-radius:5px; cursor:pointer;">🗑️ حذف الزر</button>
                     </div>
                 `;
             });
         }
-
-        // تحديث البيانات
         function updateBtn(index, key, val) { buttonsData[index][key] = val; if(key === 'requireModal') renderButtons(); }
         function updateField(btnIdx, fieldIdx, key, val) { buttonsData[btnIdx].modalFields[fieldIdx][key] = val; }
-        
-        // إضافة وحذف
-        function addNewButton() {
-            buttonsData.push({
-                id: 'btn_' + Math.floor(Math.random() * 1000), label: 'زر جديد', color: 'Primary', categoryId: '',
-                insideEmbedTitle: 'مرحباً بك', insideEmbedDesc: 'يرجى كتابة طلبك...', insideEmbedColor: '#2b2d31',
-                requireModal: false, modalTitle: 'بيانات التكت', modalFields: [], isMediator: false
-            });
-            renderButtons();
-        }
+        function addNewButton() { buttonsData.push({ id: 'btn_' + Math.floor(Math.random()*1000), label: 'زر جديد', categoryId: '', insideEmbedTitle: 'مرحباً', insideEmbedDesc: 'وصف...', requireModal: false, modalTitle: 'البيانات', modalFields: [], isMediator: false }); renderButtons(); }
         function removeBtn(index) { buttonsData.splice(index, 1); renderButtons(); }
-        function addField(index) { buttonsData[index].modalFields.push({ label: 'سؤال جديد', placeholder: '', required: true }); renderButtons(); }
+        function addField(index) { buttonsData[index].modalFields.push({ label: 'سؤال', placeholder: '', required: true }); renderButtons(); }
         function removeField(btnIdx, fieldIdx) { buttonsData[btnIdx].modalFields.splice(fieldIdx, 1); renderButtons(); }
-
-        // أول ما الصفحة تفتح نرسم الزراير القديمة
         renderButtons();
 
-        // 4. قبل ما ندوس حفظ، نحول المصفوفات دي لنصوص عشان السيرفر يفهمها
+        // 9. تحضير البيانات للحفظ
         function prepareData() {
             document.getElementById('customButtonsData').value = JSON.stringify(buttonsData);
-            // لو عايز تضيف ردود تلقائية بنفس الطريقة تقدر تكمل عليها
-            document.getElementById('autoRespondersData').value = JSON.stringify([]); 
+            document.getElementById('warnReasonsData').value = JSON.stringify(warnReasons);
         }
     </script>
 </body>
