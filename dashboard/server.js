@@ -7,7 +7,9 @@ const GuildConfig = require('../models/GuildConfig');
 
 module.exports = (client) => {
     const app = express();
-    app.use(express.urlencoded({ extended: true }));
+    // رفعنا حجم الاستقبال عشان لو عملت 100 زرار الموقع ميهنجش
+    app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+    app.use(express.json({ limit: '50mb' }));
     app.use(express.static(path.join(__dirname, 'public')));
 
     app.use(session({
@@ -63,34 +65,48 @@ module.exports = (client) => {
         res.render('settings', { guild, config, channels, roles, user: req.user, success: req.query.success });
     });
 
-    // 🟢 حفظ الإعدادات الشاملة
+    // 🟢 حفظ الإعدادات الجبارة من الداشبورد للداتابيز
     app.post('/settings/:guildID', async (req, res) => {
         if (!req.user) return res.redirect('/login');
 
+        let parsedButtons = [];
+        let parsedResponders = [];
+        try {
+            if (req.body.customButtonsData) parsedButtons = JSON.parse(req.body.customButtonsData);
+            if (req.body.autoRespondersData) parsedResponders = JSON.parse(req.body.autoRespondersData);
+        } catch(e) { console.log('Error parsing JSON:', e); }
+
         const { 
-            prefix, autoRoleId, welcomeChannelId, welcomeMessage,
-            panelChannelId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, ticketCount,
+            prefix, autoRoleId, welcomeChannelId, welcomeMessage, welcomeBgImage, welcomeAvatarBorderColor,
+            warnLogChannelId, warnMax, warnAction,
+            levelUpChannelId, suggestionChannelId,
+            panelChannelId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, ticketCount, maxTicketsPerUser,
             adminRoleId, highAdminRoles, mediatorRoleId, highMediatorRoles,
-            cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove,
+            cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove, cmdBan, cmdTimeout,
             transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
             logRoleCreateDeleteId, logMemberRoleUpdateId, logJoinLeaveId, logMsgDeleteId, logMsgUpdateId, logImgDeleteId, logVoiceId
         } = req.body;
-
-        const antiLinks = req.body.antiLinks === 'on';
-        const antiSpam = req.body.antiSpam === 'on';
-        const hideTicketOnClaim = req.body.hideTicketOnClaim === 'on';
-        const readOnlyStaffOnClaim = req.body.readOnlyStaffOnClaim === 'on';
 
         const formatArray = (val) => Array.isArray(val) ? val : (val ? [val] : []);
 
         await GuildConfig.findOneAndUpdate(
             { guildId: req.params.guildID },
             { 
-                prefix, antiLinks, antiSpam, autoRoleId, welcomeChannelId, welcomeMessage,
-                panelChannelId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, ticketCount: parseInt(ticketCount) || 0,
+                prefix, autoRoleId, welcomeChannelId, welcomeMessage, welcomeBgImage, welcomeAvatarBorderColor,
+                antiLinks: req.body.antiLinks === 'on', antiSpam: req.body.antiSpam === 'on', levelingEnabled: req.body.levelingEnabled === 'on',
+                warnLogChannelId, warnMax: parseInt(warnMax) || 3, warnAction,
+                levelUpChannelId, suggestionChannelId,
+                panelChannelId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, 
+                ticketCount: parseInt(ticketCount) || 0, maxTicketsPerUser: parseInt(maxTicketsPerUser) || 1,
+                
+                customButtons: parsedButtons, 
+                autoResponders: parsedResponders,
+
                 adminRoleId, highAdminRoles: formatArray(highAdminRoles), mediatorRoleId, highMediatorRoles: formatArray(highMediatorRoles),
-                hideTicketOnClaim, readOnlyStaffOnClaim,
-                cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove,
+                hideTicketOnClaim: req.body.hideTicketOnClaim === 'on', readOnlyStaffOnClaim: req.body.readOnlyStaffOnClaim === 'on',
+                
+                cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove, cmdBan, cmdTimeout,
+                
                 transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
                 logRoleCreateDeleteId, logMemberRoleUpdateId, logJoinLeaveId, logMsgDeleteId, logMsgUpdateId, logImgDeleteId, logVoiceId
             },
@@ -99,7 +115,7 @@ module.exports = (client) => {
         res.redirect(`/settings/${req.params.guildID}?success=saved`);
     });
 
-    // 🟢 مسار جديد لإرسال الإيمبد الحر (Embed Builder) فوراً للسيرفر
+    // 🟢 مسار صانع الإيمبد (Embed Builder) لإرسال الرسائل فوراً
     app.post('/settings/:guildID/send-embed', async (req, res) => {
         if (!req.user) return res.redirect('/login');
         const guild = client.guilds.cache.get(req.params.guildID);
