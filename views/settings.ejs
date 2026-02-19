@@ -8,7 +8,7 @@
     <style>
         body { font-family: 'Tajawal', sans-serif; background-color: #121212; color: #ffffff; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* 📱 شريط الموبايل العلوي (مخفي في الكمبيوتر) */
+        /* 📱 شريط الموبايل */
         .mobile-header { display: none; background-color: #1e1e24; padding: 15px 20px; align-items: center; justify-content: space-between; border-bottom: 2px solid #5865F2; }
         .menu-btn { background: #5865F2; color: white; border: none; padding: 8px 15px; font-size: 18px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal', sans-serif; }
 
@@ -16,8 +16,6 @@
         .sidebar { width: 260px; background-color: #1e1e24; padding: 20px; box-shadow: -2px 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 10px; overflow-y: auto; transition: 0.3s; z-index: 1000; }
         .sidebar-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
         .sidebar h2 { color: #5865F2; font-size: 22px; margin: 0; }
-        
-        /* زرار الإكس (مخفي في الكمبيوتر) */
         .close-btn { display: none; background: transparent; color: #ff4d4d; border: none; font-size: 24px; cursor: pointer; }
 
         .tab-btn { background: #2b2b36; color: white; border: none; padding: 15px; text-align: right; font-size: 16px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-family: 'Tajawal', sans-serif; }
@@ -35,7 +33,7 @@
         /* 🎛️ الإدخالات */
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; color: #b9bbbe; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; background: #2f3136; border: 1px solid #202225; color: white; border-radius: 5px; font-family: 'Tajawal', sans-serif; font-size: 15px; box-sizing: border-box; }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group select { width: 100%; padding: 12px; background: #2f3136; border: 1px solid #202225; color: white; border-radius: 5px; font-family: 'Tajawal', sans-serif; font-size: 15px; box-sizing: border-box; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #5865F2; }
         .help-text { font-size: 12px; color: #72767d; margin-top: 5px; display: block; }
         
@@ -44,7 +42,6 @@
         .save-btn:hover { background: #2d7d46; }
         .back-link { display: block; text-align: center; margin-top: 15px; color: #5865F2; text-decoration: none; }
 
-        /* 📱 تعديلات الموبايل */
         @media (max-width: 768px) {
             body { flex-direction: column; overflow: auto; }
             .mobile-header { display: flex; }
@@ -67,9 +64,9 @@
             <h2>🛠️ لوحة التحكم</h2>
             <button class="close-btn" onclick="toggleSidebar()">✖</button>
         </div>
-        <button class="tab-btn active" onclick="openTab(event, 'tickets')">🎟️ إعدادات التكتات</button>
+        <button class="tab-btn active" onclick="openTab(event, 'tickets')">🎟️ التكتات الأساسية</button>
         <button class="tab-btn" onclick="openTab(event, 'roles')">👨‍⚖️ الإدارة والوساطة</button>
-        <button class="tab-btn" onclick="openTab(event, 'logs')">📁 السجلات (اللوجات)</button>
+        <button class="tab-btn" onclick="openTab(event, 'logs')">📁 السجلات والتقييمات</button>
         <button class="tab-btn" onclick="openTab(event, 'audit')">🛡️ حماية السيرفر</button>
         <button class="tab-btn" onclick="openTab(event, 'commands')">⌨️ الأوامر المخصصة</button>
     </div>
@@ -95,12 +92,8 @@
                     <input type="text" name="ticketEmbedTitle" value="<%= config.ticketEmbedTitle || 'الدعم الفني والوساطة' %>">
                 </div>
                 <div class="form-group">
-                    <label>وصف الإيمبد (القوانين أو الرسالة):</label>
-                    <input type="text" name="ticketEmbedDesc" value="<%= config.ticketEmbedDesc || 'اضغط على الزر لفتح تذكرة جديدة.' %>">
-                </div>
-                <div class="form-group">
-                    <label>لون الإيمبد (Hex Code):</label>
-                    <input type="color" name="ticketEmbedColor" value="<%= config.ticketEmbedColor || '#0099ff' %>" style="height: 50px; padding: 0; cursor: pointer;">
+                    <label>وصف الإيمبد (القوانين):</label>
+                    <input type="text" name="ticketEmbedDesc" value="<%= config.ticketEmbedDesc || 'اضغط على الزر لفتح تذكرة.' %>">
                 </div>
                 <div class="form-group">
                     <label>رقم التكت القادم (Counter):</label>
@@ -121,12 +114,24 @@
                 </div>
                 <div class="form-group">
                     <label>رتب الإدارة العليا (للموافقات):</label>
-                    <select name="adminRoles" multiple style="height: 150px;">
+                    <select name="adminRoles" multiple style="height: 120px;">
                         <% roles.forEach(role => { %>
                             <option value="<%= role.id %>" <%= config.adminRoles && config.adminRoles.includes(role.id) ? 'selected' : '' %>><%= role.name %></option>
                         <% }) %>
                     </select>
                     <span class="help-text">اضغط مطولاً لاختيار أكثر من رتبة.</span>
+                </div>
+
+                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px; border-right: 4px solid #5865F2; margin-top: 15px;">
+                    <label style="display: inline-block; font-size: 16px; margin-bottom: 0; color: white;">🕵️‍♂️ إخفاء التكت عند الاستلام (Claim):</label>
+                    <input type="checkbox" id="hideToggle" name="hideTicketOnClaim" style="width: 20px; height: 20px; float: left; cursor: pointer;" <%= config.hideTicketOnClaim ? 'checked' : '' %>>
+                    <span class="help-text" style="display: block; margin-top: 10px; color: #a3a6aa;">سيختفي التكت من عند الجميع ويبقى مرئياً للوسيط المستلم والعضو فقط.</span>
+                </div>
+
+                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px; border-right: 4px solid #f2a658; margin-top: 15px;">
+                    <label style="display: inline-block; font-size: 16px; margin-bottom: 0; color: white;">👀 وضع المراقبة للإدارة (Read-Only):</label>
+                    <input type="checkbox" id="readOnlyToggle" name="readOnlyStaffOnClaim" style="width: 20px; height: 20px; float: left; cursor: pointer;" <%= config.readOnlyStaffOnClaim ? 'checked' : '' %>>
+                    <span class="help-text" style="display: block; margin-top: 10px; color: #a3a6aa;">الإدارة سترى التكت ولكن لا يمكنها الكتابة فيه. (يُغلق تلقائياً إذا تم تفعيل زر الإخفاء).</span>
                 </div>
             </div>
 
@@ -142,11 +147,29 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>روم تقييمات الإدارة:</label>
+                    <label>لوج التكتات (Ticket Logs):</label>
+                    <select name="ticketLogChannelId">
+                        <option value="">-- غير محدد --</option>
+                        <% channels.filter(c => c.type === 0).forEach(c => { %>
+                            <option value="<%= c.id %>" <%= config.ticketLogChannelId === c.id ? 'selected' : '' %>><%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>روم تقييمات الإدارة (Staff Rating):</label>
                     <select name="staffRatingChannelId">
                         <option value="">-- غير محدد --</option>
                         <% channels.filter(c => c.type === 0).forEach(c => { %>
                             <option value="<%= c.id %>" <%= config.staffRatingChannelId === c.id ? 'selected' : '' %>><%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>روم تقييمات الوسطاء (Mediator Rating):</label>
+                    <select name="mediatorRatingChannelId">
+                        <option value="">-- غير محدد --</option>
+                        <% channels.filter(c => c.type === 0).forEach(c => { %>
+                            <option value="<%= c.id %>" <%= config.mediatorRatingChannelId === c.id ? 'selected' : '' %>><%= c.name %></option>
                         <% }) %>
                     </select>
                 </div>
@@ -164,11 +187,29 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>لوج دخول وخروج الأعضاء:</label>
+                    <label>لوج دخول/خروج الأعضاء:</label>
                     <select name="logJoinLeaveId">
                         <option value="">-- غير محدد --</option>
                         <% channels.filter(c => c.type === 0).forEach(c => { %>
                             <option value="<%= c.id %>" <%= config.logJoinLeaveId === c.id ? 'selected' : '' %>><%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>لوج حذف الرسائل:</label>
+                    <select name="logMsgDeleteId">
+                        <option value="">-- غير محدد --</option>
+                        <% channels.filter(c => c.type === 0).forEach(c => { %>
+                            <option value="<%= c.id %>" <%= config.logMsgDeleteId === c.id ? 'selected' : '' %>><%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>لوج غرف الصوت (Voice):</label>
+                    <select name="logVoiceId">
+                        <option value="">-- غير محدد --</option>
+                        <% channels.filter(c => c.type === 0).forEach(c => { %>
+                            <option value="<%= c.id %>" <%= config.logVoiceId === c.id ? 'selected' : '' %>><%= c.name %></option>
                         <% }) %>
                     </select>
                 </div>
@@ -181,12 +222,16 @@
                     <input type="text" name="cmdDone" value="<%= config.cmdDone || '!done' %>">
                 </div>
                 <div class="form-group">
-                    <label>أمر طلب الموافقة (Approve):</label>
-                    <input type="text" name="cmdApprove" value="<%= config.cmdApprove || '!approve' %>">
+                    <label>أمر طلب الموافقة من الإدارة العليا:</label>
+                    <input type="text" name="cmdApprove" value="<%= config.cmdApprove || '!req-high' %>">
                 </div>
                 <div class="form-group">
                     <label>أمر سحب الإدارة (Come):</label>
                     <input type="text" name="cmdCome" value="<%= config.cmdCome || '!come' %>">
+                </div>
+                <div class="form-group">
+                    <label>أمر إضافة تفاصيل التريد (Trade):</label>
+                    <input type="text" name="cmdTrade" value="<%= config.cmdTrade || '!trade' %>">
                 </div>
             </div>
 
@@ -196,12 +241,10 @@
     </div>
 
     <script>
-        // فتح وقفل القائمة في الموبايل
         function toggleSidebar() {
             document.getElementById("sidebar").classList.toggle("open");
         }
 
-        // التبديل بين الصفحات
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
             tabcontent = document.getElementsByClassName("tab-content");
@@ -213,11 +256,28 @@
             document.getElementById(tabName).style.display = "block";
             evt.currentTarget.className += " active";
 
-            // قفل القائمة أوتوماتيك بعد ما تختار (للموبايل)
             if (window.innerWidth <= 768) {
                 toggleSidebar();
             }
         }
+
+        // سكريبت منع تعارض زراير الإخفاء والمراقبة
+        const hideToggle = document.getElementById('hideToggle');
+        const readOnlyToggle = document.getElementById('readOnlyToggle');
+
+        function checkToggles() {
+            if (hideToggle.checked) {
+                readOnlyToggle.disabled = true;
+                readOnlyToggle.checked = false;
+                readOnlyToggle.style.opacity = '0.5';
+            } else {
+                readOnlyToggle.disabled = false;
+                readOnlyToggle.style.opacity = '1';
+            }
+        }
+
+        checkToggles();
+        hideToggle.addEventListener('change', checkToggles);
     </script>
 </body>
 </html>
