@@ -7,18 +7,11 @@ const GuildConfig = require('../models/GuildConfig');
 
 module.exports = (client) => {
     const app = express();
-    // رفعنا حجم الاستقبال عشان لو عملت 100 زرار الموقع ميهنجش
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
     app.use(express.json({ limit: '50mb' }));
     app.use(express.static(path.join(__dirname, 'public')));
 
-    app.use(session({
-        secret: process.env.SESSION_SECRET || 'MNC_SECRET_KEY_V13',
-        resave: false,
-        saveUninitialized: false,
-        cookie: { maxAge: 60000 * 60 * 24 }
-    }));
-
+    app.use(session({ secret: process.env.SESSION_SECRET || 'MNC_SECRET', resave: false, saveUninitialized: false, cookie: { maxAge: 60000 * 60 * 24 } }));
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
 
@@ -26,13 +19,8 @@ module.exports = (client) => {
     passport.deserializeUser((obj, done) => done(null, obj));
 
     passport.use(new Strategy({
-        clientID: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-        callbackURL: process.env.CALLBACK_URL,
-        scope: ['identify', 'guilds']
-    }, (accessToken, refreshToken, profile, done) => {
-        process.nextTick(() => done(null, profile));
-    }));
+        clientID: process.env.CLIENT_ID, clientSecret: process.env.CLIENT_SECRET, callbackURL: process.env.CALLBACK_URL, scope: ['identify', 'guilds']
+    }, (accessToken, refreshToken, profile, done) => { process.nextTick(() => done(null, profile)); }));
 
     app.use(passport.initialize());
     app.use(passport.session());
@@ -65,22 +53,22 @@ module.exports = (client) => {
         res.render('settings', { guild, config, channels, roles, user: req.user, success: req.query.success });
     });
 
-    // 🟢 حفظ الإعدادات الجبارة من الداشبورد للداتابيز
     app.post('/settings/:guildID', async (req, res) => {
         if (!req.user) return res.redirect('/login');
 
-        let parsedButtons = [];
-        let parsedResponders = [];
+        let parsedButtons = [], parsedResponders = [], parsedWarnReasons = [];
         try {
             if (req.body.customButtonsData) parsedButtons = JSON.parse(req.body.customButtonsData);
             if (req.body.autoRespondersData) parsedResponders = JSON.parse(req.body.autoRespondersData);
+            if (req.body.warnReasonsData) parsedWarnReasons = JSON.parse(req.body.warnReasonsData);
         } catch(e) { console.log('Error parsing JSON:', e); }
 
         const { 
             prefix, autoRoleId, welcomeChannelId, welcomeMessage, welcomeBgImage, welcomeAvatarBorderColor,
-            warnLogChannelId, warnMax, warnAction,
+            gamesChannelId,
+            warnPanelChannelId, warnLogChannelId, warnPanelTitle, warnPanelDesc, warnPanelColor, warnMax, warnAction,
             levelUpChannelId, suggestionChannelId,
-            panelChannelId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, ticketCount, maxTicketsPerUser,
+            panelChannelId, defaultCategoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, ticketCount, maxTicketsPerUser,
             adminRoleId, highAdminRoles, mediatorRoleId, highMediatorRoles,
             cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove, cmdBan, cmdTimeout,
             transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
@@ -93,20 +81,17 @@ module.exports = (client) => {
             { guildId: req.params.guildID },
             { 
                 prefix, autoRoleId, welcomeChannelId, welcomeMessage, welcomeBgImage, welcomeAvatarBorderColor,
-                antiLinks: req.body.antiLinks === 'on', antiSpam: req.body.antiSpam === 'on', levelingEnabled: req.body.levelingEnabled === 'on',
-                warnLogChannelId, warnMax: parseInt(warnMax) || 3, warnAction,
+                antiLinks: req.body.antiLinks === 'on', antiSpam: req.body.antiSpam === 'on', 
+                levelingEnabled: req.body.levelingEnabled === 'on', gamesEnabled: req.body.gamesEnabled === 'on',
+                gamesChannelId,
+                warnPanelChannelId, warnLogChannelId, warnPanelTitle, warnPanelDesc, warnPanelColor, warnMax: parseInt(warnMax) || 3, warnAction, warnReasons: parsedWarnReasons,
                 levelUpChannelId, suggestionChannelId,
-                panelChannelId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, 
+                panelChannelId, defaultCategoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, 
                 ticketCount: parseInt(ticketCount) || 0, maxTicketsPerUser: parseInt(maxTicketsPerUser) || 1,
-                
-                customButtons: parsedButtons, 
-                autoResponders: parsedResponders,
-
+                customButtons: parsedButtons, autoResponders: parsedResponders,
                 adminRoleId, highAdminRoles: formatArray(highAdminRoles), mediatorRoleId, highMediatorRoles: formatArray(highMediatorRoles),
                 hideTicketOnClaim: req.body.hideTicketOnClaim === 'on', readOnlyStaffOnClaim: req.body.readOnlyStaffOnClaim === 'on',
-                
                 cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove, cmdBan, cmdTimeout,
-                
                 transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
                 logRoleCreateDeleteId, logMemberRoleUpdateId, logJoinLeaveId, logMsgDeleteId, logMsgUpdateId, logImgDeleteId, logVoiceId
             },
@@ -115,7 +100,6 @@ module.exports = (client) => {
         res.redirect(`/settings/${req.params.guildID}?success=saved`);
     });
 
-    // 🟢 مسار صانع الإيمبد (Embed Builder) لإرسال الرسائل فوراً
     app.post('/settings/:guildID/send-embed', async (req, res) => {
         if (!req.user) return res.redirect('/login');
         const guild = client.guilds.cache.get(req.params.guildID);
@@ -125,14 +109,9 @@ module.exports = (client) => {
         const channel = guild.channels.cache.get(embedChannelId);
         
         if (channel) {
-            const embed = {
-                title: embedTitle || '\u200b',
-                description: embedDesc || '\u200b',
-                color: parseInt((embedColor || '#5865F2').replace('#', ''), 16)
-            };
+            const embed = { title: embedTitle || '\u200b', description: embedDesc || '\u200b', color: parseInt((embedColor || '#5865F2').replace('#', ''), 16) };
             if (embedImage) embed.image = { url: embedImage };
             if (embedFooter) embed.footer = { text: embedFooter };
-
             await channel.send({ embeds: [embed] }).catch(err => console.log(err));
         }
         res.redirect(`/settings/${req.params.guildID}?success=embed_sent`);
