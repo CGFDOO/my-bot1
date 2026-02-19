@@ -21,14 +21,21 @@ client.once('ready', () => {
     // اللوج ده ديناميكي هيجيب اسم البوت بتاعك أياً كان
     console.log(`🚀 ${client.user.username} is Online & Ready!`);
     
-    // تشغيل نظام التكتات
+    // تشغيل نظام التكتات (الأزرار والنوافذ)
     try {
         require('./ticketsystem.js')(client);
     } catch (e) {
         console.error('❌ Error loading ticketsystem.js:', e.message);
     }
 
-    // ✅ تشغيل الداشبورد (تم تفعيلها الآن)
+    // تشغيل نظام الأوامر والردود التلقائية (الملف الجديد)
+    try {
+        require('./commandsHandler.js')(client);
+    } catch (e) {
+        console.error('❌ Error loading commandsHandler.js:', e.message);
+    }
+
+    // تشغيل الداشبورد
     try {
         require('./dashboard/server.js')(client);
     } catch (e) {
