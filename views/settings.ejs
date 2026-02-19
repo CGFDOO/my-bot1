@@ -32,16 +32,16 @@
 <body>
 
     <div class="mobile-header">
-        <h2 style="margin: 0; color: white;">إعدادات MNC</h2>
+        <h2 style="margin: 0; color: white;">إعدادات البوت</h2>
         <button class="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ القائمة</button>
     </div>
 
     <div class="sidebar" id="sidebar">
-        <h2>👑 MNC System</h2>
+        <h2>👑 Control Panel</h2>
         <button class="tab-btn active" onclick="openTab(event, 'general')">⚙️ الإعدادات والترحيب</button>
         <button class="tab-btn" onclick="openTab(event, 'warns_games')">⚠️ التحذيرات والألعاب</button>
         <button class="tab-btn" onclick="openTab(event, 'tickets_panel')">🎟️ التكتات الأساسية (الخارجية)</button>
-        <button class="tab-btn" onclick="openTab(event, 'tickets_builder')" style="border: 1px solid #f2a658;">🎛️ صانع الزراير والنوافذ (الداخلية)</button>
+        <button class="tab-btn" onclick="openTab(event, 'tickets_builder')" style="border: 1px solid #f2a658;">🎛️ صانع التكتات والنوافذ</button>
         <button class="tab-btn" onclick="openTab(event, 'roles')">👨‍⚖️ الرتب والتحكم بالاستلام</button>
         <button class="tab-btn" onclick="openTab(event, 'commands')">⌨️ الأوامر والرتب المسموحة</button>
         <button class="tab-btn" onclick="openTab(event, 'logs')">📁 جميع السجلات (اللوجات)</button>
@@ -126,7 +126,7 @@
             </div>
 
             <div id="tickets_builder" class="tab-content">
-                <h3>🎛️ صانع التكتات التفصيلي (الأزرار، الإيمبد الداخلي، النوافذ)</h3>
+                <h3>🎛️ صانع التكتات التفصيلي (الأزرار، النوافذ، التقييم)</h3>
                 <div id="buttonsContainer"></div>
                 <button type="button" onclick="addNewButton()" style="background:#f2a658; color:white; border:none; padding:15px; width:100%; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:20px;">➕ إضافة زر تكت جديد ومخصص</button>
             </div>
@@ -153,7 +153,7 @@
                     <% 
                     const cmds = [
                         {id: 'cmdAdd', label: 'إضافة عضو للتكت'}, {id: 'cmdDone', label: 'تقييم الوسيط'}, {id: 'cmdReqHigh', label: 'استدعاء وساطة عليا'}, 
-                        {id: 'cmdTrade', label: 'تفاصيل التريد'}, {id: 'cmdCome', label: 'سحب عضو/إدارة'}, {id: 'cmdClear', label: 'مسح الشات'}, 
+                        {id: 'cmdTrade', label: 'تفاصيل التريد والموافقة'}, {id: 'cmdCome', label: 'سحب عضو/إدارة'}, {id: 'cmdClear', label: 'مسح الشات'}, 
                         {id: 'cmdLock', label: 'قفل الشات'}, {id: 'cmdUnlock', label: 'فتح الشات'}, {id: 'cmdVmove', label: 'سحب فويس'},
                         {id: 'cmdBan', label: 'إعطاء باند'}, {id: 'cmdTimeout', label: 'إعطاء تايم أوت'}
                     ]; 
@@ -258,12 +258,16 @@
                             <div><label>وصف الإيمبد الداخلي (القوانين):</label><textarea rows="3" onchange="buttonsData[${bI}].insideEmbedDesc=this.value">${btn.insideEmbedDesc}</textarea></div>
                             <div><label>لون الإيمبد الداخلي:</label><input type="color" value="${btn.insideEmbedColor}" onchange="buttonsData[${bI}].insideEmbedColor=this.value" style="height:40px; padding:0; width:100px;"></div>
                         </div>
-                        <h4 style="color:#f2a658; margin-top:20px;">🪟 إعدادات النافذة (Modal) والتخصيص</h4>
-                        <div style="margin-bottom:10px;">
+                        <h4 style="color:#f2a658; margin-top:20px;">🪟 إعدادات النافذة (Modal) والتخصيص والتقييم</h4>
+                        
+                        <div style="margin-bottom:15px; background: #23232a; padding: 15px; border-radius: 8px;">
                             <input type="checkbox" ${btn.requireModal?'checked':''} onchange="buttonsData[${bI}].requireModal=this.checked;renderButtons();" style="width:18px;height:18px;"> <label style="display:inline; font-size:16px;">تفعيل النافذة (Modal)</label>
                             <span style="margin:0 15px;">|</span>
-                            <input type="checkbox" ${btn.isMediator?'checked':''} onchange="buttonsData[${bI}].isMediator=this.checked;" style="width:18px;height:18px;"> <label style="display:inline; font-size:16px;">زرار وساطة (لتفعيل تقييم الوسطاء)</label>
+                            <input type="checkbox" ${btn.isMediator?'checked':''} onchange="buttonsData[${bI}].isMediator=this.checked;" style="width:18px;height:18px;"> <label style="display:inline; font-size:16px;">تكت وساطة (يستخدم !done)</label>
+                            <span style="margin:0 15px;">|</span>
+                            <input type="checkbox" ${btn.enableRating!==false?'checked':''} onchange="buttonsData[${bI}].enableRating=this.checked;" style="width:18px;height:18px;"> <label style="display:inline; font-size:16px; color:#3ba55d;">إرسال تقييم تلقائي للإدارة عند الإغلاق</label>
                         </div>
+
                         <div style="display:${btn.requireModal?'block':'none'}; background:#18181b; padding:15px; border-radius:5px;">
                             <label>عنوان النافذة المكتوب بالأعلى:</label><input type="text" value="${btn.modalTitle}" onchange="buttonsData[${bI}].modalTitle=this.value">
                             ${fHTML}
@@ -274,7 +278,7 @@
                 `;
             });
         } renderButtons();
-        function addNewButton() { buttonsData.push({id:'btn_'+Date.now(), label:'زر جديد', color:'Primary', categoryId:'', insideEmbedTitle:'حياك الله', insideEmbedDesc:'القوانين...', insideEmbedColor:'#2b2d31', requireModal:false, modalTitle:'يرجى تعبئة البيانات', modalFields:[], isMediator:false}); renderButtons(); }
+        function addNewButton() { buttonsData.push({id:'btn_'+Date.now(), label:'زر جديد', color:'Primary', categoryId:'', insideEmbedTitle:'حياك الله', insideEmbedDesc:'القوانين...', insideEmbedColor:'#2b2d31', requireModal:false, modalTitle:'يرجى تعبئة البيانات', modalFields:[], isMediator:false, enableRating:true}); renderButtons(); }
         function prepareData() { document.getElementById('customButtonsData').value=JSON.stringify(buttonsData); document.getElementById('warnReasonsData').value=JSON.stringify(warnReasons); }
     </script>
 </body>
