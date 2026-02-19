@@ -1,443 +1,286 @@
-/**
- * UNIVERSAL SYSTEM - V13.0 [ULTIMATE EDITION]
- * 🛡️ Features: High Staff, Trade Input, Full Logs, Multi-Guild Support.
- * 🔧 Fixes: Rating Claimer Bug (Using ID Injection), Dynamic Server Branding.
- */
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits } = require('discord.js');
+const discordTranscripts = require('discord-html-transcripts');
+const GuildConfig = require('./models/GuildConfig');
 
-const {
-    Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder,
-    ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder,
-    TextInputStyle, InteractionType, ChannelType, PermissionFlagsBits
-} = require('discord.js');
-const { createTranscript } = require('discord-html-transcripts');
-const GuildConfig = require('./models/GuildConfig'); // ✅ استدعاء الداتابيز
-
-// ====================================================
-// 🧠 MEMORY MAPS (ذاكرة مؤقتة للجلسات)
-// ====================================================
-const ticketTypes = new Map();
-const ticketClaimer = new Map();
-const ticketCloser = new Map();
-const ticketAddedUsers = new Map();
-const activeTrades = new Map();
-
-module.exports = async (client) => {
-
-    // ====================================================
-    // 🔌 INTERACTION HANDLER
-    // ====================================================
-    client.on('interactionCreate', async (interaction) => {
+module.exports = (client) => {
+    client.on('interactionCreate', async interaction => {
         if (!interaction.guild) return;
 
-        // 1️⃣ تحميل إعدادات السيرفر الحالي من الداتابيز
-        // (ده اللي بيخلي البوت يشتغل في 100 سيرفر في نفس الوقت)
-        let config = await GuildConfig.findOne({ guildId: interaction.guild.id });
-        if (!config) {
-            config = await GuildConfig.create({ guildId: interaction.guild.id });
-        }
+        const config = await GuildConfig.findOne({ guildId: interaction.guild.id });
+        if (!config) return;
 
-        const { customId, guild, user, channel, member } = interaction;
+        // ==========================================
+        // 🟢 1. عند الضغط على زر فتح التكت من البانر
+        // ==========================================
+        if (interaction.isButton() && interaction.customId.startsWith('ticket_open_')) {
+            const btnId = interaction.customId.replace('ticket_open_', '');
+            const buttonData = config.customButtons.find(b => b.id === btnId);
+            if (!buttonData) return interaction.reply({ content: '❌ هذا الزر غير متوفر حالياً.', ephemeral: true });
 
-        // ----------------------------------------------------
-        // 🅰️ A. BUTTONS: CREATE TICKET (أزرار فتح التكت)
-        // ----------------------------------------------------
-        if (interaction.isButton() && customId.startsWith('create_')) {
-            const type = customId.split('_')[1];
-
-            // ⚠️ التحقق: هل صاحب السيرفر ضبط الرومات والرتب؟
-            if (!config.ticketChannelId || !config.staffRoleId) {
-                return interaction.reply({ content: '❌ **System Error:** Please configure the Dashboard settings first!', ephemeral: true });
+            // التحقق من الحد الأقصى للتكتات
+            const userTickets = interaction.guild.channels.cache.filter(c => c.name.includes(`ticket-`) && c.topic === interaction.user.id);
+            if (userTickets.size >= (config.maxTicketsPerUser || 1)) {
+                return interaction.reply({ content: `❌ لا يمكنك فتح أكثر من ${config.maxTicketsPerUser} تذكرة في نفس الوقت.`, ephemeral: true });
             }
 
-            // 1. Mediator Modal (نفس التفاصيل القديمة)
-            if (type === 'mediator') {
-                const modal = new ModalBuilder().setCustomId('modal_create_mediator').setTitle('🛡️ طلب وسيط');
-                const tUser = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('target_user').setLabel('الطرف الثاني (أيدي/منشن)').setStyle(TextInputStyle.Short).setRequired(false));
-                const tDetails = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('trade_details').setLabel('تفاصيل التبادل (روبوكس/حساب..)').setStyle(TextInputStyle.Short).setRequired(false));
-                const reason = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ticket_reason').setLabel('سبب الطلب / نوع العملية').setStyle(TextInputStyle.Paragraph).setRequired(true));
-                
-                modal.addComponents(tUser, tDetails, reason);
+            // إذا كان الزرار يطلب نافذة (Modal)
+            if (buttonData.requireModal && buttonData.modalFields.length > 0) {
+                const modal = new ModalBuilder()
+                    .setCustomId(`modal_ticket_${btnId}`)
+                    .setTitle(buttonData.modalTitle || 'بيانات التكت');
+
+                buttonData.modalFields.forEach((field, index) => {
+                    const textInput = new TextInputBuilder()
+                        .setCustomId(`field_${index}`)
+                        .setLabel(field.label)
+                        .setStyle(TextInputStyle.Paragraph)
+                        .setPlaceholder(field.placeholder || 'اكتب هنا...')
+                        .setRequired(field.required);
+                    modal.addComponents(new ActionRowBuilder().addComponents(textInput));
+                });
+
                 await interaction.showModal(modal);
-            }
-            // 2. Support Modal
-            else if (type === 'support') {
-                const modal = new ModalBuilder().setCustomId('modal_create_support').setTitle('🛠️ الدعم الفني');
-                const reason = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ticket_reason').setLabel('وصف المشكلة').setStyle(TextInputStyle.Paragraph).setRequired(true));
-                modal.addComponents(reason);
-                await interaction.showModal(modal);
-            }
-            // 3. Creator Modal
-            else if (type === 'creator') {
-                const modal = new ModalBuilder().setCustomId('modal_create_creator').setTitle('🎥 صانع محتوى');
-                const links = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('links').setLabel('الروابط / القناة').setStyle(TextInputStyle.Short).setRequired(true));
-                const subs = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('subs').setLabel('عدد المتابعين').setStyle(TextInputStyle.Short).setRequired(true));
-                const reason = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ticket_reason').setLabel('ملاحظات إضافية').setStyle(TextInputStyle.Paragraph).setRequired(false));
-                
-                modal.addComponents(links, subs, reason);
-                await interaction.showModal(modal);
-            }
-            // 4. Other Types (Gift/Admin/Custom)
-            else {
-                const modal = new ModalBuilder().setCustomId(`modal_create_${type}`).setTitle('Ticket Details');
-                const reason = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ticket_reason').setLabel('Details').setStyle(TextInputStyle.Paragraph).setRequired(true));
-                modal.addComponents(reason);
-                await interaction.showModal(modal);
+            } else {
+                // إذا لم يكن هناك نافذة، افتح التكت فوراً
+                await createTicket(interaction, buttonData, config, []);
             }
         }
 
-        // ----------------------------------------------------
-        // 🅱️ B. MODALS SUBMIT (تنفيذ الأوامر)
-        // ----------------------------------------------------
-        if (interaction.type === InteractionType.ModalSubmit) {
-            
-            // 1. إنشاء التكت (Create Logic)
-            if (customId.startsWith('modal_create_')) {
-                const type = customId.replace('modal_create_', '');
-                return await createTicket(interaction, config, type, interaction.fields);
-            }
+        // ==========================================
+        // 📝 2. عند إرسال النافذة (Modal Submit)
+        // ==========================================
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_ticket_')) {
+            const btnId = interaction.customId.replace('modal_ticket_', '');
+            const buttonData = config.customButtons.find(b => b.id === btnId);
+            if (!buttonData) return;
 
-            // 2. حفظ التريد (Trade Save) - ميزة V13
-            if (customId === 'modal_trade_save') {
-                const trade = interaction.fields.getTextInputValue('trade_val');
-                activeTrades.set(channel.id, trade);
-                await interaction.reply({ content: '**✅ Trade Details Saved!**', ephemeral: true });
-                return channel.send(`**📦 Trade Updated:** \`\`\`${trade}\`\`\``);
-            }
+            const answers = [];
+            buttonData.modalFields.forEach((field, index) => {
+                answers.push({ label: field.label, value: interaction.fields.getTextInputValue(`field_${index}`) });
+            });
 
-            // 3. إضافة عضو (Add User)
-            if (customId === 'modal_add_user') {
-                const targetId = interaction.fields.getTextInputValue('uid');
-                await interaction.deferReply();
-                try {
-                    const targetMember = await guild.members.fetch(targetId);
-                    await channel.permissionOverwrites.edit(targetMember, { ViewChannel: true, SendMessages: true });
-                    
-                    let addedList = ticketAddedUsers.get(channel.id) || [];
-                    addedList.push({ user: targetMember.user.tag, adder: user.tag });
-                    ticketAddedUsers.set(channel.id, addedList);
-
-                    sendLog(guild, config, 'Add User', channel, user, targetId);
-                    return interaction.editReply({ content: `✅ **${targetMember} added to ticket by ${user}**` });
-                } catch (e) {
-                    return interaction.editReply({ content: '**❌ Error:** User not found.', ephemeral: true });
-                }
-            }
-
-            // 4. حذف بسبب (Delete Reason)
-            if (customId === 'modal_delete_reason') {
-                const reason = interaction.fields.getTextInputValue('reason');
-                await interaction.reply(`**🗑️ Deleting Ticket.. Reason:** ${reason}`);
-                sendFinalDeleteLog(guild, config, channel, user, reason);
-                setTimeout(() => channel.delete().catch(() => {}), 4000);
-            }
-
-            // ⭐ 5. نظام التقييم (RATING SYSTEM) - [FIXED & DYNAMIC]
-            if (customId.startsWith('modal_rate_')) {
-                // customId: modal_rate_TYPE_STARS_CLAIMERID
-                const parts = customId.split('_');
-                const type = parts[2]; // med or staff
-                const stars = parts[3];
-                const claimerId = parts[4]; // ✅ الأيدي جاي من الزرار (الحل النهائي للمشكلة)
-
-                const comment = interaction.fields.getTextInputValue('comment') || "بدون تعليق";
-                
-                // ✅ زيادة العداد في الداتابيز (بيانات كل سيرفر لوحده)
-                if (type === 'med') config.middlemanRatings += 1;
-                else config.serverRatings += 1;
-                await config.save(); // حفظ الرقم للأبد
-
-                const totalRatings = type === 'med' ? config.middlemanRatings : config.serverRatings;
-                const starEmojis = "⭐".repeat(parseInt(stars));
-                
-                // ✅ اللوج الديناميكي (باسم السيرفر الحالي)
-                const logEmbed = new EmbedBuilder()
-                    .setTitle(type === 'med' ? `🛡️ **${guild.name} MIDDLEMAN REVIEW**` : `🛠️ **${guild.name} STAFF REVIEW**`)
-                    .setColor(type === 'med' ? '#F1C40F' : '#3498DB')
-                    .setThumbnail(guild.iconURL()) // ✅ أيقونة السيرفر الحالي
-                    .addFields(
-                        { name: '👤 العميل (Rater)', value: `${user} (\`${user.id}\`)`, inline: true },
-                        { name: type === 'med' ? '🛡️ الوسيط' : '👨‍💼 الإداري', value: claimerId !== 'NONE' ? `<@${claimerId}>` : 'غير محدد', inline: true },
-                        { name: '📊 العداد', value: `\`#${totalRatings}\``, inline: true },
-                        { name: '⭐ التقييم', value: `${starEmojis} **(${stars}/5)**`, inline: true },
-                        { name: '💬 التعليق', value: `\`\`\`${comment}\`\`\``, inline: false }
-                    )
-                    .setFooter({ text: `Rated by: ${user.tag}`, iconURL: user.displayAvatarURL() })
-                    .setTimestamp();
-
-                // إرسال اللوج لروم اللوجات المحدد في الداتابيز
-                const logCh = guild.channels.cache.get(config.logsChannelId);
-                if (logCh) await logCh.send({ content: '**✨ تقييم جديد وصل!**', embeds: [logEmbed] });
-
-                return interaction.reply({ content: '**✅ شكراً لتقييمك! (Thanks for rating)**', ephemeral: true });
-            }
+            await createTicket(interaction, buttonData, config, answers);
         }
 
-        // ----------------------------------------------------
-        // 🆎 C. BUTTONS HANDLING (التحكم في الأزرار)
-        // ----------------------------------------------------
+        // ==========================================
+        // ⚙️ 3. أزرار التحكم داخل التكت (Claim, Close, Add, Delete)
+        // ==========================================
         if (interaction.isButton()) {
             
-            // ✅ صلاحيات ديناميكية (من الداتابيز بدل الأيديهات الثابتة)
-            const isOwner = user.id === guild.ownerId;
-            const isStaff = config.staffRoleId && member.roles.cache.has(config.staffRoleId);
-            const isAdmin = config.adminRoleId && member.roles.cache.has(config.adminRoleId);
-            
-            // 1. زرار الاستلام (Claim)
-            if (customId === 'btn_claim') {
-                if (!isStaff && !isAdmin && !isOwner) return interaction.reply({ content: '❌ **Staff Only!**', ephemeral: true });
-
-                ticketClaimer.set(channel.id, user.id);
-                
-                // ✅ إخفاء التكت عن الجميع ما عدا المستلم (Privacy)
-                await channel.permissionOverwrites.edit(user.id, { ViewChannel: true, SendMessages: true });
-                if (config.staffRoleId) await channel.permissionOverwrites.edit(config.staffRoleId, { ViewChannel: false });
-
-                const row = ActionRowBuilder.from(interaction.message.components[0]);
-                row.components[0].setDisabled(true).setLabel(`Claimed by ${user.username}`);
-                await interaction.update({ components: [row] });
-
-                await channel.send({ content: `**✅ Ticket claimed by ${user}**` });
-                sendLog(guild, config, 'Claim', channel, user);
-            }
-
-            // 2. زرار الإغلاق (Close)
-            if (customId === 'btn_close') {
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('btn_confirm_close').setLabel('Confirm Close').setStyle(ButtonStyle.Danger),
-                    new ButtonBuilder().setCustomId('btn_cancel_close').setLabel('Cancel').setStyle(ButtonStyle.Secondary)
-                );
-                return interaction.reply({ content: '**❓ Are you sure?**', components: [row] });
-            }
-
-            if (customId === 'btn_cancel_close') {
-                return interaction.update({ content: '**✅ Close Cancelled.**', components: [] });
-            }
-
-            // 3. تأكيد الإغلاق (Confirm Close)
-            if (customId === 'btn_confirm_close') {
-                const ticketOwnerId = channel.topic;
-                ticketCloser.set(channel.id, user.id);
-
-                if (ticketOwnerId) await channel.permissionOverwrites.edit(ticketOwnerId, { ViewChannel: false });
-                await interaction.update({ content: '**🔒 Ticket Closed.**', components: [] });
-
-                // لوحة التحكم الكاملة
-                const controlRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('btn_transcript').setLabel('Transcript').setStyle(ButtonStyle.Secondary).setEmoji('📄'),
-                    new ButtonBuilder().setCustomId('btn_reopen').setLabel('Reopen').setStyle(ButtonStyle.Success).setEmoji('🔓'),
-                    new ButtonBuilder().setCustomId('btn_delete').setLabel('Delete').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
-                    new ButtonBuilder().setCustomId('btn_delete_reason').setLabel('Delete (Reason)').setStyle(ButtonStyle.Danger)
-                );
-
-                await channel.send({ content: `**Ticket Control Panel**\nClosed By: ${user}`, components: [controlRow] });
-
-                // حفظ الترانسكريبت باسم السيرفر
-                const attachment = await createTranscript(channel, { limit: -1, fileName: `${guild.name}-${channel.name}.html` });
-                const logCh = guild.channels.cache.get(config.transcriptChannelId || config.logsChannelId);
-                if (logCh) await logCh.send({ content: `📄 **Ticket Closed:** \`${channel.name}\``, files: [attachment] });
-
-                sendLog(guild, config, 'Close', channel, user);
-
-                // --- 🛠️ FIX: Rating Logic (الحل النهائي) ---
-                // بنجيب الأيدي من الذاكرة، ولو مش موجود (بسبب ريستارت) بنحط NONE
-                const claimerId = ticketClaimer.get(channel.id) || 'NONE'; 
-                const type = ticketTypes.get(channel.id) || 'support';
-
-                // ✅ بنحط أيدي المستلم جوه الزرار نفسه (عشان عمره ما يضيع)
-                const rateRow = new ActionRowBuilder().addComponents(
-                    [1, 2, 3, 4, 5].map(i => 
-                        new ButtonBuilder().setCustomId(`rate_${type === 'mediator' ? 'med' : 'staff'}_${i}_${claimerId}`).setLabel(`${i}⭐`).setStyle(ButtonStyle.Secondary)
-                    )
-                );
-
-                try {
-                    if (ticketOwnerId) {
-                        const ownerMember = await guild.members.fetch(ticketOwnerId);
-                        // ✅ رسالة التقييم ديناميكية باسم السيرفر
-                        await ownerMember.send({ content: `**⭐ يرجى تقييم خدمة سيرفر ${guild.name}:**`, components: [rateRow] }).catch(() => {
-                            channel.send({ content: `**⭐ يرجى التقييم هنا:** <@${ticketOwnerId}>`, components: [rateRow] });
-                        });
-                    }
-                } catch (e) {
-                     channel.send({ content: `**⭐ يرجى التقييم:**`, components: [rateRow] });
+            // 🔒 زر إغلاق التكت (Close)
+            if (interaction.customId === 'ticket_close') {
+                if (!interaction.member.permissions.has('ManageChannels') && !interaction.member.roles.cache.has(config.adminRoleId)) {
+                    return interaction.reply({ content: '❌ لا تملك صلاحية لإغلاق التذكرة.', ephemeral: true });
                 }
+
+                await interaction.deferUpdate();
+                
+                // سحب الصلاحيات من العضو
+                const ticketOwnerId = interaction.channel.topic;
+                if (ticketOwnerId) {
+                    await interaction.channel.permissionOverwrites.edit(ticketOwnerId, {
+                        SendMessages: false,
+                        ViewChannel: false
+                    });
+                }
+
+                const closeEmbed = new EmbedBuilder()
+                    .setTitle('Ticket control')
+                    .setDescription(`Closed By: <@${interaction.user.id}>\n(${interaction.user.id})`)
+                    .setColor('#2b2d31');
+
+                const controlRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('ticket_reopen').setLabel('Reopen ticket').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('ticket_delete').setLabel('Delete ticket').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId('ticket_delete_reason').setLabel('Delete With Reason').setStyle(ButtonStyle.Danger)
+                );
+
+                await interaction.channel.send({ embeds: [closeEmbed], components: [controlRow] });
             }
 
-            // 4. بقية الأزرار (Reopen, Delete, Transcript)
-            if (customId === 'btn_reopen') {
-                const ticketOwnerId = channel.topic;
-                await channel.permissionOverwrites.edit(ticketOwnerId, { ViewChannel: true });
-                await interaction.message.delete();
-                await interaction.reply({ content: '**🔓 Ticket Reopened.**' });
-                sendLog(guild, config, 'Reopen', channel, user);
+            // 🔓 زر إعادة فتح التكت (Reopen)
+            if (interaction.customId === 'ticket_reopen') {
+                const ticketOwnerId = interaction.channel.topic;
+                if (ticketOwnerId) {
+                    await interaction.channel.permissionOverwrites.edit(ticketOwnerId, {
+                        SendMessages: true,
+                        ViewChannel: true
+                    });
+                }
+                await interaction.reply('✅ تم إعادة فتح التذكرة بنجاح.');
+                await interaction.message.delete().catch(() => {});
             }
 
-            if (customId === 'btn_delete') {
-                await interaction.reply('**🗑️ Deleting ticket in 5 seconds...**');
-                sendFinalDeleteLog(guild, config, channel, user, "Manual Delete");
-                setTimeout(() => channel.delete().catch(() => {}), 5000);
+            // 🗑️ زر الحذف المباشر (Delete)
+            if (interaction.customId === 'ticket_delete') {
+                await interaction.reply('جاري حذف التذكرة وحفظ السجل...');
+                await deleteAndLogTicket(interaction.channel, interaction.user, config, "بدون سبب");
             }
 
-            if (customId === 'btn_transcript') {
-                const attachment = await createTranscript(channel, { limit: -1, fileName: `${guild.name}-${channel.name}.html` });
-                return interaction.reply({ content: `**✅ Transcript Generated**`, files: [attachment], ephemeral: true });
-            }
-
-            // 5. أزرار إضافية (Trade Input, Add User)
-            if (customId === 'btn_trade_input') {
-                const modal = new ModalBuilder().setCustomId('modal_trade_save').setTitle('Trade Details');
-                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('trade_val').setLabel('تفاصيل التريد').setStyle(TextInputStyle.Paragraph).setRequired(true)));
+            // 📝 زر الحذف مع سبب (Delete With Reason)
+            if (interaction.customId === 'ticket_delete_reason') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_delete_reason')
+                    .setTitle('سبب حذف التذكرة');
+                const reasonInput = new TextInputBuilder()
+                    .setCustomId('delete_reason')
+                    .setLabel('اكتب سبب الحذف:')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+                modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
                 await interaction.showModal(modal);
             }
-            
-            if (customId === 'btn_add_user') {
-                 const modal = new ModalBuilder().setCustomId('modal_add_user').setTitle('Add User');
-                 modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('uid').setLabel('User ID').setStyle(TextInputStyle.Short).setRequired(true)));
-                 await interaction.showModal(modal);
+
+            // ✅ زر الاستلام (Claim)
+            if (interaction.customId === 'ticket_claim') {
+                await interaction.deferUpdate();
+                
+                // تنفيذ خصوصية الاستلام (إخفاء أو مراقبة)
+                const staffRoles = [config.adminRoleId, config.mediatorRoleId].filter(Boolean);
+                for (const roleId of staffRoles) {
+                    if (config.hideTicketOnClaim) {
+                        await interaction.channel.permissionOverwrites.edit(roleId, { ViewChannel: false });
+                    } else if (config.readOnlyStaffOnClaim) {
+                        await interaction.channel.permissionOverwrites.edit(roleId, { SendMessages: false });
+                    }
+                }
+                // إعطاء المستلم صلاحيات كاملة
+                await interaction.channel.permissionOverwrites.edit(interaction.user.id, { ViewChannel: true, SendMessages: true });
+
+                await interaction.channel.send(`✅ **The ticket has been claimed successfully by <@${interaction.user.id}>**`);
             }
 
-            // 6. High Staff Buttons
-            if (['high_approve', 'high_reject'].includes(customId)) {
-                if (!isAdmin) return interaction.reply({ content: '❌ **High Staff Only!**', ephemeral: true });
-                const status = customId === 'high_approve' ? '✅ **Approved**' : '❌ **Rejected**';
-                await interaction.update({ content: `**${status} by ${user}**`, components: [] });
-            }
-
-            // 7. زرار التقييم (عند الضغط عليه يفتح المودال)
-            if (customId.startsWith('rate_')) {
-                const parts = customId.split('_');
-                const type = parts[1];
-                const stars = parts[2];
-                const claimerId = parts[3];
-
-                const modal = new ModalBuilder().setCustomId(`modal_rate_${type}_${stars}_${claimerId}`).setTitle(`تقييم ${guild.name}`);
-                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('comment').setLabel('تعليقك (اختياري)').setStyle(TextInputStyle.Paragraph).setRequired(false)));
+            // ➕ زر إضافة عضو (Add User)
+            if (interaction.customId === 'ticket_add_user') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_add_user')
+                    .setTitle('إضافة عضو للتكت');
+                const idInput = new TextInputBuilder()
+                    .setCustomId('user_id_to_add')
+                    .setLabel('أيدي العضو (User ID):')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+                modal.addComponents(new ActionRowBuilder().addComponents(idInput));
                 await interaction.showModal(modal);
+            }
+        }
+
+        // ==========================================
+        // 🧩 4. معالجة نوافذ التحكم (الحذف بالسبب / إضافة عضو)
+        // ==========================================
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'modal_delete_reason') {
+                const reason = interaction.fields.getTextInputValue('delete_reason');
+                await interaction.reply('جاري حذف التذكرة وحفظ السجل...');
+                await deleteAndLogTicket(interaction.channel, interaction.user, config, reason);
+            }
+
+            if (interaction.customId === 'modal_add_user') {
+                const userId = interaction.fields.getTextInputValue('user_id_to_add');
+                try {
+                    const member = await interaction.guild.members.fetch(userId);
+                    await interaction.channel.permissionOverwrites.edit(userId, { ViewChannel: true, SendMessages: true });
+                    await interaction.reply(`✅ <@${userId}> **has been added to the ticket by:** <@${interaction.user.id}>`);
+                } catch (err) {
+                    await interaction.reply({ content: '❌ لم يتم العثور على العضو.', ephemeral: true });
+                }
             }
         }
     });
 
-    // ====================================================
-    // ⚙️ HELPER FUNCTIONS (المحركات الخلفية)
-    // ====================================================
+    // ==========================================
+    // 🛠️ دوال مساعدة لإنشاء وحذف التكت
+    // ==========================================
+    
+    // دالة إنشاء التكت
+    async function createTicket(interaction, buttonData, config, answers) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        let ticketNum = config.ticketCount + 1;
+        await GuildConfig.findOneAndUpdate({ guildId: interaction.guild.id }, { $inc: { ticketCount: 1 } });
 
-    async function createTicket(interaction, config, type, fields) {
-        const { guild, user } = interaction;
-        const count = config.ticketCount; // ✅ العداد من الداتابيز
+        const categoryId = buttonData.categoryId || config.defaultCategoryId;
+        const permissionOverwrites = [
+            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }
+        ];
 
-        // ✅ إنشاء الروم (باستخدام القنوات والرتب من الداتابيز)
-        const channel = await guild.channels.create({
-            name: `ticket-${count}-${user.username}`,
-            type: ChannelType.GuildText,
-            parent: config.ticketChannelId,
-            topic: user.id, // حفظ أيدي العضو في الوصف
-            permissionOverwrites: [
-                { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                { id: config.staffRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-            ]
+        // إعطاء الإدارة صلاحية رؤية التكت
+        const staffRoles = [config.adminRoleId, config.mediatorRoleId].filter(Boolean);
+        staffRoles.forEach(roleId => {
+            permissionOverwrites.push({ id: roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] });
         });
 
-        ticketTypes.set(channel.id, type);
-        config.ticketCount += 1;
-        await config.save(); // ✅ حفظ العداد
+        const ticketChannel = await interaction.guild.channels.create({
+            name: `ticket-${ticketNum}`,
+            type: ChannelType.GuildText,
+            parent: categoryId,
+            topic: interaction.user.id, // حفظ أيدي صاحب التكت في الوصف
+            permissionOverwrites: permissionOverwrites
+        });
 
-        const embed = new EmbedBuilder().setColor('#FFFFFF').setTimestamp();
-        let mentionText = `**حياك الله** <@${user.id}>`;
+        // رسالة الترحيب خارج الإيمبد
+        const outsideMessage = `حياك الله <@${interaction.user.id}>\nReason: ${buttonData.label}`;
 
-        if (type === 'mediator') {
-            const tUser = fields.getTextInputValue('target_user') || 'N/A';
-            const tDetails = fields.getTextInputValue('trade_details') || 'N/A';
-            activeTrades.set(channel.id, tDetails);
+        // بناء الإيمبد الداخلي
+        const insideEmbed = new EmbedBuilder()
+            .setTitle(buttonData.insideEmbedTitle || 'الدعم الفني')
+            .setDescription(buttonData.insideEmbedDesc || 'يرجى كتابة طلبك بالتفصيل.')
+            .setColor(buttonData.insideEmbedColor || '#2b2d31');
 
-            embed.setTitle('🛡️ **طلب وسيط**');
-            embed.setDescription(`**هذا القسم مخصص لطلب وسيط لعملية تريد داخل السيرفر**\n\n**${"-".repeat(20)}**\n\n` + 
-            `**1️⃣ تأكد أن الطرف الآخر جاهز ومتواجد.**\n` +
-            `**2️⃣ رجاء عدم فتح أكثر من تذكرة.**\n` +
-            `**3️⃣ تحقق من درجة الوسيط.**\n\n` +
-            `**تفاصيل الطلب:**\n${fields.getTextInputValue('ticket_reason')}`);
-            
-            embed.addFields({ name: '👤 الطرف الثاني', value: tUser, inline: true }, { name: '📦 التفاصيل', value: tDetails, inline: true });
-        } 
-        else if (type === 'support') {
-            embed.setTitle('🛠️ **تذكرة الدعم الفني**');
-            embed.setDescription(`\n**شكراً لفتح تذكرة الدعم الفني**\n**${"-".repeat(20)}**\n` +
-            `**يرجى شرح مشكلتك بوضوح.**\n**فريق الدعم سيراجع تذكرتك قريباً.**`);
-            embed.addFields({ name: '❓ المشكلة', value: fields.getTextInputValue('ticket_reason') });
-        }
-        else if (type === 'creator') {
-            mentionText += `\n🎥 **Please wait for Content Creator Managers.**`;
-            embed.setTitle('🎥 **تقديم صانع محتوى**');
-            embed.addFields({ name: '🔗 الروابط', value: fields.getTextInputValue('links') }, { name: '👥 المتابعين', value: fields.getTextInputValue('subs') });
-        }
-        else if (type === 'admin') {
-            mentionText += `\n⚠️ **Please wait for High Staff.**`;
-            embed.setTitle('📛 **شكوى إداري**');
-            embed.setDescription(`**سيتم مراجعة الشكوى من قبل الإدارة العليا فقط.**`);
-            await channel.permissionOverwrites.edit(config.staffRoleId, { ViewChannel: false });
-        }
-        else {
-            embed.setTitle('🎁 **استلام جوائز**');
-            embed.setDescription(`**${"-".repeat(20)}**\n تفاصيل: ${fields.getTextInputValue('ticket_reason')}`);
+        if (answers.length > 0) {
+            let fieldsStr = '';
+            answers.forEach(a => fieldsStr += `**${a.label}:**\n${a.value}\n\n`);
+            insideEmbed.addFields({ name: '📝 بيانات الطلب:', value: fieldsStr });
         }
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_claim').setLabel('Claim').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('btn_close').setLabel('Close').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('btn_add_user').setLabel('Add User').setStyle(ButtonStyle.Primary)
+        // أزرار التحكم الموحدة (الترتيب الذي طلبته)
+        const row1 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('ticket_add_user').setLabel('Add User').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId('ticket_claim').setLabel('Claim').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId('ticket_close').setLabel('Close').setStyle(ButtonStyle.Danger)
+        );
+        const row2 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('ticket_delete_reason').setLabel('Delete With Reason').setStyle(ButtonStyle.Danger)
         );
 
-        if (type === 'mediator') row.addComponents(new ButtonBuilder().setCustomId('btn_trade_input').setLabel('Trade Input').setStyle(ButtonStyle.Secondary));
-
-        await channel.send({ content: mentionText, embeds: [embed], components: [row] });
-        await interaction.reply({ content: `**✅ Ticket Created:** ${channel}`, ephemeral: true });
-
-        sendLog(guild, config, 'Open', channel, user, user.id);
+        await ticketChannel.send({ content: outsideMessage, embeds: [insideEmbed], components: [row1, row2] });
+        await interaction.editReply(`✅ تم فتح تذكرتك بنجاح: <#${ticketChannel.id}>`);
     }
 
-    // ⭐ V13 Feature: Full Delete Log
-    function sendFinalDeleteLog(guild, config, channel, executor, reason) {
-        const claimer = ticketClaimer.get(channel.id) || 'None';
-        const closer = ticketCloser.get(channel.id) || 'None';
-        const owner = channel.topic || 'Unknown';
+    // دالة حذف التكت وإرسال الترانسكريبت
+    async function deleteAndLogTicket(channel, closedBy, config, reason) {
+        // إنشاء ترانسكريبت
+        const attachment = await discordTranscripts.createTranscript(channel, {
+            limit: -1,
+            returnType: 'attachment',
+            filename: `${channel.name}.html`,
+            saveImages: true,
+            poweredBy: false
+        });
+
+        const logEmbed = new EmbedBuilder()
+            .setTitle('📄 سجل إغلاق تذكرة')
+            .addFields(
+                { name: 'اسم التذكرة:', value: channel.name, inline: true },
+                { name: 'أُغلقت بواسطة:', value: `<@${closedBy.id}>`, inline: true },
+                { name: 'السبب:', value: reason, inline: false }
+            )
+            .setColor('#ed4245')
+            .setTimestamp();
+
+        // إرسال للوج التكتات الشامل
+        if (config.ticketLogChannelId) {
+            const logChannel = channel.guild.channels.cache.get(config.ticketLogChannelId);
+            if (logChannel) await logChannel.send({ embeds: [logEmbed], files: [attachment] }).catch(()=>{});
+        }
         
-        const addedUsersList = ticketAddedUsers.get(channel.id) || [];
-        const addedUsersString = addedUsersList.length > 0 ? addedUsersList.map(i => `👤 **${i.user}** (by ${i.adder})`).join('\n') : 'None';
+        // إرسال للترانسكريبت المنفصل
+        if (config.transcriptChannelId && config.transcriptChannelId !== config.ticketLogChannelId) {
+            const transChannel = channel.guild.channels.cache.get(config.transcriptChannelId);
+            if (transChannel) await transChannel.send({ embeds: [logEmbed], files: [attachment] }).catch(()=>{});
+        }
 
-        const embed = new EmbedBuilder()
-            .setColor('#FF0000')
-            .setAuthor({ name: `${guild.name} LOGS`, iconURL: guild.iconURL() }) // ✅ اسم السيرفر
-            .setTitle('🗑️ Ticket Deleted')
-            .setDescription(`**Ticket:** \`${channel.name}\` was deleted.`)
-            .addFields(
-                { name: '👑 Owner', value: `<@${owner}>`, inline: true },
-                { name: '🗑️ Deleted By', value: `<@${executor.id}>`, inline: true },
-                { name: '🙋 Claimed By', value: claimer !== 'None' ? `<@${claimer}>` : 'None', inline: true },
-                { name: '🔒 Closed By', value: closer !== 'None' ? `<@${closer}>` : 'None', inline: true },
-                { name: '➕ Added Users', value: addedUsersString, inline: false },
-                { name: '📝 Reason', value: reason || 'No Reason', inline: false }
-            )
-            .setTimestamp();
-
-        const logChannel = guild.channels.cache.get(config.logsChannelId);
-        if (logChannel) logChannel.send({ embeds: [embed] });
+        setTimeout(() => channel.delete().catch(()=>{}), 3000);
     }
-
-    function sendLog(guild, config, action, channel, executor, ownerId) {
-        const embed = new EmbedBuilder()
-            .setColor(action === 'Delete' ? '#FF0000' : '#2F3136')
-            .setAuthor({ name: `${guild.name} LOGS`, iconURL: guild.iconURL() }) // ✅ اسم السيرفر
-            .setTitle(`${action} Ticket`)
-            .addFields(
-                { name: 'Channel', value: `\`${channel.name}\``, inline: true },
-                { name: 'Executor', value: `<@${executor.id}>`, inline: true },
-                { name: 'Owner', value: `<@${ownerId || 'Unknown'}>`, inline: true }
-            )
-            .setTimestamp();
-
-        const logChannel = guild.channels.cache.get(config.logsChannelId);
-        if (logChannel) logChannel.send({ embeds: [embed] });
-    }
-
-    console.log('💎 TICKET SYSTEM V13.0 [UNIVERSAL WHITE-LABEL] IS ONLINE!');
 };
