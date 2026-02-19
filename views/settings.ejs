@@ -8,16 +8,25 @@
     <style>
         body { font-family: 'Tajawal', sans-serif; background-color: #121212; color: #ffffff; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
+        /* 📱 شريط الموبايل العلوي (مخفي في الكمبيوتر) */
+        .mobile-header { display: none; background-color: #1e1e24; padding: 15px 20px; align-items: center; justify-content: space-between; border-bottom: 2px solid #5865F2; }
+        .menu-btn { background: #5865F2; color: white; border: none; padding: 8px 15px; font-size: 18px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal', sans-serif; }
+
         /* 📱 القائمة الجانبية */
-        .sidebar { width: 260px; background-color: #1e1e24; padding: 20px; box-shadow: -2px 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-        .sidebar h2 { text-align: center; color: #5865F2; margin-bottom: 20px; font-size: 24px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .sidebar { width: 260px; background-color: #1e1e24; padding: 20px; box-shadow: -2px 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 10px; overflow-y: auto; transition: 0.3s; z-index: 1000; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
+        .sidebar h2 { color: #5865F2; font-size: 22px; margin: 0; }
+        
+        /* زرار الإكس (مخفي في الكمبيوتر) */
+        .close-btn { display: none; background: transparent; color: #ff4d4d; border: none; font-size: 24px; cursor: pointer; }
+
         .tab-btn { background: #2b2b36; color: white; border: none; padding: 15px; text-align: right; font-size: 16px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-family: 'Tajawal', sans-serif; }
         .tab-btn:hover { background: #3b3b4f; }
         .tab-btn.active { background: #5865F2; font-weight: bold; }
         
         /* 📝 محتوى الصفحة */
         .content { flex: 1; padding: 30px; overflow-y: auto; background-color: #18181b; }
-        .content h1 { border-bottom: 2px solid #5865F2; padding-bottom: 10px; margin-bottom: 30px; }
+        .content h1 { border-bottom: 2px solid #5865F2; padding-bottom: 10px; margin-bottom: 30px; font-size: 24px; }
         .tab-content { display: none; background: #23232a; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: fadeIn 0.4s; }
         .tab-content.active { display: block; }
         
@@ -26,21 +35,39 @@
         /* 🎛️ الإدخالات */
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; color: #b9bbbe; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; background: #2f3136; border: 1px solid #202225; color: white; border-radius: 5px; font-family: 'Tajawal', sans-serif; font-size: 15px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; background: #2f3136; border: 1px solid #202225; color: white; border-radius: 5px; font-family: 'Tajawal', sans-serif; font-size: 15px; box-sizing: border-box; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #5865F2; }
         .help-text { font-size: 12px; color: #72767d; margin-top: 5px; display: block; }
         
         /* 💾 زر الحفظ */
-        .save-btn { background: #3ba55d; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; font-family: 'Tajawal', sans-serif; font-weight: bold; }
+        .save-btn { background: #3ba55d; color: white; padding: 15px; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; font-family: 'Tajawal', sans-serif; font-weight: bold; }
         .save-btn:hover { background: #2d7d46; }
         .back-link { display: block; text-align: center; margin-top: 15px; color: #5865F2; text-decoration: none; }
+
+        /* 📱 تعديلات الموبايل */
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow: auto; }
+            .mobile-header { display: flex; }
+            .sidebar { position: fixed; right: -300px; top: 0; height: 100%; width: 250px; }
+            .sidebar.open { right: 0; }
+            .close-btn { display: block; }
+            .content { padding: 15px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>🛠️ لوحة التحكم</h2>
-        <button class="tab-btn active" onclick="openTab(event, 'tickets')">🎟️ إعدادات التكتات والإيمبد</button>
+    <div class="mobile-header">
+        <h2 style="margin: 0; color: white; font-size: 20px;">إعدادات MNC</h2>
+        <button class="menu-btn" onclick="toggleSidebar()">☰ القائمة</button>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>🛠️ لوحة التحكم</h2>
+            <button class="close-btn" onclick="toggleSidebar()">✖</button>
+        </div>
+        <button class="tab-btn active" onclick="openTab(event, 'tickets')">🎟️ إعدادات التكتات</button>
         <button class="tab-btn" onclick="openTab(event, 'roles')">👨‍⚖️ الإدارة والوساطة</button>
         <button class="tab-btn" onclick="openTab(event, 'logs')">📁 السجلات (اللوجات)</button>
         <button class="tab-btn" onclick="openTab(event, 'audit')">🛡️ حماية السيرفر</button>
@@ -48,7 +75,7 @@
     </div>
 
     <div class="content">
-        <h1>إعدادات سيرفر: <%= guild.name %></h1>
+        <h1>سيرفر: <%= guild.name %></h1>
         
         <form action="/settings/<%= guild.id %>" method="POST">
 
@@ -73,7 +100,7 @@
                 </div>
                 <div class="form-group">
                     <label>لون الإيمبد (Hex Code):</label>
-                    <input type="color" name="ticketEmbedColor" value="<%= config.ticketEmbedColor || '#0099ff' %>" style="height: 50px;">
+                    <input type="color" name="ticketEmbedColor" value="<%= config.ticketEmbedColor || '#0099ff' %>" style="height: 50px; padding: 0; cursor: pointer;">
                 </div>
                 <div class="form-group">
                     <label>رقم التكت القادم (Counter):</label>
@@ -91,21 +118,20 @@
                             <option value="<%= role.id %>" <%= config.staffRoleId === role.id ? 'selected' : '' %>><%= role.name %></option>
                         <% }) %>
                     </select>
-                    <span class="help-text">هذه الرتبة ستتمكن من رؤية التكتات.</span>
                 </div>
                 <div class="form-group">
-                    <label>رتب الإدارة العليا (Multi-Admin) [للموافقات]:</label>
+                    <label>رتب الإدارة العليا (للموافقات):</label>
                     <select name="adminRoles" multiple style="height: 150px;">
                         <% roles.forEach(role => { %>
                             <option value="<%= role.id %>" <%= config.adminRoles && config.adminRoles.includes(role.id) ? 'selected' : '' %>><%= role.name %></option>
                         <% }) %>
                     </select>
-                    <span class="help-text">اضغط CTRL لاختيار أكثر من رتبة. هؤلاء سيتم عمل منشن لهم عند طلب موافقة على تريد.</span>
+                    <span class="help-text">اضغط مطولاً لاختيار أكثر من رتبة.</span>
                 </div>
             </div>
 
             <div id="logs" class="tab-content">
-                <h3>📁 السجلات والتقييمات (اللوجات)</h3>
+                <h3>📁 السجلات والتقييمات</h3>
                 <div class="form-group">
                     <label>روم الترانسكريبت (حفظ التكتات):</label>
                     <select name="transcriptChannelId">
@@ -116,7 +142,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>روم تقييمات الإدارة (Staff Rating):</label>
+                    <label>روم تقييمات الإدارة:</label>
                     <select name="staffRatingChannelId">
                         <option value="">-- غير محدد --</option>
                         <% channels.filter(c => c.type === 0).forEach(c => { %>
@@ -124,10 +150,10 @@
                         <% }) %>
                     </select>
                 </div>
-                </div>
+            </div>
 
             <div id="audit" class="tab-content">
-                <h3>🛡️ حماية ولوجات السيرفر (Audit Logs)</h3>
+                <h3>🛡️ حماية ولوجات السيرفر</h3>
                 <div class="form-group">
                     <label>لوج إنشاء/حذف الرتب:</label>
                     <select name="logRoleCreateId">
@@ -149,7 +175,7 @@
             </div>
 
             <div id="commands" class="tab-content">
-                <h3>⌨️ تخصيص الأوامر (Custom Commands)</h3>
+                <h3>⌨️ تخصيص الأوامر</h3>
                 <div class="form-group">
                     <label>أمر إغلاق التكت (Done):</label>
                     <input type="text" name="cmdDone" value="<%= config.cmdDone || '!done' %>">
@@ -164,20 +190,33 @@
                 </div>
             </div>
 
-            <button type="submit" class="save-btn">💾 حفظ التعديلات في السيرفر</button>
+            <button type="submit" class="save-btn">💾 حفظ التعديلات</button>
             <a href="/dashboard" class="back-link">⬅️ العودة لقائمة السيرفرات</a>
         </form>
     </div>
 
     <script>
+        // فتح وقفل القائمة في الموبايل
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("open");
+        }
+
+        // التبديل بين الصفحات
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
             tabcontent = document.getElementsByClassName("tab-content");
             for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+            
             tablinks = document.getElementsByClassName("tab-btn");
             for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+            
             document.getElementById(tabName).style.display = "block";
             evt.currentTarget.className += " active";
+
+            // قفل القائمة أوتوماتيك بعد ما تختار (للموبايل)
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
         }
     </script>
 </body>
