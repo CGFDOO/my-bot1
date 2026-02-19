@@ -1,10 +1,84 @@
-<form action="/settings/<%= guild.id %>" method="POST">
-    <h3>إعدادات التكت</h3>
-    <input type="number" name="ticketCount" value="<%= config.ticketCount %>">
-    <select name="ticketChannelId">
-        <% channels.forEach(ch => { %>
-            <option value="<%= ch.id %>" <%= config.ticketChannelId === ch.id ? 'selected' : '' %>># <%= ch.name %></option>
-        <% }) %>
-    </select>
-    <button type="submit">حفظ الإعدادات لكل السيرفرات</button>
-</form>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات <%= guild.name %></title>
+    <style>
+        body { background-color: #23272a; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #2c2f33; padding: 40px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        h1 { color: #7289da; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: #b9bbbe; }
+        select, input { width: 100%; padding: 12px; background: #23272a; border: 1px solid #7289da; color: white; border-radius: 5px; font-size: 16px; outline: none; }
+        select:focus, input:focus { border-color: #5865f2; box-shadow: 0 0 5px rgba(88, 101, 242, 0.5); }
+        .btn { display: block; width: 100%; padding: 15px; background: #43b581; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold; transition: 0.3s; margin-top: 20px; }
+        .btn:hover { background: #3ca374; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #7289da; text-decoration: none; }
+        .note { font-size: 12px; color: #faa61a; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ إعدادات سيرفر: <%= guild.name %></h1>
+        
+        <form action="/settings/<%= guild.id %>" method="POST">
+            
+            <div class="form-group">
+                <label>🔢 رقم التكت القادم (Ticket Counter)</label>
+                <input type="number" name="ticketCount" value="<%= config.ticketCount %>" min="1">
+                <p class="note">لسيرفر MNC: اكتب 360 هنا ليكمل من الرقم القديم.</p>
+            </div>
+
+            <div class="form-group">
+                <label>📂 قسم التكتات (Category)</label>
+                <select name="ticketChannelId">
+                    <option value="" disabled selected>-- اختر الكاتيجوري --</option>
+                    <% channels.forEach(ch => { %>
+                        <% if (ch.type === 4) { %> <option value="<%= ch.id %>" <%= config.ticketChannelId === ch.id ? 'selected' : '' %>>📂 <%= ch.name %></option>
+                        <% } %>
+                    <% }) %>
+                </select>
+                <p class="note">سيتم فتح جميع التكتات الجديدة داخل هذا القسم.</p>
+            </div>
+
+            <div class="form-group">
+                <label>📝 روم اللوجات والترانسكريبت (Logs Channel)</label>
+                <select name="logsChannelId">
+                    <option value="" disabled selected>-- اختر روم اللوجات --</option>
+                    <% channels.forEach(ch => { %>
+                        <% if (ch.type === 0) { %> <option value="<%= ch.id %>" <%= config.logsChannelId === ch.id ? 'selected' : '' %>># <%= ch.name %></option>
+                        <% } %>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>👮 رتبة الإدارة (Staff Role)</label>
+                <select name="staffRoleId">
+                    <option value="" disabled selected>-- اختر رتبة الدعم --</option>
+                    <% roles.forEach(role => { %>
+                        <option value="<%= role.id %>" <%= config.staffRoleId === role.id ? 'selected' : '' %>>@<%= role.name %></option>
+                    <% }) %>
+                </select>
+                <p class="note">هذه الرتبة سترى التكتات وتستلمها.</p>
+            </div>
+
+            <div class="form-group">
+                <label>👑 رتبة الإدارة العليا (High Staff / Admin)</label>
+                <select name="adminRoleId">
+                    <option value="" disabled selected>-- اختر رتبة الإدارة العليا --</option>
+                    <% roles.forEach(role => { %>
+                        <option value="<%= role.id %>" <%= config.adminRoleId === role.id ? 'selected' : '' %>>@<%= role.name %></option>
+                    <% }) %>
+                </select>
+                <p class="note">مطلوبة للموافقة على الوسطاء (High Approve).</p>
+            </div>
+
+            <button type="submit" class="btn">💾 حفظ الإعدادات</button>
+        </form>
+
+        <a href="/dashboard" class="back-link">⬅️ العودة لقائمة السيرفرات</a>
+    </div>
+</body>
+</html>
