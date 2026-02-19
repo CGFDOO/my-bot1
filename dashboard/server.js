@@ -11,7 +11,13 @@ module.exports = (client) => {
     app.use(express.json({ limit: '50mb' }));
     app.use(express.static(path.join(__dirname, 'public')));
 
-    app.use(session({ secret: process.env.SESSION_SECRET || 'MNC_SECRET', resave: false, saveUninitialized: false, cookie: { maxAge: 60000 * 60 * 24 } }));
+    app.use(session({
+        secret: process.env.SESSION_SECRET || 'MNC_COMMUNITY_SECRET',
+        resave: false,
+        saveUninitialized: false,
+        cookie: { maxAge: 60000 * 60 * 24 }
+    }));
+
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
 
@@ -19,8 +25,13 @@ module.exports = (client) => {
     passport.deserializeUser((obj, done) => done(null, obj));
 
     passport.use(new Strategy({
-        clientID: process.env.CLIENT_ID, clientSecret: process.env.CLIENT_SECRET, callbackURL: process.env.CALLBACK_URL, scope: ['identify', 'guilds']
-    }, (accessToken, refreshToken, profile, done) => { process.nextTick(() => done(null, profile)); }));
+        clientID: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET,
+        callbackURL: process.env.CALLBACK_URL,
+        scope: ['identify', 'guilds']
+    }, (accessToken, refreshToken, profile, done) => {
+        process.nextTick(() => done(null, profile));
+    }));
 
     app.use(passport.initialize());
     app.use(passport.session());
@@ -56,44 +67,48 @@ module.exports = (client) => {
     app.post('/settings/:guildID', async (req, res) => {
         if (!req.user) return res.redirect('/login');
 
-        let parsedButtons = [], parsedResponders = [], parsedWarnReasons = [];
+        const formatArray = (val) => Array.isArray(val) ? val : (val ? [val] : []);
+        let parsedButtons = [], parsedWarnReasons = [];
         try {
             if (req.body.customButtonsData) parsedButtons = JSON.parse(req.body.customButtonsData);
-            if (req.body.autoRespondersData) parsedResponders = JSON.parse(req.body.autoRespondersData);
             if (req.body.warnReasonsData) parsedWarnReasons = JSON.parse(req.body.warnReasonsData);
         } catch(e) { console.log('Error parsing JSON:', e); }
 
-        const { 
-            prefix, autoRoleId, welcomeChannelId, welcomeMessage, welcomeBgImage, welcomeAvatarBorderColor,
-            gamesChannelId,
-            warnPanelChannelId, warnLogChannelId, warnPanelTitle, warnPanelDesc, warnPanelColor, warnMax, warnAction,
-            levelUpChannelId, suggestionChannelId,
-            panelChannelId, defaultCategoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, ticketCount, maxTicketsPerUser,
-            adminRoleId, highAdminRoles, mediatorRoleId, highMediatorRoles,
-            cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove, cmdBan, cmdTimeout,
-            transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
-            logRoleCreateDeleteId, logMemberRoleUpdateId, logJoinLeaveId, logMsgDeleteId, logMsgUpdateId, logImgDeleteId, logVoiceId
-        } = req.body;
-
-        const formatArray = (val) => Array.isArray(val) ? val : (val ? [val] : []);
+        const data = req.body;
 
         await GuildConfig.findOneAndUpdate(
             { guildId: req.params.guildID },
             { 
-                prefix, autoRoleId, welcomeChannelId, welcomeMessage, welcomeBgImage, welcomeAvatarBorderColor,
-                antiLinks: req.body.antiLinks === 'on', antiSpam: req.body.antiSpam === 'on', 
-                levelingEnabled: req.body.levelingEnabled === 'on', gamesEnabled: req.body.gamesEnabled === 'on',
-                gamesChannelId,
-                warnPanelChannelId, warnLogChannelId, warnPanelTitle, warnPanelDesc, warnPanelColor, warnMax: parseInt(warnMax) || 3, warnAction, warnReasons: parsedWarnReasons,
-                levelUpChannelId, suggestionChannelId,
-                panelChannelId, defaultCategoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage, 
-                ticketCount: parseInt(ticketCount) || 0, maxTicketsPerUser: parseInt(maxTicketsPerUser) || 1,
-                customButtons: parsedButtons, autoResponders: parsedResponders,
-                adminRoleId, highAdminRoles: formatArray(highAdminRoles), mediatorRoleId, highMediatorRoles: formatArray(highMediatorRoles),
-                hideTicketOnClaim: req.body.hideTicketOnClaim === 'on', readOnlyStaffOnClaim: req.body.readOnlyStaffOnClaim === 'on',
-                cmdDone, cmdReqHigh, cmdCome, cmdTrade, cmdClear, cmdLock, cmdUnlock, cmdVmove, cmdBan, cmdTimeout,
-                transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
-                logRoleCreateDeleteId, logMemberRoleUpdateId, logJoinLeaveId, logMsgDeleteId, logMsgUpdateId, logImgDeleteId, logVoiceId
+                prefix: data.prefix, autoRoleId: data.autoRoleId,
+                antiLinks: data.antiLinks === 'on', antiSpam: data.antiSpam === 'on', 
+                gamesEnabled: data.gamesEnabled === 'on', gamesChannelId: data.gamesChannelId,
+                levelingEnabled: data.levelingEnabled === 'on', levelUpChannelId: data.levelUpChannelId, suggestionChannelId: data.suggestionChannelId,
+                
+                welcomeChannelId: data.welcomeChannelId, welcomeMessage: data.welcomeMessage, welcomeBgImage: data.welcomeBgImage, welcomeAvatarBorderColor: data.welcomeAvatarBorderColor,
+                
+                warnPanelChannelId: data.warnPanelChannelId, warnLogChannelId: data.warnLogChannelId, warnPanelTitle: data.warnPanelTitle, warnPanelDesc: data.warnPanelDesc, warnPanelColor: data.warnPanelColor, warnMax: parseInt(data.warnMax) || 3, warnAction: data.warnAction, warnReasons: parsedWarnReasons,
+                
+                panelChannelId: data.panelChannelId, defaultCategoryId: data.defaultCategoryId, ticketEmbedTitle: data.ticketEmbedTitle, ticketEmbedDesc: data.ticketEmbedDesc, ticketEmbedColor: data.ticketEmbedColor, ticketEmbedImage: data.ticketEmbedImage, ticketCount: parseInt(data.ticketCount) || 0, maxTicketsPerUser: parseInt(data.maxTicketsPerUser) || 1, customButtons: parsedButtons,
+                
+                adminRoleId: data.adminRoleId, highAdminRoles: formatArray(data.highAdminRoles), mediatorRoleId: data.mediatorRoleId, highMediatorRoles: formatArray(data.highMediatorRoles), hideTicketOnClaim: data.hideTicketOnClaim === 'on', readOnlyStaffOnClaim: data.readOnlyStaffOnClaim === 'on',
+                
+                // الأوامر والرتب المخصصة لها بالكامل
+                cmdAdd: data.cmdAdd, cmdAddRoles: formatArray(data.cmdAddRoles),
+                cmdDone: data.cmdDone, cmdDoneRoles: formatArray(data.cmdDoneRoles),
+                cmdReqHigh: data.cmdReqHigh, cmdReqHighRoles: formatArray(data.cmdReqHighRoles),
+                cmdCome: data.cmdCome, cmdComeRoles: formatArray(data.cmdComeRoles),
+                cmdTrade: data.cmdTrade, cmdTradeRoles: formatArray(data.cmdTradeRoles),
+                cmdClear: data.cmdClear, cmdClearRoles: formatArray(data.cmdClearRoles),
+                cmdLock: data.cmdLock, cmdLockRoles: formatArray(data.cmdLockRoles),
+                cmdUnlock: data.cmdUnlock, cmdUnlockRoles: formatArray(data.cmdUnlockRoles),
+                cmdVmove: data.cmdVmove, cmdVmoveRoles: formatArray(data.cmdVmoveRoles),
+                cmdBan: data.cmdBan, cmdBanRoles: formatArray(data.cmdBanRoles),
+                cmdTimeout: data.cmdTimeout, cmdTimeoutRoles: formatArray(data.cmdTimeoutRoles),
+                
+                // جميع اللوجات
+                transcriptChannelId: data.transcriptChannelId, ticketLogChannelId: data.ticketLogChannelId, staffRatingChannelId: data.staffRatingChannelId, mediatorRatingChannelId: data.mediatorRatingChannelId,
+                logRoleCreateDeleteId: data.logRoleCreateDeleteId, logMemberRoleUpdateId: data.logMemberRoleUpdateId, logJoinLeaveId: data.logJoinLeaveId, logMsgDeleteId: data.logMsgDeleteId, logMsgUpdateId: data.logMsgUpdateId, logImgDeleteId: data.logImgDeleteId, logVoiceId: data.logVoiceId,
+                logInviteId: data.logInviteId, logChannelThreadId: data.logChannelThreadId, logBanId: data.logBanId, logTimeoutId: data.logTimeoutId, logUnwarnId: data.logUnwarnId
             },
             { upsert: true }
         );
@@ -105,13 +120,15 @@ module.exports = (client) => {
         const guild = client.guilds.cache.get(req.params.guildID);
         if (!guild) return res.redirect('/dashboard');
 
-        const { embedChannelId, embedTitle, embedDesc, embedColor, embedImage, embedFooter } = req.body;
-        const channel = guild.channels.cache.get(embedChannelId);
-        
+        const channel = guild.channels.cache.get(req.body.embedChannelId);
         if (channel) {
-            const embed = { title: embedTitle || '\u200b', description: embedDesc || '\u200b', color: parseInt((embedColor || '#5865F2').replace('#', ''), 16) };
-            if (embedImage) embed.image = { url: embedImage };
-            if (embedFooter) embed.footer = { text: embedFooter };
+            const embed = {
+                title: req.body.embedTitle || '\u200b',
+                description: req.body.embedDesc || '\u200b',
+                color: parseInt((req.body.embedColor || '#5865F2').replace('#', ''), 16)
+            };
+            if (req.body.embedImage) embed.image = { url: req.body.embedImage };
+            if (req.body.embedFooter) embed.footer = { text: req.body.embedFooter };
             await channel.send({ embeds: [embed] }).catch(err => console.log(err));
         }
         res.redirect(`/settings/${req.params.guildID}?success=embed_sent`);
