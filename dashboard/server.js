@@ -21,7 +21,7 @@ module.exports = (client) => {
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
 
-    // إعدادات Passport (تسجيل الدخول عبر ديسكورد)
+    // إعدادات Passport لتسجيل الدخول عبر ديسكورد
     passport.serializeUser((user, done) => done(null, user));
     passport.deserializeUser((obj, done) => done(null, obj));
 
@@ -50,10 +50,9 @@ module.exports = (client) => {
         });
     });
 
-    // 🟢 صفحة اختيار السيرفرات (الداشبورد)
+    // 🟢 صفحة الداشبورد واختيار السيرفرات
     app.get('/dashboard', (req, res) => {
         if (!req.user) return res.redirect('/login');
-        // إظهار السيرفرات اللي هو أدمن فيها بس
         const adminGuilds = req.user.guilds.filter(g => (g.permissions & 0x8) === 0x8);
         res.render('dashboard', { user: req.user, guilds: adminGuilds });
     });
@@ -66,22 +65,18 @@ module.exports = (client) => {
         if (!guild) return res.send(`
             <div style="text-align:center; font-family:sans-serif; margin-top:50px; color:white; background:#121212; height:100vh; padding-top:20px;">
                 <h1>❌ البوت ليس في هذا السيرفر</h1>
-                <p>يجب عليك إضافة البوت للسيرفر أولاً لتتمكن من إعداده.</p>
-                <a href="https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot" style="background:#5865F2; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">اضغط هنا لإضافة البوت</a>
+                <p>يجب عليك إضافة البوت للسيرفر أولاً.</p>
             </div>
         `);
 
-        // التأكد إن المستخدم أدمن
         const userGuild = req.user.guilds.find(g => g.id === req.params.guildID);
         if (!userGuild || (userGuild.permissions & 0x8) !== 0x8) return res.send("❌ ليس لديك صلاحية للتحكم في هذا السيرفر!");
 
-        // جلب الإعدادات من الداتابيز
         let config = await GuildConfig.findOne({ guildId: guild.id });
         if (!config) config = await GuildConfig.create({ guildId: guild.id });
 
-        // جلب الرومات والرتب
         const channels = guild.channels.cache
-            .filter(c => c.type === 0 || c.type === 4 || c.type === 2) // نصوص، أقسام، أو صوت
+            .filter(c => c.type === 0 || c.type === 4 || c.type === 2) 
             .map(c => ({ id: c.id, name: c.name, type: c.type }));
             
         const roles = guild.roles.cache
@@ -91,18 +86,22 @@ module.exports = (client) => {
         res.render('settings', { guild, config, channels, roles, user: req.user });
     });
 
-    // 🟢 حفظ الإعدادات الجديدة الشاملة
+    // 🟢 حفظ الإعدادات في الداتابيز
     app.post('/settings/:guildID', async (req, res) => {
         if (!req.user) return res.redirect('/login');
 
         const { 
-            ticketCount, categoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor, ticketEmbedImage,
-            staffRoleId, adminRoles, cmdDone, cmdCome, cmdApprove,
+            ticketCount, categoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor,
+            staffRoleId, adminRoles, cmdDone, cmdCome, cmdApprove, cmdTrade,
             transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
             logRoleCreateId, logJoinLeaveId, logMsgDeleteId, logImgDeleteId, logVoiceId
         } = req.body;
 
-        // تظبيط الرتب العليا عشان لو اختار رتبة واحدة الداتابيز متضربش (بتحولها لمصفوفة أوتوماتيك)
+        // قراءة حالة زراير الكليم
+        const hideTicketOnClaim = req.body.hideTicketOnClaim === 'on';
+        const readOnlyStaffOnClaim = req.body.readOnlyStaffOnClaim === 'on';
+
+        // تظبيط الرتب العليا
         let formattedAdminRoles = [];
         if (adminRoles) {
             formattedAdminRoles = Array.isArray(adminRoles) ? adminRoles : [adminRoles];
@@ -112,25 +111,12 @@ module.exports = (client) => {
             { guildId: req.params.guildID },
             { 
                 ticketCount: parseInt(ticketCount) || 0, 
-                categoryId, 
-                ticketEmbedTitle, 
-                ticketEmbedDesc, 
-                ticketEmbedColor, 
-                ticketEmbedImage,
-                staffRoleId, 
-                adminRoles: formattedAdminRoles,
-                cmdDone, 
-                cmdCome, 
-                cmdApprove,
-                transcriptChannelId, 
-                ticketLogChannelId, 
-                staffRatingChannelId, 
-                mediatorRatingChannelId,
-                logRoleCreateId, 
-                logJoinLeaveId, 
-                logMsgDeleteId, 
-                logImgDeleteId, 
-                logVoiceId
+                categoryId, ticketEmbedTitle, ticketEmbedDesc, ticketEmbedColor,
+                staffRoleId, adminRoles: formattedAdminRoles,
+                hideTicketOnClaim, readOnlyStaffOnClaim, // حفظ زراير الإخفاء والمراقبة
+                cmdDone, cmdCome, cmdApprove, cmdTrade, // حفظ الأوامر
+                transcriptChannelId, ticketLogChannelId, staffRatingChannelId, mediatorRatingChannelId,
+                logRoleCreateId, logJoinLeaveId, logMsgDeleteId, logImgDeleteId, logVoiceId
             },
             { upsert: true }
         );
@@ -138,7 +124,6 @@ module.exports = (client) => {
         res.redirect(`/settings/${req.params.guildID}`);
     });
 
-    // تشغيل السيرفر على البورت
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => console.log(`🌐 Dashboard Running on port ${PORT}`));
 };
