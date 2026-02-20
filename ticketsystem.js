@@ -18,28 +18,27 @@ module.exports = (client) => {
     client.on('interactionCreate', async interaction => {
 
         // =====================================================================
-        // ⭐ الجزء الأول: استلام ضغطة النجوم في الخاص (Ratings)
+        // ⭐ الجزء الأول: استلام ضغطة النجوم في الخاص (فتح نافذة التعليق)
         // =====================================================================
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('rate_')) {
                 
-                // تقسيم المعرف لاستخراج البيانات: rate_type_stars_targetId_guildId
                 const parts = interaction.customId.split('_');
                 const type = parts[1]; // 'staff' OR 'mediator'
                 const stars = parts[2];
                 const targetId = parts[3];
                 const guildId = parts[4]; 
 
-                // بناء النافذة المنبثقة (Modal) لأخذ تعليق إضافي
+                // بناء النافذة المنبثقة لأخذ التعليق
                 const modal = new ModalBuilder();
                 modal.setCustomId(`modalrate_${type}_${stars}_${targetId}_${guildId}`);
                 modal.setTitle('Add Comment (Optional)');
 
                 const commentInput = new TextInputBuilder();
                 commentInput.setCustomId('rating_comment');
-                commentInput.setLabel('Any extra feedback?');
+                commentInput.setLabel('التعليق:'); // التعليق ممكن يكون عربي عادي
                 commentInput.setStyle(TextInputStyle.Paragraph);
-                commentInput.setRequired(false); // غير إجباري
+                commentInput.setRequired(false); 
 
                 const actionRow = new ActionRowBuilder();
                 actionRow.addComponents(commentInput);
@@ -51,7 +50,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⭐ الجزء الثاني: استلام التعليق وإرسال اللوج (العدادات والإيمبد الفخم)
+        // ⭐ الجزء الثاني: استلام التعليق من النافذة وإرسال إيمبد اللوج
         // =====================================================================
         if (interaction.isModalSubmit()) {
             if (interaction.customId.startsWith('modalrate_')) {
@@ -64,7 +63,7 @@ module.exports = (client) => {
                 
                 let feedback = interaction.fields.getTextInputValue('rating_comment');
                 if (!feedback || feedback.trim() === '') {
-                    feedback = 'No comment provided.';
+                    feedback = 'لا يوجد تعليق.';
                 }
 
                 let config = await GuildConfig.findOne({ guildId: guildId });
@@ -83,7 +82,7 @@ module.exports = (client) => {
                     const logChannel = guild.channels.cache.get(logChannelId);
                     
                     if (logChannel) {
-                        // 1. تحديث العدادات الموحدة
+                        // 1. تحديث العدادات الموحدة في الداتابيز
                         let currentServerTotal = config.totalServerRatings || 0;
                         currentServerTotal += 1;
                         config.totalServerRatings = currentServerTotal;
@@ -116,35 +115,38 @@ module.exports = (client) => {
                         if (type === 'staff') {
                             authorTitle = `${guild.name} STAFF REVIEW`;
                             embedColor = config.staffRatingColor || '#3ba55d';
-                            targetLabel = 'Admin 👮';
+                            targetLabel = 'الإداري 👮';
                         } else {
                             authorTitle = `${guild.name} MIDDLEMAN REVIEW`;
                             embedColor = config.basicRatingColor || '#f2a658';
-                            targetLabel = 'Middleman 🛡️';
+                            targetLabel = 'الوسيط 🛡️';
                         }
 
                         // 4. بناء الإيمبد الفخم للوج
                         const logEmbed = new EmbedBuilder();
-                        logEmbed.setAuthor({ name: `📊 ${authorTitle}`, iconURL: guild.iconURL({ dynamic: true }) });
+                        logEmbed.setAuthor({ 
+                            name: `📊 ${authorTitle}`, 
+                            iconURL: guild.iconURL({ dynamic: true }) 
+                        });
                         logEmbed.setThumbnail(guild.iconURL({ dynamic: true }));
                         
                         const descriptionText = `
-**Client 👤**
+**العميل (المُقيِّم) 👤**
 <@${interaction.user.id}>
 
 **${targetLabel}**
 <@${targetId}>
 
-**Statistics 📈**
-Staff Ratings #${userRatingCount}
-Server Ratings #${currentServerTotal}
+**الإحصائيات 📈**
+عدد تقييمات ${type === 'staff' ? 'الإداري' : 'الوسيط'} #${userRatingCount}
+عدد تقييمات السيرفر #${currentServerTotal}
 
 -------------------------
 
-**Rating ⭐**
+**التقييم ⭐**
 **${starsText} (${stars}/5)**
 
-**Comment 💬**
+**التعليق 💬**
 \`\`\`${feedback}\`\`\`
 `;
                         logEmbed.setDescription(descriptionText);
@@ -156,13 +158,16 @@ Server Ratings #${currentServerTotal}
                         });
                         logEmbed.setTimestamp();
 
-                        await logChannel.send({ content: `**New Rating for <@${targetId}>!**`, embeds: [logEmbed] }).catch(()=>{});
+                        await logChannel.send({ 
+                            content: `**New Rating for <@${targetId}>!**`, 
+                            embeds: [logEmbed] 
+                        }).catch(()=>{});
                     }
                 }
                 
                 // 5. تعديل الرسالة في الخاص لإخفاء الأزرار وشكر العضو
                 const thankYouEmbed = new EmbedBuilder();
-                thankYouEmbed.setDescription(`✅ **Thank you! Your feedback has been submitted successfully.**\n\nStars: ${stars}/5`);
+                thankYouEmbed.setDescription(`✅ **شكراً لك! تم إرسال تقييمك بنجاح.**\n\nالنجوم: ${stars}/5`);
                 thankYouEmbed.setColor('#3ba55d');
                 
                 try {
@@ -176,7 +181,7 @@ Server Ratings #${currentServerTotal}
         }
 
         // =====================================================================
-        // منع باقي التفاعلات إذا لم تكن في سيرفر
+        // منع باقي التفاعلات إذا لم تكن في سيرفر (خاصة بالتكتات)
         // =====================================================================
         if (!interaction.guild) return;
         
@@ -193,17 +198,25 @@ Server Ratings #${currentServerTotal}
                 const buttonData = config.customButtons.find(b => b.id === btnId);
                 
                 if (!buttonData) {
-                    return interaction.reply({ content: '**❌ This button is no longer available.**', ephemeral: true });
+                    return interaction.reply({ 
+                        content: '**❌ This button is no longer available.**', 
+                        ephemeral: true 
+                    });
                 }
 
-                // السماح للجميع بفتح التكت بشكل افتراضي (مع فحص الحد الأقصى)
-                const maxTickets = config.maxTicketsPerUser || 1;
+                // فحص الحد الأقصى للتكتات المفتوحة للعضو
+                let maxTickets = config.maxTicketsPerUser;
+                if (!maxTickets) maxTickets = 1;
+
                 const userTickets = interaction.guild.channels.cache.filter(c => {
                     return c.name.startsWith('ticket-') && c.topic && c.topic.startsWith(interaction.user.id);
                 });
                 
                 if (userTickets.size >= maxTickets) {
-                    return interaction.reply({ content: `**❌ You can only have ${maxTickets} ticket(s) open at a time.**`, ephemeral: true });
+                    return interaction.reply({ 
+                        content: `**❌ You can only have ${maxTickets} ticket(s) open at a time.**`, 
+                        ephemeral: true 
+                    });
                 }
 
                 // التحقق إذا كان الزر يحتوي على نافذة أسئلة
@@ -217,7 +230,10 @@ Server Ratings #${currentServerTotal}
                     modal.setTitle(modalTitle);
 
                     buttonData.modalFields.forEach((field, index) => {
-                        const isRequired = (field.required === true || String(field.required) === 'true');
+                        let isRequired = false;
+                        if (field.required === true || String(field.required) === 'true') {
+                            isRequired = true;
+                        }
                         
                         const textInput = new TextInputBuilder();
                         textInput.setCustomId(`field_${index}`);
@@ -241,6 +257,7 @@ Server Ratings #${currentServerTotal}
 
                     await interaction.showModal(modal);
                 } else {
+                    // فتح التكت مباشرة
                     await createTicket(interaction, buttonData, config, []);
                 }
             }
@@ -272,9 +289,10 @@ Server Ratings #${currentServerTotal}
         if (interaction.isButton()) {
             
             // -----------------------------------------
-            // 🔒 زر الإغلاق الخطوة الأولى (Ask for confirmation)
+            // 🔒 الخطوة الأولى للإغلاق (Ask for confirmation)
             // -----------------------------------------
             if (interaction.customId === 'ticket_close') {
+                
                 const confirmRow = new ActionRowBuilder();
                 
                 const confirmBtn = new ButtonBuilder();
@@ -296,14 +314,18 @@ Server Ratings #${currentServerTotal}
                 });
             }
 
-            // ❌ زر الإلغاء
+            // ❌ إلغاء الإغلاق
             if (interaction.customId === 'cancel_close') {
-                await interaction.update({ content: '**✅ Ticket closing cancelled.**', components: [] });
+                await interaction.update({ 
+                    content: '**✅ Ticket closing cancelled.**', 
+                    components: [] 
+                });
             }
 
-            // ✅ زر تأكيد الإغلاق (الخطوة الثانية الفورية)
+            // ✅ تأكيد الإغلاق الفعلي (الخطوة الثانية)
             if (interaction.customId === 'confirm_close') {
-                // السرعة الصاروخية: الرد الفوري على ديسكورد ثم العمل في الخلفية
+                
+                // السرعة: Defer Update
                 await interaction.deferUpdate(); 
                 
                 const topicData = interaction.channel.topic || '';
@@ -312,25 +334,29 @@ Server Ratings #${currentServerTotal}
                 // Format: OwnerID_BtnID_ClaimerID_AddedUsers_CloserID
                 const ticketOwnerId = parts[0];
                 const btnId = parts[1];
-                const claimedById = parts[2] !== 'none' ? parts[2] : null;
+                let claimedById = null;
+                
+                if (parts.length > 2 && parts[2] !== 'none') {
+                    claimedById = parts[2];
+                }
 
                 const closeMessage = `**🔒 The ticket has been closed by <@${interaction.user.id}>**`;
                 await interaction.channel.send(closeMessage);
 
-                // فحص نظام التقييم (هل نرسل التقييم أم لا؟)
+                // فحص نظام التقييم
                 let shouldSendRating = true;
                 const btnData = config.customButtons.find(b => b.id === btnId);
                 
                 if (btnData) {
                     if (btnData.isMediator === true) {
-                        shouldSendRating = false; // الوساطة تستخدم !done
+                        shouldSendRating = false; 
                     }
                     if (btnData.enableRating === false) {
                         shouldSendRating = false;
                     }
                 }
 
-                // 🌟 إرسال التقييم لصاحب التكت فقط، وبداخله منشن الإداري الذي عمل Claim فقط
+                // 🌟 إرسال التقييم لصاحب التكت، وبداخله الإداري الذي عمل Claim فقط!
                 if (shouldSendRating && ticketOwnerId && claimedById && config.staffRatingChannelId) {
                     try {
                         const owner = await interaction.guild.members.fetch(ticketOwnerId);
@@ -338,25 +364,29 @@ Server Ratings #${currentServerTotal}
                         
                         const ratingEmbed = new EmbedBuilder();
                         
-                        // اختيار نوع التقييم (مخصص من الداشبورد أم الأساسي)
-                        let embedTitle = 'Ticket Feedback';
+                        // اختيار نوع التقييم (بيسك عربي أو مخصص من الداشبورد)
+                        let embedTitle = 'تقييم فريق العمل';
                         let descText = '';
                         
                         if (config.ratingStyle === 'custom' && config.customRatingText) {
-                            embedTitle = config.customRatingTitle || 'Ticket Feedback';
-                            // تغيير المتغيرات
+                            embedTitle = config.customRatingTitle || 'تقييم الخدمة';
                             descText = config.customRatingText
                                 .replace(/\[staff\]/g, `<@${claimedById}>`)
                                 .replace(/\[user\]/g, `<@${owner.id}>`)
                                 .replace(/\[server\]/g, guildName);
                         } else {
-                            descText = `Thank you for contacting support at **${guildName}**.\n\nPlease rate the service provided by <@${claimedById}> by clicking the stars below.`;
+                            // التقييم البيسك العربي كما في صورتك القديمة
+                            descText = `شكرا لتواصلك مع الدعم الفني الخاص بسيرفر **${guildName}**\n\nيرجى تقييم مستوى الخدمة التي تلقيتها من <@${claimedById}>، رأيك يهمنا ويساعدنا في تحسين جودة الخدمة، اضغط على الزر الموافق لتقييمك وسيتم ارسال التقييم للادارة.`;
                         }
                         
                         ratingEmbed.setTitle(embedTitle);
                         ratingEmbed.setDescription(descText);
                         ratingEmbed.setColor(config.staffRatingColor || '#3ba55d');
-                        ratingEmbed.setFooter({ text: guildName, iconURL: interaction.guild.iconURL({ dynamic: true }) });
+                        
+                        ratingEmbed.setFooter({ 
+                            text: guildName, 
+                            iconURL: interaction.guild.iconURL({ dynamic: true }) 
+                        });
                         ratingEmbed.setTimestamp();
                         
                         const ratingRow = new ActionRowBuilder();
@@ -369,13 +399,16 @@ Server Ratings #${currentServerTotal}
                         
                         ratingRow.addComponents(btn1, btn2, btn3, btn4, btn5);
                         
-                        await owner.send({ embeds: [ratingEmbed], components: [ratingRow] });
+                        await owner.send({ 
+                            embeds: [ratingEmbed], 
+                            components: [ratingRow] 
+                        });
                     } catch (err) { 
                         // الخاص مغلق
                     }
                 }
 
-                // سحب صلاحيات العضو لعدم الكتابة
+                // سحب صلاحيات العضو
                 if (ticketOwnerId) {
                     await interaction.channel.permissionOverwrites.edit(ticketOwnerId, { 
                         SendMessages: false, 
@@ -384,6 +417,9 @@ Server Ratings #${currentServerTotal}
                 }
 
                 // تحديث Topic لحفظ من قام بالإغلاق (الخانة الخامسة)
+                if (parts.length < 5) {
+                    while(parts.length < 5) parts.push('none');
+                }
                 parts[4] = interaction.user.id;
                 await interaction.channel.setTopic(parts.join('_')).catch(()=>{});
 
@@ -412,14 +448,17 @@ Server Ratings #${currentServerTotal}
                 
                 controlRow.addComponents(reopenBtn, deleteBtn, deleteReasonBtn);
                 
-                await interaction.channel.send({ embeds: [closeEmbed], components: [controlRow] });
+                await interaction.channel.send({ 
+                    embeds: [closeEmbed], 
+                    components: [controlRow] 
+                });
                 
-                // مسح رسالة التحذير الخاصة بالخطوة الأولى
+                // مسح رسالة التأكيد المبدئية
                 await interaction.message.delete().catch(()=>{});
             }
 
             // -----------------------------------------
-            // 🛡️ زر الاستلام (Claim) السريع جداً 
+            // 🛡️ زر الاستلام (Claim) الصاروخي (مع الرتب المخصصة)
             // -----------------------------------------
             if (interaction.customId === 'ticket_claim') {
                 
@@ -428,16 +467,18 @@ Server Ratings #${currentServerTotal}
                 const btnId = parts[1];
                 const btnData = config.customButtons.find(b => b.id === btnId);
 
-                // فحص الرتب المسموح لها باستلام هذا التكت تحديداً
-                let allowedRoles = [
-                    config.adminRoleId, 
-                    config.mediatorRoleId, 
-                    ...config.highAdminRoles, 
-                    ...config.highMediatorRoles
-                ].filter(Boolean);
+                // تحديد الرتب المسموح لها باستلام هذا التكت
+                let allowedRoles = [];
                 
                 if (btnData && btnData.allowedClaimRoles && btnData.allowedClaimRoles.length > 0) {
                     allowedRoles = btnData.allowedClaimRoles;
+                } else {
+                    allowedRoles = [
+                        config.adminRoleId, 
+                        config.mediatorRoleId, 
+                        ...config.highAdminRoles, 
+                        ...config.highMediatorRoles
+                    ].filter(Boolean);
                 }
 
                 let hasPerm = false;
@@ -453,13 +494,15 @@ Server Ratings #${currentServerTotal}
                 }
 
                 if (!hasPerm) {
-                    return interaction.reply({ content: '**❌ You do not have permission to claim this ticket.**', ephemeral: true });
+                    return interaction.reply({ 
+                        content: '**❌ You do not have permission to claim this ticket.**', 
+                        ephemeral: true 
+                    });
                 }
 
-                // ⚡ السرعة الصاروخية: الرد الفوري قبل تعديل الرومات
+                // ⚡ السرعة: الرد قبل تعديل الرومات
                 await interaction.deferUpdate(); 
                 
-                // تطبيق نظام الإخفاء أو القراءة فقط لباقي الإدارة
                 for (let i = 0; i < allowedRoles.length; i++) {
                     const roleId = allowedRoles[i];
                     if (config.hideTicketOnClaim) {
@@ -469,13 +512,16 @@ Server Ratings #${currentServerTotal}
                     }
                 }
                 
-                // إعطاء المستلم صلاحيات كاملة
+                // إعطاء المستلم الصلاحيات
                 await interaction.channel.permissionOverwrites.edit(interaction.user.id, { 
                     ViewChannel: true, 
                     SendMessages: true 
                 });
                 
                 // تحديث Topic لحفظ الإداري الذي عمل Claim (الخانة الثالثة)
+                if (parts.length < 5) {
+                    while(parts.length < 5) parts.push('none');
+                }
                 parts[2] = interaction.user.id;
                 await interaction.channel.setTopic(parts.join('_')).catch(()=>{});
                 
@@ -500,7 +546,7 @@ Server Ratings #${currentServerTotal}
             }
 
             // -----------------------------------------
-            // 🔓 إعادة الفتح والحذف
+            // 🔓 إعادة الفتح والحذف (السرعة والخط العريض)
             // -----------------------------------------
             if (interaction.customId === 'ticket_reopen') {
                 const topicData = interaction.channel.topic || '';
@@ -518,7 +564,11 @@ Server Ratings #${currentServerTotal}
             }
 
             if (interaction.customId === 'ticket_delete') {
-                await interaction.reply({ content: '**🗑️ Deleting the ticket...**', ephemeral: true });
+                // السرعة والخط العريض
+                await interaction.reply({ 
+                    content: '**🗑️ Deleting the ticket...**', 
+                    ephemeral: true 
+                });
                 await deleteAndLogTicket(interaction.channel, interaction.user, config, "Manual Delete");
             }
 
@@ -560,20 +610,25 @@ Server Ratings #${currentServerTotal}
         }
 
         // =====================================================================
-        // 🧩 معالجة النوافذ المنبثقة للتحكم (حذف / إضافة)
+        // 🧩 معالجة نوافذ الإدارة المنبثقة
         // =====================================================================
         if (interaction.isModalSubmit()) {
             
             if (interaction.customId === 'modal_delete_reason') {
                 const reason = interaction.fields.getTextInputValue('delete_reason');
-                await interaction.reply({ content: '**🗑️ Deleting the ticket...**', ephemeral: true });
+                await interaction.reply({ 
+                    content: '**🗑️ Deleting the ticket...**', 
+                    ephemeral: true 
+                });
                 await deleteAndLogTicket(interaction.channel, interaction.user, config, reason);
             }
 
             if (interaction.customId === 'modal_add_user') {
                 const userId = interaction.fields.getTextInputValue('user_id_to_add');
+                
                 try {
                     const member = await interaction.guild.members.fetch(userId);
+                    
                     await interaction.channel.permissionOverwrites.edit(userId, { 
                         ViewChannel: true, 
                         SendMessages: true 
@@ -582,6 +637,10 @@ Server Ratings #${currentServerTotal}
                     // تحديث Topic لحفظ العضو المضاف (الخانة الرابعة)
                     const topicData = interaction.channel.topic || '';
                     const parts = topicData.split('_');
+                    if (parts.length < 5) {
+                        while(parts.length < 5) parts.push('none');
+                    }
+                    
                     let added = parts[3];
                     if (added === 'none') {
                         added = userId;
@@ -589,12 +648,17 @@ Server Ratings #${currentServerTotal}
                         added = `${added},${userId}`;
                     }
                     parts[3] = added;
+                    
                     await interaction.channel.setTopic(parts.join('_')).catch(()=>{});
 
                     const addMsg = `**✅ <@${userId}> was added to the ticket by <@${interaction.user.id}>**`;
                     await interaction.reply(addMsg);
+                    
                 } catch (err) { 
-                    await interaction.reply({ content: '**❌ User not found in this server.**', ephemeral: true }); 
+                    await interaction.reply({ 
+                        content: '**❌ User not found in this server.**', 
+                        ephemeral: true 
+                    }); 
                 }
             }
         }
@@ -608,7 +672,10 @@ Server Ratings #${currentServerTotal}
         await interaction.deferReply({ ephemeral: true });
         
         await GuildConfig.findOneAndUpdate({ guildId: interaction.guild.id }, { $inc: { ticketCount: 1 } });
-        const ticketNum = config.ticketCount + 1;
+        
+        let ticketNum = config.ticketCount;
+        if (!ticketNum) ticketNum = 0;
+        ticketNum += 1;
         
         let categoryId = buttonData.categoryId;
         if (!categoryId) {
@@ -640,7 +707,7 @@ Server Ratings #${currentServerTotal}
             });
         }
 
-        // حفظ تفاصيل التكت في Topic: OwnerID_BtnID_Claimer_AddedUsers_Closer
+        // حفظ تفاصيل التكت في الوصف: OwnerID_BtnID_Claimer_AddedUsers_Closer
         const topicData = `${interaction.user.id}_${buttonData.id}_none_none_none`;
 
         const ticketChannel = await interaction.guild.channels.create({
@@ -664,7 +731,7 @@ Server Ratings #${currentServerTotal}
         
         embedsToSend.push(rulesEmbed);
 
-        // 🔥 الإيمبد الثاني: إجابات النافذة (منفصل)
+        // 🔥 الإيمبد الثاني: إجابات النافذة (مفصول)
         if (answers.length > 0) {
             const answersEmbed = new EmbedBuilder();
             answersEmbed.setColor('#2b2d31');
@@ -674,7 +741,6 @@ Server Ratings #${currentServerTotal}
                 let aVal = a.value;
                 if (!aVal) aVal = 'N/A';
                 
-                // جعل عنوان السؤال بخط عريض
                 answersEmbed.addFields({ name: `**${a.label}**`, value: aVal });
             }
             embedsToSend.push(answersEmbed);
@@ -700,6 +766,7 @@ Server Ratings #${currentServerTotal}
         row1.addComponents(addUserBtn, claimBtn, closeBtn);
 
         const row2 = new ActionRowBuilder();
+        
         const deleteReasonBtn = new ButtonBuilder();
         deleteReasonBtn.setCustomId('ticket_delete_reason');
         deleteReasonBtn.setLabel('Delete (Reason)');
@@ -724,16 +791,21 @@ Server Ratings #${currentServerTotal}
         const topicData = channel.topic || '';
         const parts = topicData.split('_');
         
-        const ownerId = parts[0] !== 'none' ? parts[0] : null;
-        const claimerId = parts[2] !== 'none' ? parts[2] : null;
+        let ownerId = null;
+        if (parts[0] && parts[0] !== 'none') ownerId = parts[0];
+        
+        let claimerId = null;
+        if (parts[2] && parts[2] !== 'none') claimerId = parts[2];
         
         let addedUsers = [];
-        if (parts[3] !== 'none' && parts[3] !== undefined) {
+        if (parts[3] && parts[3] !== 'none') {
             addedUsers = parts[3].split(',');
         }
         
-        // لو مفيش حد قفل التكت (حذف مباشر)، نعتبر اللي حذف هو اللي قفل
-        const closedById = (parts[4] !== 'none' && parts[4] !== undefined) ? parts[4] : closedBy.id; 
+        let closedById = closedBy.id;
+        if (parts[4] && parts[4] !== 'none') {
+            closedById = parts[4]; 
+        }
 
         let ownerDisplay = 'Unknown';
         if (ownerId) ownerDisplay = `<@${ownerId}>`;
@@ -748,7 +820,10 @@ Server Ratings #${currentServerTotal}
 
         // بناء الإيمبد الفخم للوج
         const logEmbed = new EmbedBuilder();
-        logEmbed.setAuthor({ name: 'MNC TICKET LOGS', iconURL: channel.guild.iconURL({ dynamic: true }) });
+        logEmbed.setAuthor({ 
+            name: 'MNC TICKET LOGS', 
+            iconURL: channel.guild.iconURL({ dynamic: true }) 
+        });
         logEmbed.setTitle('🗑️ Ticket Deleted');
         
         const desc = `
@@ -774,7 +849,11 @@ ${reason}
 `;
         
         logEmbed.setDescription(desc);
-        logEmbed.setColor(config.logEmbedColor || '#ed4245');
+        
+        let logColor = config.logEmbedColor;
+        if (!logColor) logColor = '#ed4245';
+        logEmbed.setColor(logColor);
+        
         logEmbed.setTimestamp();
 
         // 1. إرسال الإيمبد فقط إلى روم Ticket Logs (بدون ترانسكريبت HTML)
@@ -797,7 +876,9 @@ ${reason}
                     poweredBy: false 
                 });
                 
-                // زر التحميل المباشر
+                const transEmbedColor = config.transcriptEmbedColor || '#2b2d31';
+                logEmbed.setColor(transEmbedColor); // تغيير لون الإيمبد لو حبيت
+
                 const transRow = new ActionRowBuilder();
                 const fakeBtn = new ButtonBuilder();
                 fakeBtn.setCustomId('fake_btn');
