@@ -1,5 +1,5 @@
 // =====================================================================
-// استدعاء المكاتب الأساسية من ديسكورد (مفرودة بالكامل)
+// استدعاء المكاتب الأساسية من ديسكورد (مفرودة بالكامل بدون أي اختصار)
 // =====================================================================
 const { 
     EmbedBuilder, 
@@ -13,10 +13,10 @@ const {
     PermissionFlagsBits 
 } = require('discord.js');
 
-// استدعاء مكتبة الترانسكريبت
+// استدعاء مكتبة الترانسكريبت لحفظ المحادثات
 const discordTranscripts = require('discord-html-transcripts');
 
-// استدعاء قاعدة البيانات
+// استدعاء قاعدة البيانات الشاملة
 const GuildConfig = require('./models/GuildConfig');
 
 module.exports = (client) => {
@@ -27,7 +27,7 @@ module.exports = (client) => {
     client.on('interactionCreate', async interaction => {
 
         // =====================================================================
-        // ⭐ 1. نظام التقييم في الخاص (عند الضغط على أي نجمة)
+        // ⭐ 1. نظام التقييم في الخاص (فتح نافذة التعليق عند الضغط على النجوم)
         // =====================================================================
         if (interaction.isButton()) {
             
@@ -37,12 +37,12 @@ module.exports = (client) => {
                 
                 // استخراج المتغيرات من المعرف (ID)
                 const customIdParts = interaction.customId.split('_');
-                const ratingType = customIdParts[1]; 
+                const ratingType = customIdParts[1]; // staff أو mediator
                 const ratingStars = customIdParts[2];
                 const ratedTargetId = customIdParts[3];
                 const currentGuildId = customIdParts[4]; 
 
-                // بناء نافذة التعليق
+                // بناء نافذة التعليق الإضافي
                 const feedbackModal = new ModalBuilder();
                 
                 let modalId = `modalrate_${ratingType}_${ratingStars}_${ratedTargetId}_${currentGuildId}`;
@@ -70,7 +70,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⭐ 2. استلام تعليق التقييم وإرسال اللوج للإدارة
+        // ⭐ 2. استلام تعليق التقييم وإرسال اللوج (مع سحب تفاصيل التريد)
         // =====================================================================
         if (interaction.isModalSubmit()) {
             
@@ -88,14 +88,14 @@ module.exports = (client) => {
                 const ratedTargetId = customIdParts[3];
                 const currentGuildId = customIdParts[4];
                 
-                // جلب التعليق
+                // جلب التعليق المكتوب
                 let userFeedback = interaction.fields.getTextInputValue('rating_comment');
                 
                 if (!userFeedback || userFeedback.trim() === '') {
                     userFeedback = 'لا يوجد تعليق مضاف من العضو.';
                 }
 
-                // جلب الإعدادات
+                // جلب الإعدادات من الداتابيز
                 let serverConfig = await GuildConfig.findOne({ guildId: currentGuildId });
                 
                 if (!serverConfig) {
@@ -107,8 +107,8 @@ module.exports = (client) => {
                 
                 if (ratingType === 'staff') {
                     targetLogChannelId = serverConfig.staffRatingChannelId;
-                } else if (ratingType === 'mediator') {
-                    targetLogChannelId = serverConfig.mediatorRatingChannelId;
+                } else if (ratingType === 'mediator') { // كلمة السر في الـ ID القديم كانت mediator
+                    targetLogChannelId = serverConfig.middlemanRatingChannelId; // نستخدم المتغير الجديد
                 }
 
                 // جلب السيرفر
@@ -121,7 +121,7 @@ module.exports = (client) => {
                     if (logChannel) {
                         
                         // 🔥 سحب تفاصيل التريد من رسالة التقييم في الخاص (إن وُجدت)
-                        let tradeDetailsIncluded = 'لا يوجد تفاصيل للتريد (تقييم مباشر أو إدارة).';
+                        let tradeDetailsIncluded = 'لا يوجد تفاصيل (تم التقييم بدون نافذة تريد).';
                         
                         if (interaction.message && interaction.message.embeds && interaction.message.embeds.length > 0) {
                             let oldEmbedDesc = interaction.message.embeds[0].description;
@@ -133,7 +133,7 @@ module.exports = (client) => {
                             }
                         }
 
-                        // تحديث العدادات
+                        // تحديث العدادات الشاملة للسيرفر
                         let currentServerTotal = serverConfig.totalServerRatings;
                         if (!currentServerTotal) {
                             currentServerTotal = 0;
@@ -152,12 +152,12 @@ module.exports = (client) => {
                             individualRatingCount = oldStaffCount + 1;
                             serverConfig.staffRatingsCount.set(ratedTargetId, individualRatingCount);
                         } else {
-                            let oldMedCount = serverConfig.mediatorRatingsCount.get(ratedTargetId);
+                            let oldMedCount = serverConfig.middlemanRatingsCount.get(ratedTargetId);
                             if (!oldMedCount) {
                                 oldMedCount = 0;
                             }
                             individualRatingCount = oldMedCount + 1;
-                            serverConfig.mediatorRatingsCount.set(ratedTargetId, individualRatingCount);
+                            serverConfig.middlemanRatingsCount.set(ratedTargetId, individualRatingCount);
                         }
                         
                         // حفظ الداتابيز
@@ -173,7 +173,7 @@ module.exports = (client) => {
                         let logEmbedColor = '';
                         let ratedPersonLabel = '';
 
-                        // الألوان تتسحب من الداتابيز
+                        // سحب الألوان والمسميات الجديدة (MiddleMan)
                         if (ratingType === 'staff') {
                             logAuthorTitle = `${discordGuild.name} STAFF REVIEW`;
                             
@@ -193,10 +193,10 @@ module.exports = (client) => {
                             }
                             logEmbedColor = medColor;
                             
-                            ratedPersonLabel = 'الوسيط 🛡️';
+                            ratedPersonLabel = 'الوسيط (MiddleMan) 🛡️';
                         }
 
-                        // بناء إيمبد اللوج
+                        // بناء إيمبد اللوج للإدارة
                         const ratingLogEmbed = new EmbedBuilder();
                         
                         ratingLogEmbed.setAuthor({ 
@@ -212,7 +212,7 @@ module.exports = (client) => {
                         embedDescriptionText += `**${ratedPersonLabel}**\n`;
                         embedDescriptionText += `<@${ratedTargetId}>\n\n`;
                         
-                        // إضافة التريد للإيمبد إذا كان وساطة
+                        // دمج تفاصيل التريد في اللوج إذا كان تقييم وساطة
                         if (ratingType === 'mediator') {
                             embedDescriptionText += `**📦 تفاصيل التريد:**\n`;
                             embedDescriptionText += `> ${tradeDetailsIncluded}\n\n`;
@@ -246,7 +246,7 @@ module.exports = (client) => {
                     }
                 }
                 
-                // تعديل رسالة الخاص للعضو
+                // تعديل رسالة الخاص للعضو لشكره على التقييم
                 const thankYouEmbed = new EmbedBuilder();
                 thankYouEmbed.setDescription(`**✅ شكراً لك! تم إرسال تقييمك للإدارة بنجاح.**\n\nالنجوم: ${ratingStars}/5`);
                 thankYouEmbed.setColor('#3ba55d');
@@ -260,7 +260,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // التأكد أن التفاعل داخل السيرفر (للتكتات والأوامر)
+        // التأكد أن التفاعل داخل السيرفر
         // =====================================================================
         if (!interaction.guild) {
             return;
@@ -273,7 +273,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚖️ 3. تفاعلات نافذة أمر التريد (!trade)
+        // ⚖️ 3. تفاعلات نافذة أمر التريد (!trade) والموافقة
         // =====================================================================
         if (interaction.isButton()) {
             
@@ -305,21 +305,19 @@ module.exports = (client) => {
                 
                 const tradeDetailsText = interaction.fields.getTextInputValue('trade_details_input');
                 
-                // 🔥 تعطيل زر التريد الأصلي حتى لا يضغط عليه العضو مرة أخرى
+                // 🔥 تعطيل زر التريد الأصلي حتى لا يضغط عليه العضو مرة أخرى (شفاف)
                 if (interaction.message) {
                     const originalActionRow = interaction.message.components[0];
                     if (originalActionRow) {
                         const originalButton = originalActionRow.components[0];
                         const disabledButton = ButtonBuilder.from(originalButton);
                         
-                        // جعله شفاف وغير قابل للضغط
                         disabledButton.setDisabled(true);
                         disabledButton.setStyle(ButtonStyle.Secondary);
                         
                         const newDisabledRow = new ActionRowBuilder();
                         newDisabledRow.addComponents(disabledButton);
                         
-                        // تعديل الرسالة القديمة
                         await interaction.message.edit({ components: [newDisabledRow] }).catch(()=>{});
                     }
                 }
@@ -329,7 +327,7 @@ module.exports = (client) => {
                 tradeRequestEmbed.setTitle('⚖️ Trade Approval Request');
                 
                 let tradeDesc = '';
-                tradeDesc += `**Middleman:** <@${interaction.user.id}>\n\n`;
+                tradeDesc += `**MiddleMan:** <@${interaction.user.id}>\n\n`;
                 tradeDesc += `**Details:**\n\`\`\`${tradeDetailsText}\`\`\`\n\n`;
                 tradeDesc += `⏳ *Waiting for approval...*`;
                 
@@ -357,7 +355,6 @@ module.exports = (client) => {
                 
                 approvalRow.addComponents(approveBtn, rejectBtn);
 
-                // إرسال طلب الموافقة كرد جديد في الشات
                 await interaction.reply({ 
                     embeds: [tradeRequestEmbed], 
                     components: [approvalRow] 
@@ -376,7 +373,7 @@ module.exports = (client) => {
                 let tradeAllowedRoles = guildConfig.tradeApproveRoles;
                 
                 if (!tradeAllowedRoles || tradeAllowedRoles.length === 0) {
-                    tradeAllowedRoles = guildConfig.highMediatorRoles; 
+                    tradeAllowedRoles = guildConfig.highMiddlemanRoles; // استخدام المسمى الجديد
                 }
                 
                 let hasTradePerm = false;
@@ -462,7 +459,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // 🎟️ 5. فتح التكت من البانر الخارجي
+        // 🎟️ 5. فتح التكت من البانرات المتعددة (Multi-Panels)
         // =====================================================================
         if (interaction.isButton()) {
             
@@ -470,18 +467,30 @@ module.exports = (client) => {
                 
                 const buttonRealId = interaction.customId.replace('ticket_open_', '');
                 
+                // البحث عن الزر في جميع البانلات الموجودة في الداتابيز
                 let targetButtonData = null;
+                let targetPanelData = null;
                 
-                for (let i = 0; i < guildConfig.customButtons.length; i++) {
-                    if (guildConfig.customButtons[i].id === buttonRealId) {
-                        targetButtonData = guildConfig.customButtons[i];
-                        break;
+                if (guildConfig.ticketPanels && guildConfig.ticketPanels.length > 0) {
+                    for (let p = 0; p < guildConfig.ticketPanels.length; p++) {
+                        const currentPanel = guildConfig.ticketPanels[p];
+                        
+                        if (currentPanel.buttons && currentPanel.buttons.length > 0) {
+                            for (let b = 0; b < currentPanel.buttons.length; b++) {
+                                if (currentPanel.buttons[b].id === buttonRealId) {
+                                    targetButtonData = currentPanel.buttons[b];
+                                    targetPanelData = currentPanel;
+                                    break;
+                                }
+                            }
+                        }
+                        if (targetButtonData) break;
                     }
                 }
                 
                 if (!targetButtonData) {
                     return interaction.reply({ 
-                        content: '**❌ This button is no longer available.**', 
+                        content: '**❌ This button is no longer available in the database.**', 
                         ephemeral: true 
                     });
                 }
@@ -560,14 +569,16 @@ module.exports = (client) => {
                     
                     await interaction.showModal(ticketModal);
                 } else {
+                    // الرد السريع لعدم التعليق
                     await interaction.deferReply({ ephemeral: true });
-                    await openNewTicket(interaction, targetButtonData, guildConfig, []);
+                    // إرسال بيانات البانل أيضاً لتحديد القسم الخاص به
+                    await openNewTicket(interaction, targetButtonData, guildConfig, [], targetPanelData);
                 }
             }
         }
 
         // =====================================================================
-        // 📝 6. استلام إجابات النافذة وفتح التكت
+        // 📝 6. استلام إجابات النافذة وفتح التكت (للبانلات المتعددة)
         // =====================================================================
         if (interaction.isModalSubmit()) {
             
@@ -579,11 +590,22 @@ module.exports = (client) => {
                 const buttonRealId = interaction.customId.replace('modalticket_', '');
                 
                 let targetButtonData = null;
+                let targetPanelData = null;
                 
-                for (let i = 0; i < guildConfig.customButtons.length; i++) {
-                    if (guildConfig.customButtons[i].id === buttonRealId) {
-                        targetButtonData = guildConfig.customButtons[i];
-                        break;
+                if (guildConfig.ticketPanels && guildConfig.ticketPanels.length > 0) {
+                    for (let p = 0; p < guildConfig.ticketPanels.length; p++) {
+                        const currentPanel = guildConfig.ticketPanels[p];
+                        
+                        if (currentPanel.buttons && currentPanel.buttons.length > 0) {
+                            for (let b = 0; b < currentPanel.buttons.length; b++) {
+                                if (currentPanel.buttons[b].id === buttonRealId) {
+                                    targetButtonData = currentPanel.buttons[b];
+                                    targetPanelData = currentPanel;
+                                    break;
+                                }
+                            }
+                        }
+                        if (targetButtonData) break;
                     }
                 }
                 
@@ -601,17 +623,17 @@ module.exports = (client) => {
                     });
                 }
                 
-                await openNewTicket(interaction, targetButtonData, guildConfig, userAnswersArray);
+                await openNewTicket(interaction, targetButtonData, guildConfig, userAnswersArray, targetPanelData);
             }
         }
 
         // =====================================================================
-        // ⚙️ 7. أزرار التحكم داخل التكت (Claim, Close, Add User, Delete)
+        // ⚙️ 7. أزرار التحكم داخل التكت (السرعة الجبارة)
         // =====================================================================
         if (interaction.isButton()) {
             
             // -------------------------------------------------------------
-            // 🔒 زر الإغلاق 1: رسالة التأكيد (2-Step Close)
+            // 🔒 زر الإغلاق 1: رسالة التأكيد
             // -------------------------------------------------------------
             if (interaction.customId === 'ticket_close') {
                 
@@ -657,6 +679,7 @@ module.exports = (client) => {
                 
                 const topicParts = currentTopic.split('_');
                 
+                // Topic Format: OwnerID_BtnID_ClaimerID_AddedUsers_CloserID_IsMiddleMan
                 const ticketOwnerId = topicParts[0];
                 const usedBtnId = topicParts[1];
                 
@@ -665,12 +688,12 @@ module.exports = (client) => {
                     claimedByAdminId = topicParts[2];
                 }
                 
-                let isMediatorTicket = false;
+                let isMiddleManTicket = false;
                 if (topicParts.length > 5 && topicParts[5] === 'true') {
-                    isMediatorTicket = true;
+                    isMiddleManTicket = true;
                 }
 
-                // تغيير اسم الروم ليتمكن العضو من فتح غيرها
+                // تغيير اسم الروم إلى closed- ليتمكن العضو من فتح تكت جديد
                 let oldChannelName = interaction.channel.name;
                 let nameParts = oldChannelName.split('-');
                 let oldNameNumber = nameParts[1];
@@ -683,16 +706,26 @@ module.exports = (client) => {
                 const closingMessage = `**🔒 The ticket has been closed by <@${interaction.user.id}>**`;
                 await interaction.channel.send(closingMessage);
 
+                // 🔥 منع التقييم المزدوج: إذا كان التكت MiddleMan، لا ترسل تقييم الإدارة
                 let shouldSendStaffRating = true;
                 
-                if (isMediatorTicket) {
+                if (isMiddleManTicket) {
                     shouldSendStaffRating = false; 
                 } else {
+                    // البحث عن إعداد الزر لنتأكد هل تم تعطيل التقييم منه أم لا
                     let specificBtnData = null;
-                    for (let i = 0; i < guildConfig.customButtons.length; i++) {
-                        if (guildConfig.customButtons[i].id === usedBtnId) {
-                            specificBtnData = guildConfig.customButtons[i];
-                            break;
+                    if (guildConfig.ticketPanels) {
+                        for (let p = 0; p < guildConfig.ticketPanels.length; p++) {
+                            const pnl = guildConfig.ticketPanels[p];
+                            if (pnl.buttons) {
+                                for (let b = 0; b < pnl.buttons.length; b++) {
+                                    if (pnl.buttons[b].id === usedBtnId) {
+                                        specificBtnData = pnl.buttons[b];
+                                        break;
+                                    }
+                                }
+                            }
+                            if (specificBtnData) break;
                         }
                     }
                     
@@ -815,7 +848,7 @@ module.exports = (client) => {
             }
 
             // -------------------------------------------------------------
-            // 🛡️ زر الاستلام (Claim) السرعة الجبارة 
+            // 🛡️ زر الاستلام (Claim) السرعة الصاروخية الجبارة
             // -------------------------------------------------------------
             if (interaction.customId === 'ticket_claim') {
                 
@@ -828,10 +861,18 @@ module.exports = (client) => {
                 const usedBtnId = topicParts[1];
                 
                 let specificBtnData = null;
-                for (let i = 0; i < guildConfig.customButtons.length; i++) {
-                    if (guildConfig.customButtons[i].id === usedBtnId) {
-                        specificBtnData = guildConfig.customButtons[i];
-                        break;
+                if (guildConfig.ticketPanels) {
+                    for (let p = 0; p < guildConfig.ticketPanels.length; p++) {
+                        const pnl = guildConfig.ticketPanels[p];
+                        if (pnl.buttons) {
+                            for (let b = 0; b < pnl.buttons.length; b++) {
+                                if (pnl.buttons[b].id === usedBtnId) {
+                                    specificBtnData = pnl.buttons[b];
+                                    break;
+                                }
+                            }
+                        }
+                        if (specificBtnData) break;
                     }
                 }
 
@@ -847,9 +888,9 @@ module.exports = (client) => {
                 } else {
                     const allStaffArr = [
                         guildConfig.adminRoleId, 
-                        guildConfig.mediatorRoleId, 
+                        guildConfig.middlemanRoleId, // تم التعديل
                         ...guildConfig.highAdminRoles, 
-                        ...guildConfig.highMediatorRoles
+                        ...guildConfig.highMiddlemanRoles // تم التعديل
                     ];
                     
                     for (let i = 0; i < allStaffArr.length; i++) {
@@ -878,7 +919,7 @@ module.exports = (client) => {
                     });
                 }
 
-                // 🔥 الحل السحري: تحديث الزرار فوراً لديسكورد (يخضر في 0.001 ثانية)
+                // 🔥 الحل السحري للسرعة: تحديث الزرار فوراً لديسكورد (يخضر في 0.001 ثانية)
                 const oldComponents = interaction.message.components;
                 const newComponentsArr = [];
                 
@@ -1130,9 +1171,9 @@ module.exports = (client) => {
     });
 
     // =====================================================================
-    // 🛠️ Helper Function: فتح تكت جديد
+    // 🛠️ Helper Function: فتح تكت جديد مع البانلات المتعددة
     // =====================================================================
-    async function openNewTicket(interaction, buttonData, config, answersArray) {
+    async function openNewTicket(interaction, buttonData, config, answersArray, targetPanelData) {
         
         let currentTicketCount = config.ticketCount;
         if (!currentTicketCount) {
@@ -1141,7 +1182,8 @@ module.exports = (client) => {
         
         const newTicketNumber = currentTicketCount + 1;
         
-        let targetCategoryId = buttonData.categoryId;
+        // جلب الكتاجوري الخاص بالبانل الحالي، أو الأساسي
+        let targetCategoryId = targetPanelData ? targetPanelData.ticketCategoryId : null;
         if (!targetCategoryId) {
             targetCategoryId = config.defaultCategoryId;
         }
@@ -1160,9 +1202,9 @@ module.exports = (client) => {
         
         const staffRolesArray = [
             config.adminRoleId, 
-            config.mediatorRoleId, 
+            config.middlemanRoleId, // تم التعديل
             ...config.highAdminRoles, 
-            ...config.highMediatorRoles
+            ...config.highMiddlemanRoles // تم التعديل
         ];
         
         for (let i = 0; i < staffRolesArray.length; i++) {
@@ -1174,8 +1216,9 @@ module.exports = (client) => {
             }
         }
 
+        // حفظ نوع التكت في الخانة السادسة: isMiddleMan
         let isMedStr = 'false';
-        if (buttonData.isMediator === true) {
+        if (buttonData.isMiddleMan === true) {
             isMedStr = 'true';
         }
         
@@ -1189,6 +1232,7 @@ module.exports = (client) => {
             permissionOverwrites: permsArray
         });
         
+        // تحديث العداد
         await GuildConfig.findOneAndUpdate({ guildId: interaction.guild.id }, { $inc: { ticketCount: 1 } });
 
         const msgContent = `**Welcome <@${interaction.user.id}>**\n**Reason:** ${buttonData.label}`;
