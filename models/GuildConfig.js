@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // =====================================================================
-// 📝 Schema for Modal Fields (أسئلة النوافذ)
+// 📝 1. Schema for Modal Fields (أسئلة النوافذ)
 // =====================================================================
 const modalFieldSchema = new mongoose.Schema({
     label: { 
@@ -19,7 +19,7 @@ const modalFieldSchema = new mongoose.Schema({
 });
 
 // =====================================================================
-// 🔘 Schema for Ticket Buttons (زراير التكتات المخصصة)
+// 🔘 2. Schema for Ticket Buttons (زراير التكتات الفردية داخل البانل)
 // =====================================================================
 const ticketButtonSchema = new mongoose.Schema({
     id: { 
@@ -34,10 +34,6 @@ const ticketButtonSchema = new mongoose.Schema({
         type: String, 
         default: 'Primary' 
     },
-    categoryId: { 
-        type: String, 
-        default: null 
-    }, 
     insideEmbedTitle: { 
         type: String, 
         default: 'Ticket Info' 
@@ -62,7 +58,7 @@ const ticketButtonSchema = new mongoose.Schema({
         type: [modalFieldSchema], 
         default: [] 
     }, 
-    isMediator: { 
+    isMiddleMan: { 
         type: Boolean, 
         default: false 
     },
@@ -77,7 +73,49 @@ const ticketButtonSchema = new mongoose.Schema({
 });
 
 // =====================================================================
-// 💬 Schema for Auto Responders (الردود التلقائية)
+// 🎟️ 3. Schema for Multiple Ticket Panels (نظام البانلات المتعددة)
+// =====================================================================
+const ticketPanelSchema = new mongoose.Schema({
+    id: { 
+        type: String, 
+        required: true 
+    },
+    name: { 
+        type: String, 
+        default: 'بانل جديد' 
+    }, 
+    panelChannelId: { 
+        type: String, 
+        default: null 
+    }, 
+    ticketCategoryId: { 
+        type: String, 
+        default: null 
+    }, 
+    embedTitle: { 
+        type: String, 
+        default: 'الدعم الفني' 
+    },
+    embedDesc: { 
+        type: String, 
+        default: 'اضغط على الزر لفتح تذكرة.' 
+    },
+    embedColor: { 
+        type: String, 
+        default: '#0099ff' 
+    },
+    embedImage: { 
+        type: String, 
+        default: null 
+    },
+    buttons: { 
+        type: [ticketButtonSchema], 
+        default: [] 
+    } 
+});
+
+// =====================================================================
+// 💬 4. Schema for Auto Responders (الردود التلقائية)
 // =====================================================================
 const autoResponderSchema = new mongoose.Schema({
     word: { 
@@ -91,7 +129,7 @@ const autoResponderSchema = new mongoose.Schema({
 });
 
 // =====================================================================
-// 👑 THE MAIN GUILD CONFIGURATION (الإعدادات الشاملة للسيرفر)
+// 👑 5. THE MAIN GUILD CONFIGURATION (الإعدادات الشاملة)
 // =====================================================================
 const guildConfigSchema = new mongoose.Schema({
     
@@ -205,32 +243,16 @@ const guildConfigSchema = new mongoose.Schema({
     }, 
     
     // ---------------------------------------------------
-    // 🎟️ External Ticket Panel Settings
+    // 🎟️ MULTI-PANELS SYSTEM (البانلات المتعددة)
     // ---------------------------------------------------
-    panelChannelId: { 
-        type: String, 
-        default: null 
-    }, 
-    defaultCategoryId: { 
-        type: String, 
-        default: null 
-    }, 
-    ticketEmbedTitle: { 
-        type: String, 
-        default: 'MNC COMMUNITY' 
+    ticketPanels: { 
+        type: [ticketPanelSchema], 
+        default: [] 
     },
-    ticketEmbedDesc: { 
-        type: String, 
-        default: 'اضغط لفتح تذكرة.' 
-    },
-    ticketEmbedColor: { 
-        type: String, 
-        default: '#0099ff' 
-    },
-    ticketEmbedImage: { 
-        type: String, 
-        default: null 
-    },
+    
+    // ---------------------------------------------------
+    // 🎫 Ticket Core Settings
+    // ---------------------------------------------------
     ticketCount: { 
         type: Number, 
         default: 0 
@@ -239,18 +261,31 @@ const guildConfigSchema = new mongoose.Schema({
         type: Number, 
         default: 1 
     }, 
+    hideTicketOnClaim: { 
+        type: Boolean, 
+        default: true 
+    },
+    readOnlyStaffOnClaim: { 
+        type: Boolean, 
+        default: false 
+    },
+
+    // (احتياطي للبانل القديم حتى لا تفقد بياناتك السابقة)
+    panelChannelId: { type: String, default: null }, 
+    defaultCategoryId: { type: String, default: null }, 
+    ticketEmbedTitle: { type: String, default: 'MNC COMMUNITY' },
+    ticketEmbedDesc: { type: String, default: 'اضغط لفتح تذكرة.' },
+    ticketEmbedColor: { type: String, default: '#0099ff' },
+    ticketEmbedImage: { type: String, default: null },
+    customButtons: { type: [ticketButtonSchema], default: [] }, 
     
-    customButtons: { 
-        type: [ticketButtonSchema], 
-        default: [] 
-    }, 
     autoResponders: { 
         type: [autoResponderSchema], 
         default: [] 
     },
 
     // ---------------------------------------------------
-    // 👨‍⚖️ Staff & Mediator Roles
+    // 👨‍⚖️ Staff & MiddleMan Roles
     // ---------------------------------------------------
     adminRoleId: { 
         type: String, 
@@ -260,23 +295,14 @@ const guildConfigSchema = new mongoose.Schema({
         type: [String], 
         default: [] 
     }, 
-    mediatorRoleId: { 
+    middlemanRoleId: { 
         type: String, 
         default: null 
     }, 
-    highMediatorRoles: { 
+    highMiddlemanRoles: { 
         type: [String], 
         default: [] 
     }, 
-    
-    hideTicketOnClaim: { 
-        type: Boolean, 
-        default: true 
-    },
-    readOnlyStaffOnClaim: { 
-        type: Boolean, 
-        default: false 
-    },
     
     // ---------------------------------------------------
     // ⌨️ Commands & Permissions
@@ -293,9 +319,9 @@ const guildConfigSchema = new mongoose.Schema({
     cmdCome: { type: String, default: '!come' }, 
     cmdComeRoles: { type: [String], default: [] },
     
-    // إعدادات التريد
     cmdTrade: { type: String, default: '!trade' }, 
     cmdTradeRoles: { type: [String], default: [] },
+    
     tradeApproveRoles: { type: [String], default: [] }, 
     tradeMentionRoles: { type: [String], default: [] }, 
     
@@ -327,7 +353,7 @@ const guildConfigSchema = new mongoose.Schema({
     cmdMoveRoles: { type: [String], default: [] },
 
     // ---------------------------------------------------
-    // 🎨 Embed Colors Customization (التحكم الشامل بالألوان)
+    // 🎨 Embed Colors Customization
     // ---------------------------------------------------
     logEmbedColor: { type: String, default: '#ed4245' }, 
     transcriptEmbedColor: { type: String, default: '#2b2d31' }, 
@@ -342,26 +368,68 @@ const guildConfigSchema = new mongoose.Schema({
     untimeoutEmbedColor: { type: String, default: '#3ba55d' },
     
     // ---------------------------------------------------
-    // ⭐ Ratings Customization (تخصيص التقييم)
+    // ⭐ Ratings Customization
     // ---------------------------------------------------
-    ratingStyle: { type: String, default: 'basic' }, 
-    customRatingTitle: { type: String, default: 'تقييم فريق العمل' },
-    customRatingText: { type: String, default: 'مرحباً [user]، يرجى تقييم خدمة الإداري [staff].' },
-    customMedRatingTitle: { type: String, default: 'تقييم الوساطة' },
-    customMedRatingText: { type: String, default: 'مرحباً [user]، يرجى تقييم خدمة الوسيط [staff].' },
+    ratingStyle: { 
+        type: String, 
+        default: 'basic' 
+    }, 
+    customRatingTitle: { 
+        type: String, 
+        default: 'تقييم فريق العمل' 
+    },
+    customRatingText: { 
+        type: String, 
+        default: 'مرحباً [user]، يرجى تقييم خدمة الإداري [staff].' 
+    },
+    customMiddlemanRatingTitle: { 
+        type: String, 
+        default: 'تقييم الوساطة' 
+    }, 
+    customMiddlemanRatingText: { 
+        type: String, 
+        default: 'مرحباً [user]، يرجى تقييم خدمة الوسيط [staff].' 
+    }, 
 
     // ---------------------------------------------------
-    // 🔨 Punishments Customization (تخصيص العقوبات)
+    // 🔨 Punishments Customization
     // ---------------------------------------------------
-    punishmentStyle: { type: String, default: 'basic' },
-    customBanTitle: { type: String, default: '🔨 تم حظر عضو' },
-    customBanDesc: { type: String, default: 'تم حظر [user] بواسطة [moderator].\nالسبب: [reason]' },
-    customUnbanTitle: { type: String, default: '🕊️ تم فك الحظر' },
-    customUnbanDesc: { type: String, default: 'تم فك الحظر عن [user] بواسطة [moderator].' },
-    customTimeoutTitle: { type: String, default: '⏳ تم إعطاء تايم أوت' },
-    customTimeoutDesc: { type: String, default: 'تم معاقبة [user] بواسطة [moderator] لمدة [duration].\nالسبب: [reason]' },
-    customUntimeoutTitle: { type: String, default: '🔊 تم فك التايم أوت' },
-    customUntimeoutDesc: { type: String, default: 'تم فك التايم أوت عن [user] بواسطة [moderator].' },
+    punishmentStyle: { 
+        type: String, 
+        default: 'basic' 
+    },
+    customBanTitle: { 
+        type: String, 
+        default: '🔨 تم حظر عضو' 
+    },
+    customBanDesc: { 
+        type: String, 
+        default: 'تم حظر [user] بواسطة [moderator].\nالسبب: [reason]' 
+    },
+    customUnbanTitle: { 
+        type: String, 
+        default: '🕊️ تم فك الحظر' 
+    },
+    customUnbanDesc: { 
+        type: String, 
+        default: 'تم فك الحظر عن [user] بواسطة [moderator].' 
+    },
+    customTimeoutTitle: { 
+        type: String, 
+        default: '⏳ تم إعطاء تايم أوت' 
+    },
+    customTimeoutDesc: { 
+        type: String, 
+        default: 'تم معاقبة [user] بواسطة [moderator] لمدة [duration].\nالسبب: [reason]' 
+    },
+    customUntimeoutTitle: { 
+        type: String, 
+        default: '🔊 تم فك التايم أوت' 
+    },
+    customUntimeoutDesc: { 
+        type: String, 
+        default: 'تم فك التايم أوت عن [user] بواسطة [moderator].' 
+    },
 
     // ---------------------------------------------------
     // 📁 Universal Logging Channels
@@ -369,7 +437,7 @@ const guildConfigSchema = new mongoose.Schema({
     transcriptChannelId: { type: String, default: null }, 
     ticketLogChannelId: { type: String, default: null }, 
     staffRatingChannelId: { type: String, default: null }, 
-    mediatorRatingChannelId: { type: String, default: null }, 
+    middlemanRatingChannelId: { type: String, default: null }, 
     logRoleCreateDeleteId: { type: String, default: null }, 
     logMemberRoleUpdateId: { type: String, default: null }, 
     logJoinLeaveId: { type: String, default: null }, 
@@ -391,11 +459,11 @@ const guildConfigSchema = new mongoose.Schema({
         of: Number, 
         default: {} 
     },
-    mediatorRatingsCount: { 
+    middlemanRatingsCount: { 
         type: Map, 
         of: Number, 
         default: {} 
-    },
+    }, 
     totalServerRatings: { 
         type: Number, 
         default: 0 
