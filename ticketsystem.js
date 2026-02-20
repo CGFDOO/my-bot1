@@ -173,7 +173,7 @@ module.exports = (client) => {
                         let logEmbedColor = '';
                         let ratedPersonLabel = '';
 
-                        // 🔥 الألوان هنا بتتسحب من الداتابيز سواء كان التقييم بيسك أو مخصص
+                        // الألوان تتسحب من الداتابيز
                         if (ratingType === 'staff') {
                             logAuthorTitle = `${discordGuild.name} STAFF REVIEW`;
                             
@@ -670,7 +670,7 @@ module.exports = (client) => {
                     isMediatorTicket = true;
                 }
 
-                // تغيير اسم الروم
+                // تغيير اسم الروم ليتمكن العضو من فتح غيرها
                 let oldChannelName = interaction.channel.name;
                 let nameParts = oldChannelName.split('-');
                 let oldNameNumber = nameParts[1];
@@ -815,7 +815,7 @@ module.exports = (client) => {
             }
 
             // -------------------------------------------------------------
-            // 🛡️ زر الاستلام (Claim) السرعة الجبارة بالـ Update الفوري
+            // 🛡️ زر الاستلام (Claim) السرعة الجبارة 
             // -------------------------------------------------------------
             if (interaction.customId === 'ticket_claim') {
                 
@@ -878,7 +878,7 @@ module.exports = (client) => {
                     });
                 }
 
-                // 🔥 الحل السحري: استخدام interaction.update يغير لون الزرار في نفس اللحظة!
+                // 🔥 الحل السحري: تحديث الزرار فوراً لديسكورد (يخضر في 0.001 ثانية)
                 const oldComponents = interaction.message.components;
                 const newComponentsArr = [];
                 
@@ -906,7 +906,7 @@ module.exports = (client) => {
                 await interaction.channel.send(claimMsg).catch(()=>{});
 
                 // ==========================================
-                // تعديل الصلاحيات في الخلفية (طلقة)
+                // تعديل الصلاحيات في الخلفية 
                 // ==========================================
                 const currentOverwrites = interaction.channel.permissionOverwrites.cache;
                 const newOverwritesArray = [];
@@ -1174,7 +1174,6 @@ module.exports = (client) => {
             }
         }
 
-        // حفظ نوع التكت في الخانة السادسة
         let isMedStr = 'false';
         if (buttonData.isMediator === true) {
             isMedStr = 'true';
