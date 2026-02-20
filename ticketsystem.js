@@ -1,5 +1,5 @@
 // =====================================================================
-// استدعاء المكاتب الأساسية
+// استدعاء المكاتب الأساسية من ديسكورد (مفرودة بالكامل)
 // =====================================================================
 const { 
     EmbedBuilder, 
@@ -13,31 +13,44 @@ const {
     PermissionFlagsBits 
 } = require('discord.js');
 
+// استدعاء مكتبة الترانسكريبت
 const discordTranscripts = require('discord-html-transcripts');
+
+// استدعاء قاعدة البيانات
 const GuildConfig = require('./models/GuildConfig');
 
 module.exports = (client) => {
     
+    // =====================================================================
+    // الحدث الرئيسي للتعامل مع أي تفاعل (أزرار / نوافذ)
+    // =====================================================================
     client.on('interactionCreate', async interaction => {
 
         // =====================================================================
-        // ⭐ 1. نظام التقييم في الخاص (فتح النافذة)
+        // ⭐ 1. نظام التقييم في الخاص (عند الضغط على أي نجمة)
         // =====================================================================
         if (interaction.isButton()) {
             
-            if (interaction.customId.startsWith('rate_')) {
+            let isRateButton = interaction.customId.startsWith('rate_');
+            
+            if (isRateButton) {
                 
+                // استخراج المتغيرات من المعرف (ID)
                 const customIdParts = interaction.customId.split('_');
                 const ratingType = customIdParts[1]; 
                 const ratingStars = customIdParts[2];
                 const ratedTargetId = customIdParts[3];
                 const currentGuildId = customIdParts[4]; 
 
+                // بناء نافذة التعليق
                 const feedbackModal = new ModalBuilder();
+                
                 let modalId = `modalrate_${ratingType}_${ratingStars}_${ratedTargetId}_${currentGuildId}`;
                 feedbackModal.setCustomId(modalId);
-                feedbackModal.setTitle('Add Comment (Optional)');
+                
+                feedbackModal.setTitle('إضافة تعليق (اختياري)');
 
+                // بناء حقل النص
                 const commentTextInput = new TextInputBuilder();
                 commentTextInput.setCustomId('rating_comment');
                 commentTextInput.setLabel('هل لديك أي تعليق إضافي؟');
@@ -49,39 +62,47 @@ module.exports = (client) => {
                 
                 feedbackModal.addComponents(modalActionRow);
 
+                // إظهار النافذة للعضو
                 await interaction.showModal(feedbackModal);
+                
                 return;
             }
         }
 
         // =====================================================================
-        // ⭐ 2. استلام تعليق التقييم وإرسال اللوج
+        // ⭐ 2. استلام تعليق التقييم وإرسال اللوج للإدارة
         // =====================================================================
         if (interaction.isModalSubmit()) {
             
-            if (interaction.customId.startsWith('modalrate_')) {
+            let isRateModal = interaction.customId.startsWith('modalrate_');
+            
+            if (isRateModal) {
                 
-                // 🔥 الرد السريع لتجنب خطأ ديسكورد (Something went wrong)
+                // الرد السريع لتجنب تعليق النافذة
                 await interaction.deferUpdate().catch(() => {});
 
+                // استخراج البيانات
                 const customIdParts = interaction.customId.split('_');
                 const ratingType = customIdParts[1];
                 const ratingStars = parseInt(customIdParts[2]);
                 const ratedTargetId = customIdParts[3];
                 const currentGuildId = customIdParts[4];
                 
+                // جلب التعليق
                 let userFeedback = interaction.fields.getTextInputValue('rating_comment');
                 
                 if (!userFeedback || userFeedback.trim() === '') {
-                    userFeedback = 'لا يوجد تعليق.';
+                    userFeedback = 'لا يوجد تعليق مضاف من العضو.';
                 }
 
+                // جلب الإعدادات
                 let serverConfig = await GuildConfig.findOne({ guildId: currentGuildId });
                 
                 if (!serverConfig) {
                     return;
                 }
 
+                // تحديد روم اللوج بناءً على نوع التقييم
                 let targetLogChannelId = null;
                 
                 if (ratingType === 'staff') {
@@ -90,6 +111,7 @@ module.exports = (client) => {
                     targetLogChannelId = serverConfig.mediatorRatingChannelId;
                 }
 
+                // جلب السيرفر
                 const discordGuild = client.guilds.cache.get(currentGuildId);
                 
                 if (discordGuild && targetLogChannelId) {
@@ -98,6 +120,20 @@ module.exports = (client) => {
                     
                     if (logChannel) {
                         
+                        // 🔥 سحب تفاصيل التريد من رسالة التقييم في الخاص (إن وُجدت)
+                        let tradeDetailsIncluded = 'لا يوجد تفاصيل للتريد (تقييم مباشر أو إدارة).';
+                        
+                        if (interaction.message && interaction.message.embeds && interaction.message.embeds.length > 0) {
+                            let oldEmbedDesc = interaction.message.embeds[0].description;
+                            if (oldEmbedDesc && oldEmbedDesc.includes('**📦 تفاصيل المعاملة:**')) {
+                                let splitDesc = oldEmbedDesc.split('**📦 تفاصيل المعاملة:**');
+                                if (splitDesc.length > 1) {
+                                    tradeDetailsIncluded = splitDesc[1].trim();
+                                }
+                            }
+                        }
+
+                        // تحديث العدادات
                         let currentServerTotal = serverConfig.totalServerRatings;
                         if (!currentServerTotal) {
                             currentServerTotal = 0;
@@ -124,8 +160,10 @@ module.exports = (client) => {
                             serverConfig.mediatorRatingsCount.set(ratedTargetId, individualRatingCount);
                         }
                         
+                        // حفظ الداتابيز
                         await serverConfig.save();
 
+                        // بناء النجوم
                         let starsEmojiText = '';
                         for (let i = 0; i < ratingStars; i++) {
                             starsEmojiText += '⭐';
@@ -157,6 +195,7 @@ module.exports = (client) => {
                             ratedPersonLabel = 'الوسيط 🛡️';
                         }
 
+                        // بناء إيمبد اللوج
                         const ratingLogEmbed = new EmbedBuilder();
                         
                         ratingLogEmbed.setAuthor({ 
@@ -171,6 +210,13 @@ module.exports = (client) => {
                         embedDescriptionText += `<@${interaction.user.id}>\n\n`;
                         embedDescriptionText += `**${ratedPersonLabel}**\n`;
                         embedDescriptionText += `<@${ratedTargetId}>\n\n`;
+                        
+                        // إضافة التريد للإيمبد إذا كان وساطة
+                        if (ratingType === 'mediator') {
+                            embedDescriptionText += `**📦 تفاصيل التريد:**\n`;
+                            embedDescriptionText += `> ${tradeDetailsIncluded}\n\n`;
+                        }
+
                         embedDescriptionText += `**الإحصائيات 📈**\n`;
                         embedDescriptionText += `عدد التقييمات #${individualRatingCount}\n`;
                         embedDescriptionText += `إجمالي السيرفر #${currentServerTotal}\n\n`;
@@ -199,8 +245,9 @@ module.exports = (client) => {
                     }
                 }
                 
+                // تعديل رسالة الخاص للعضو
                 const thankYouEmbed = new EmbedBuilder();
-                thankYouEmbed.setDescription(`**✅ شكراً لك! تم إرسال تقييمك بنجاح.**\n\nالنجوم: ${ratingStars}/5`);
+                thankYouEmbed.setDescription(`**✅ شكراً لك! تم إرسال تقييمك للإدارة بنجاح.**\n\nالنجوم: ${ratingStars}/5`);
                 thankYouEmbed.setColor('#3ba55d');
                 
                 try { 
@@ -212,7 +259,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // التأكد أن التفاعل داخل السيرفر فقط
+        // التأكد أن التفاعل داخل السيرفر (للتكتات والأوامر)
         // =====================================================================
         if (!interaction.guild) {
             return;
@@ -225,7 +272,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚖️ 3. تفاعلات نافذة التريد (!trade)
+        // ⚖️ 3. تفاعلات نافذة أمر التريد (!trade)
         // =====================================================================
         if (interaction.isButton()) {
             
@@ -364,7 +411,6 @@ module.exports = (client) => {
             
             if (interaction.customId === 'direct_transcript_btn') {
                 
-                // الرد الفوري للسرعة
                 await interaction.deferReply({ ephemeral: true });
                 
                 const logMsgContent = interaction.message.content;
@@ -419,7 +465,7 @@ module.exports = (client) => {
                     });
                 }
 
-                // 🔥 فحص الحد الأقصى (للتكتات المفتوحة فقط، يتم تجاهل الـ closed)
+                // فحص الحد الأقصى (للتكتات المفتوحة فقط، يتم تجاهل الـ closed)
                 let maximumTickets = guildConfig.maxTicketsPerUser;
                 if (!maximumTickets) {
                     maximumTickets = 1;
@@ -443,7 +489,6 @@ module.exports = (client) => {
                     });
                 }
 
-                // فحص النافذة
                 let hasModalFields = false;
                 if (targetButtonData.modalFields && targetButtonData.modalFields.length > 0) {
                     hasModalFields = true;
@@ -494,7 +539,6 @@ module.exports = (client) => {
                     
                     await interaction.showModal(ticketModal);
                 } else {
-                    // الرد السريع قبل الفتح
                     await interaction.deferReply({ ephemeral: true });
                     await openNewTicket(interaction, targetButtonData, guildConfig, []);
                 }
@@ -508,7 +552,6 @@ module.exports = (client) => {
             
             if (interaction.customId.startsWith('modalticket_')) {
                 
-                // 🔥 الرد الصاروخي لمنع الإيرور (Something went wrong)
                 await interaction.deferReply({ ephemeral: true }).catch(()=>{});
 
                 const buttonRealId = interaction.customId.replace('modalticket_', '');
@@ -541,12 +584,183 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚙️ 7. أزرار التحكم داخل التكت (Claim, Close, Add User, Delete)
+        // ⚙️ 7. أزرار التحكم داخل التكت (السرعة الصاروخية الحقيقية)
         // =====================================================================
         if (interaction.isButton()) {
             
             // -------------------------------------------------------------
-            // 🔒 زر الإغلاق 1: رسالة التأكيد (2-Step Close)
+            // 🛡️ زر الاستلام (Claim) - حل مشكلة التعليق والبطء
+            // -------------------------------------------------------------
+            if (interaction.customId === 'ticket_claim') {
+                
+                let currentTopic = interaction.channel.topic;
+                if (!currentTopic) {
+                    currentTopic = '';
+                }
+                
+                const topicParts = currentTopic.split('_');
+                const usedBtnId = topicParts[1];
+                
+                let specificBtnData = null;
+                for (let i = 0; i < guildConfig.customButtons.length; i++) {
+                    if (guildConfig.customButtons[i].id === usedBtnId) {
+                        specificBtnData = guildConfig.customButtons[i];
+                        break;
+                    }
+                }
+
+                let allowedToClaimRoles = [];
+                let hasCustomClaimRoles = false;
+                
+                if (specificBtnData && specificBtnData.allowedClaimRoles && specificBtnData.allowedClaimRoles.length > 0) {
+                    hasCustomClaimRoles = true;
+                }
+                
+                if (hasCustomClaimRoles) {
+                    allowedToClaimRoles = specificBtnData.allowedClaimRoles;
+                } else {
+                    const allStaffArr = [
+                        guildConfig.adminRoleId, 
+                        guildConfig.mediatorRoleId, 
+                        ...guildConfig.highAdminRoles, 
+                        ...guildConfig.highMediatorRoles
+                    ];
+                    
+                    for (let i = 0; i < allStaffArr.length; i++) {
+                        if (allStaffArr[i]) {
+                            allowedToClaimRoles.push(allStaffArr[i]);
+                        }
+                    }
+                }
+
+                let canClaim = false;
+                if (interaction.member.permissions.has('Administrator')) {
+                    canClaim = true;
+                } else {
+                    for (let i = 0; i < allowedToClaimRoles.length; i++) {
+                        if (interaction.member.roles.cache.has(allowedToClaimRoles[i])) {
+                            canClaim = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!canClaim) {
+                    return interaction.reply({ 
+                        content: '**❌ You do not have permission to claim this ticket.**', 
+                        ephemeral: true 
+                    });
+                }
+
+                // 🔥 الحل الجذري للتعليق: استخدام interaction.update لتحديث الزرار فوراً في جزء من الثانية
+                const oldComponents = interaction.message.components;
+                const newComponentsArr = [];
+                
+                for (let i = 0; i < oldComponents.length; i++) {
+                    const oldRow = oldComponents[i];
+                    const newRow = new ActionRowBuilder();
+                    
+                    for (let j = 0; j < oldRow.components.length; j++) {
+                        const oldBtn = oldRow.components[j];
+                        const clonedBtn = ButtonBuilder.from(oldBtn);
+                        
+                        if (oldBtn.customId === 'ticket_claim') {
+                            clonedBtn.setDisabled(true);
+                            clonedBtn.setStyle(ButtonStyle.Success);
+                        }
+                        
+                        newRow.addComponents(clonedBtn);
+                    }
+                    newComponentsArr.push(newRow);
+                }
+                
+                // التحديث الفوري المرئي للزرار
+                await interaction.update({ components: newComponentsArr }).catch(()=>{});
+                
+                // إرسال رسالة التأكيد
+                const claimMsg = `**✅ Ticket has been claimed by <@${interaction.user.id}>**`;
+                await interaction.channel.send(claimMsg).catch(()=>{});
+
+                // ==========================================
+                // العمل في الخلفية لتعديل الصلاحيات 
+                // (لن يؤثر على سرعة الزرار إطلاقاً)
+                // ==========================================
+                const currentOverwrites = interaction.channel.permissionOverwrites.cache;
+                const newOverwritesArray = [];
+                
+                currentOverwrites.forEach((overwrite) => {
+                    newOverwritesArray.push({
+                        id: overwrite.id,
+                        allow: overwrite.allow.toArray(),
+                        deny: overwrite.deny.toArray()
+                    });
+                });
+
+                for (let i = 0; i < allowedToClaimRoles.length; i++) {
+                    const staffRoleId = allowedToClaimRoles[i];
+                    let roleOverwrite = null;
+                    
+                    for (let k = 0; k < newOverwritesArray.length; k++) {
+                        if (newOverwritesArray[k].id === staffRoleId) {
+                            roleOverwrite = newOverwritesArray[k];
+                            break;
+                        }
+                    }
+                    
+                    if (!roleOverwrite) {
+                        roleOverwrite = { id: staffRoleId, allow: [], deny: [] };
+                        newOverwritesArray.push(roleOverwrite);
+                    }
+                    
+                    if (guildConfig.hideTicketOnClaim) {
+                        if (!roleOverwrite.deny.includes('ViewChannel')) {
+                            roleOverwrite.deny.push('ViewChannel');
+                        }
+                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'ViewChannel');
+                    } else if (guildConfig.readOnlyStaffOnClaim) {
+                        if (!roleOverwrite.deny.includes('SendMessages')) {
+                            roleOverwrite.deny.push('SendMessages');
+                        }
+                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'SendMessages');
+                    }
+                }
+                
+                let claimerOverwrite = null;
+                for (let k = 0; k < newOverwritesArray.length; k++) {
+                    if (newOverwritesArray[k].id === interaction.user.id) {
+                        claimerOverwrite = newOverwritesArray[k];
+                        break;
+                    }
+                }
+                
+                if (!claimerOverwrite) {
+                    newOverwritesArray.push({ 
+                        id: interaction.user.id, 
+                        allow: ['ViewChannel', 'SendMessages'], 
+                        deny: [] 
+                    });
+                } else {
+                    if (!claimerOverwrite.allow.includes('ViewChannel')) {
+                        claimerOverwrite.allow.push('ViewChannel');
+                    }
+                    if (!claimerOverwrite.allow.includes('SendMessages')) {
+                        claimerOverwrite.allow.push('SendMessages');
+                    }
+                }
+
+                await interaction.channel.permissionOverwrites.set(newOverwritesArray).catch(()=>{});
+                
+                while(topicParts.length < 6) {
+                    topicParts.push('none');
+                }
+                topicParts[2] = interaction.user.id;
+                
+                let newTopicStr = topicParts.join('_');
+                await interaction.channel.setTopic(newTopicStr).catch(()=>{});
+            }
+
+            // -------------------------------------------------------------
+            // 🔒 زر الإغلاق 1: رسالة التأكيد
             // -------------------------------------------------------------
             if (interaction.customId === 'ticket_close') {
                 
@@ -579,11 +793,10 @@ module.exports = (client) => {
             }
 
             // -------------------------------------------------------------
-            // ✅ تأكيد الإغلاق الفعلي (السرعة، التقييم، وتغيير الاسم)
+            // ✅ تأكيد الإغلاق الفعلي
             // -------------------------------------------------------------
             if (interaction.customId === 'confirm_close') {
                 
-                // ⚡ السرعة الصاروخية: الرد الفوري
                 await interaction.deferUpdate(); 
                 
                 let currentTopic = interaction.channel.topic;
@@ -607,7 +820,7 @@ module.exports = (client) => {
                     isMediatorTicket = true;
                 }
 
-                // 🔥 تغيير اسم الروم إلى closed- ليتمكن العضو من فتح تكت جديد
+                // تغيير اسم الروم ليتمكن العضو من فتح غيرها
                 let oldChannelName = interaction.channel.name;
                 let nameParts = oldChannelName.split('-');
                 let oldNameNumber = nameParts[1];
@@ -620,11 +833,12 @@ module.exports = (client) => {
                 const closingMessage = `**🔒 The ticket has been closed by <@${interaction.user.id}>**`;
                 await interaction.channel.send(closingMessage);
 
-                // فحص نظام التقييم
+                // فحص نظام التقييم التلقائي للإدارة
                 let shouldSendStaffRating = true;
                 
+                // منع إرسال تقييم الإدارة إذا كان تكت وساطة
                 if (isMediatorTicket) {
-                    shouldSendStaffRating = false; // لا ترسل تقييم إدارة في تكت وساطة
+                    shouldSendStaffRating = false; 
                 } else {
                     let specificBtnData = null;
                     for (let i = 0; i < guildConfig.customButtons.length; i++) {
@@ -714,7 +928,6 @@ module.exports = (client) => {
                 let newTopicString = topicParts.join('_');
                 await interaction.channel.setTopic(newTopicString).catch(()=>{});
 
-                // 🔥 إرسال بانر التحكم الأخير (نفس شكل صورتك رقم 3 بالضبط)
                 const controlEmbed = new EmbedBuilder();
                 controlEmbed.setTitle('Ticket control');
                 controlEmbed.setDescription(`Closed By: <@${interaction.user.id}>\n(${interaction.user.id})`);
@@ -725,188 +938,32 @@ module.exports = (client) => {
                 }
                 controlEmbed.setColor(cColor);
                 
-                // الصف الأول: Reopen (رمادي) ، Delete (أحمر)
                 const cRow1 = new ActionRowBuilder();
-                const reopenBtn = new ButtonBuilder().setCustomId('ticket_reopen').setLabel('Reopen ticket').setStyle(ButtonStyle.Secondary);
-                const deleteBtn = new ButtonBuilder().setCustomId('ticket_delete').setLabel('Delete ticket').setStyle(ButtonStyle.Danger);
+                
+                const reopenBtn = new ButtonBuilder();
+                reopenBtn.setCustomId('ticket_reopen');
+                reopenBtn.setLabel('Reopen ticket');
+                reopenBtn.setStyle(ButtonStyle.Secondary);
+                
+                const deleteBtn = new ButtonBuilder();
+                deleteBtn.setCustomId('ticket_delete');
+                deleteBtn.setLabel('Delete ticket');
+                deleteBtn.setStyle(ButtonStyle.Danger);
+                
                 cRow1.addComponents(reopenBtn, deleteBtn);
                 
-                // الصف الثاني: Delete with Reason (أحمر)
                 const cRow2 = new ActionRowBuilder();
-                const delReasonBtn = new ButtonBuilder().setCustomId('ticket_delete_reason').setLabel('Delete With Reason').setStyle(ButtonStyle.Danger);
+                
+                const delReasonBtn = new ButtonBuilder();
+                delReasonBtn.setCustomId('ticket_delete_reason');
+                delReasonBtn.setLabel('Delete With Reason');
+                delReasonBtn.setStyle(ButtonStyle.Danger);
+                
                 cRow2.addComponents(delReasonBtn);
                 
                 await interaction.channel.send({ embeds: [controlEmbed], components: [cRow1, cRow2] });
                 
                 await interaction.message.delete().catch(()=>{});
-            }
-
-            // -------------------------------------------------------------
-            // 🛡️ زر الاستلام (Claim) الصاروخي جداً
-            // -------------------------------------------------------------
-            if (interaction.customId === 'ticket_claim') {
-                
-                let currentTopic = interaction.channel.topic;
-                if (!currentTopic) {
-                    currentTopic = '';
-                }
-                
-                const topicParts = currentTopic.split('_');
-                const usedBtnId = topicParts[1];
-                
-                let specificBtnData = null;
-                for (let i = 0; i < guildConfig.customButtons.length; i++) {
-                    if (guildConfig.customButtons[i].id === usedBtnId) {
-                        specificBtnData = guildConfig.customButtons[i];
-                        break;
-                    }
-                }
-
-                let allowedToClaimRoles = [];
-                
-                let hasCustomClaimRoles = false;
-                if (specificBtnData && specificBtnData.allowedClaimRoles && specificBtnData.allowedClaimRoles.length > 0) {
-                    hasCustomClaimRoles = true;
-                }
-                
-                if (hasCustomClaimRoles) {
-                    allowedToClaimRoles = specificBtnData.allowedClaimRoles;
-                } else {
-                    const allStaffArr = [
-                        guildConfig.adminRoleId, 
-                        guildConfig.mediatorRoleId, 
-                        ...guildConfig.highAdminRoles, 
-                        ...guildConfig.highMediatorRoles
-                    ];
-                    
-                    for(let i = 0; i < allStaffArr.length; i++) {
-                        if (allStaffArr[i]) {
-                            allowedToClaimRoles.push(allStaffArr[i]);
-                        }
-                    }
-                }
-
-                let canClaim = false;
-                if (interaction.member.permissions.has('Administrator')) {
-                    canClaim = true;
-                } else {
-                    for (let i = 0; i < allowedToClaimRoles.length; i++) {
-                        if (interaction.member.roles.cache.has(allowedToClaimRoles[i])) {
-                            canClaim = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!canClaim) {
-                    return interaction.reply({ 
-                        content: '**❌ You do not have permission to claim this ticket.**', 
-                        ephemeral: true 
-                    });
-                }
-
-                // ⚡ السرعة الصاروخية: تعديل الزرار فوراً لديسكورد
-                await interaction.deferUpdate(); 
-                
-                const oldComponents = interaction.message.components;
-                const newComponentsArr = [];
-                
-                for (let i = 0; i < oldComponents.length; i++) {
-                    const oldRow = oldComponents[i];
-                    const newRow = new ActionRowBuilder();
-                    
-                    for (let j = 0; j < oldRow.components.length; j++) {
-                        const oldBtn = oldRow.components[j];
-                        const clonedBtn = ButtonBuilder.from(oldBtn);
-                        
-                        if (oldBtn.customId === 'ticket_claim') {
-                            clonedBtn.setDisabled(true);
-                            clonedBtn.setStyle(ButtonStyle.Success);
-                        }
-                        
-                        newRow.addComponents(clonedBtn);
-                    }
-                    newComponentsArr.push(newRow);
-                }
-                
-                await interaction.message.edit({ components: newComponentsArr });
-                
-                const claimMsg = `**✅ Ticket has been claimed by <@${interaction.user.id}>**`;
-                await interaction.channel.send(claimMsg);
-
-                // العمل في الخلفية لتعديل الصلاحيات (دون أن يشعر العميل ببطء)
-                const currentOverwrites = interaction.channel.permissionOverwrites.cache;
-                const newOverwritesArray = [];
-                
-                currentOverwrites.forEach((overwrite) => {
-                    newOverwritesArray.push({
-                        id: overwrite.id,
-                        allow: overwrite.allow.toArray(),
-                        deny: overwrite.deny.toArray()
-                    });
-                });
-
-                for (let i = 0; i < allowedToClaimRoles.length; i++) {
-                    const staffRoleId = allowedToClaimRoles[i];
-                    let roleOverwrite = null;
-                    
-                    for (let k = 0; k < newOverwritesArray.length; k++) {
-                        if (newOverwritesArray[k].id === staffRoleId) {
-                            roleOverwrite = newOverwritesArray[k];
-                            break;
-                        }
-                    }
-                    
-                    if (!roleOverwrite) {
-                        roleOverwrite = { id: staffRoleId, allow: [], deny: [] };
-                        newOverwritesArray.push(roleOverwrite);
-                    }
-                    
-                    if (guildConfig.hideTicketOnClaim) {
-                        if (!roleOverwrite.deny.includes('ViewChannel')) {
-                            roleOverwrite.deny.push('ViewChannel');
-                        }
-                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'ViewChannel');
-                    } else if (guildConfig.readOnlyStaffOnClaim) {
-                        if (!roleOverwrite.deny.includes('SendMessages')) {
-                            roleOverwrite.deny.push('SendMessages');
-                        }
-                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'SendMessages');
-                    }
-                }
-                
-                let claimerOverwrite = null;
-                for (let k = 0; k < newOverwritesArray.length; k++) {
-                    if (newOverwritesArray[k].id === interaction.user.id) {
-                        claimerOverwrite = newOverwritesArray[k];
-                        break;
-                    }
-                }
-                
-                if (!claimerOverwrite) {
-                    newOverwritesArray.push({ 
-                        id: interaction.user.id, 
-                        allow: ['ViewChannel', 'SendMessages'], 
-                        deny: [] 
-                    });
-                } else {
-                    if (!claimerOverwrite.allow.includes('ViewChannel')) {
-                        claimerOverwrite.allow.push('ViewChannel');
-                    }
-                    if (!claimerOverwrite.allow.includes('SendMessages')) {
-                        claimerOverwrite.allow.push('SendMessages');
-                    }
-                }
-
-                await interaction.channel.permissionOverwrites.set(newOverwritesArray).catch(()=>{});
-                
-                while(topicParts.length < 6) {
-                    topicParts.push('none');
-                }
-                topicParts[2] = interaction.user.id;
-                
-                let newTopicStr = topicParts.join('_');
-                await interaction.channel.setTopic(newTopicStr).catch(()=>{});
             }
 
             // -------------------------------------------------------------
@@ -1057,7 +1114,7 @@ module.exports = (client) => {
     });
 
     // =====================================================================
-    // 🛠️ Helper Function: فتح تكت جديد وبناء الإيمبدات والتصميم المطابق للصورة
+    // 🛠️ Helper Function: فتح تكت جديد
     // =====================================================================
     async function openNewTicket(interaction, buttonData, config, answersArray) {
         
@@ -1101,7 +1158,7 @@ module.exports = (client) => {
             }
         }
 
-        // حفظ نوع التكت في الخانة السادسة: isMediator
+        // حفظ نوع التكت في الـ Topic (مهم جداً لمنع التقييم المزدوج)
         let isMedStr = 'false';
         if (buttonData.isMediator === true) {
             isMedStr = 'true';
@@ -1117,7 +1174,6 @@ module.exports = (client) => {
             permissionOverwrites: permsArray
         });
         
-        // تحديث العداد
         await GuildConfig.findOneAndUpdate({ guildId: interaction.guild.id }, { $inc: { ticketCount: 1 } });
 
         const msgContent = `**Welcome <@${interaction.user.id}>**\n**Reason:** ${buttonData.label}`;
@@ -1173,33 +1229,31 @@ module.exports = (client) => {
             embedsList.push(answersEmbed);
         }
 
-        // 🔥 شكل الزراير بالظبط زي صورتك (Add User رمادي، Claim أخضر، Close أحمر)
         const controlsRow1 = new ActionRowBuilder();
         
         const btnAdd = new ButtonBuilder();
         btnAdd.setCustomId('ticket_add_user');
         btnAdd.setLabel('Add User');
-        btnAdd.setStyle(ButtonStyle.Secondary); // رمادي
+        btnAdd.setStyle(ButtonStyle.Secondary); 
         
         const btnClaim = new ButtonBuilder();
         btnClaim.setCustomId('ticket_claim');
         btnClaim.setLabel('Claim');
-        btnClaim.setStyle(ButtonStyle.Success); // أخضر
+        btnClaim.setStyle(ButtonStyle.Success); 
         
         const btnClose = new ButtonBuilder();
         btnClose.setCustomId('ticket_close');
         btnClose.setLabel('Close');
-        btnClose.setStyle(ButtonStyle.Danger); // أحمر
+        btnClose.setStyle(ButtonStyle.Danger); 
         
         controlsRow1.addComponents(btnAdd, btnClaim, btnClose);
 
-        // الصف التاني فيه زرار الديليت الأحمر
         const controlsRow2 = new ActionRowBuilder();
         
         const btnDelReason = new ButtonBuilder();
         btnDelReason.setCustomId('ticket_delete_reason');
         btnDelReason.setLabel('Delete With Reason');
-        btnDelReason.setStyle(ButtonStyle.Danger); // أحمر
+        btnDelReason.setStyle(ButtonStyle.Danger); 
         
         controlsRow2.addComponents(btnDelReason);
         
@@ -1210,11 +1264,17 @@ module.exports = (client) => {
         });
         
         const successReply = `**✅ Ticket opened successfully: <#${createdChannel.id}>**`;
-        await interaction.editReply(successReply);
+        
+        // التحقق إن لم يكن قد تم الرد مسبقاً (في حالة وجود نافذة)
+        try {
+            await interaction.editReply(successReply);
+        } catch (e) {
+            await interaction.reply({ content: successReply, ephemeral: true });
+        }
     }
 
     // =====================================================================
-    // 🛠️ Helper Function: اللوجات والترانسكريبت المفصول
+    // 🛠️ Helper Function: اللوجات
     // =====================================================================
     async function executeDeleteAndLog(ticketChannel, closedByUser, config, deleteReasonText) {
         
@@ -1264,7 +1324,6 @@ module.exports = (client) => {
             addedDisplayStr = mentionsArr.join(', ');
         }
 
-        // بناء إيمبد اللوج
         const mainLogEmbed = new EmbedBuilder();
         
         mainLogEmbed.setAuthor({ 
@@ -1299,7 +1358,6 @@ module.exports = (client) => {
         
         mainLogEmbed.setTimestamp();
 
-        // 1. إرسال إلى روم اللوج العادي
         if (config.ticketLogChannelId) { 
             const pureLogChannel = ticketChannel.guild.channels.cache.get(config.ticketLogChannelId); 
             if(pureLogChannel) {
@@ -1307,7 +1365,6 @@ module.exports = (client) => {
             }
         }
         
-        // 2. إرسال الترانسكريبت إلى روم الترانسكريبت
         if (config.transcriptChannelId && config.transcriptChannelId !== config.ticketLogChannelId) { 
             const transcriptChannel = ticketChannel.guild.channels.cache.get(config.transcriptChannelId); 
             
@@ -1317,8 +1374,7 @@ module.exports = (client) => {
                     limit: -1, 
                     returnType: 'attachment', 
                     filename: `${ticketChannel.name}.html`, 
-                    saveImages: true, 
-                    poweredBy: false 
+                    saveImages: true 
                 });
                 
                 let transColor = config.transcriptEmbedColor;
@@ -1329,7 +1385,6 @@ module.exports = (client) => {
                 
                 const directBtnRow = new ActionRowBuilder();
                 
-                // زر التحميل الحقيقي اللي بيشتغل دلوقتي
                 const realDirectBtn = new ButtonBuilder();
                 realDirectBtn.setCustomId('direct_transcript_btn');
                 realDirectBtn.setLabel('Direct Transcript');
