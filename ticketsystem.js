@@ -1,433 +1,487 @@
 // =====================================================================
-// 📦 استدعاء المكاتب الأساسية (تم فرد كل استدعاء في سطر منفصل لضمان الوضوح)
+// 📦 1. استدعاء المكاتب الأساسية من مكتبة ديسكورد (مفرودة بالكامل)
 // =====================================================================
-const { EmbedBuilder } = require('discord.js');
-const { ActionRowBuilder } = require('discord.js');
-const { ButtonBuilder } = require('discord.js');
-const { ButtonStyle } = require('discord.js');
-const { ModalBuilder } = require('discord.js');
-const { TextInputBuilder } = require('discord.js');
-const { TextInputStyle } = require('discord.js');
-const { ChannelType } = require('discord.js');
-const { PermissionFlagsBits } = require('discord.js');
+const discordLibrary = require('discord.js');
 
-// استدعاء مكتبة الترانسكريبت لحفظ المحادثات (سجلات التكت)
+const EmbedBuilder = discordLibrary.EmbedBuilder;
+const ActionRowBuilder = discordLibrary.ActionRowBuilder;
+const ButtonBuilder = discordLibrary.ButtonBuilder;
+const ButtonStyle = discordLibrary.ButtonStyle;
+const ModalBuilder = discordLibrary.ModalBuilder;
+const TextInputBuilder = discordLibrary.TextInputBuilder;
+const TextInputStyle = discordLibrary.TextInputStyle;
+const ChannelType = discordLibrary.ChannelType;
+const PermissionFlagsBits = discordLibrary.PermissionFlagsBits;
+const StringSelectMenuBuilder = discordLibrary.StringSelectMenuBuilder;
+
+// =====================================================================
+// 📦 2. استدعاء المكاتب الإضافية
+// =====================================================================
 const discordTranscripts = require('discord-html-transcripts');
 
-// استدعاء قاعدة البيانات الشاملة
+// =====================================================================
+// 📦 3. استدعاء قاعدة البيانات الشاملة للمشروع
+// =====================================================================
 const GuildConfig = require('./models/GuildConfig');
 
+// =====================================================================
+// 🚀 4. تصدير الوحدة الرئيسية
+// =====================================================================
 module.exports = (client) => {
     
     // =====================================================================
-    // 🎧 الحدث الرئيسي للتعامل مع أي تفاعل (أزرار / نوافذ) في السيرفر
+    // 🎧 الحدث الرئيسي للتعامل مع أي تفاعل (أزرار / نوافذ / قوائم)
     // =====================================================================
     client.on('interactionCreate', async (interaction) => {
 
         // =====================================================================
-        // ⭐ 1. نظام التقييم في الخاص (فتح نافذة التعليق عند الضغط على النجوم)
+        // ⭐ القسم الأول: نظام التقييم في الخاص (فتح نافذة التعليق عند الضغط على النجوم)
         // =====================================================================
-        if (interaction.isButton() === true) {
+        const isInteractionAButton = interaction.isButton();
+        
+        if (isInteractionAButton === true) {
             
             const customIdString = interaction.customId;
-            const isRateButton = customIdString.startsWith('rate_');
+            const isRateButtonAction = customIdString.startsWith('rate_');
             
-            if (isRateButton === true) {
+            if (isRateButtonAction === true) {
                 
-                // استخراج المتغيرات من المعرف (ID) بالتفصيل
                 const customIdPartsArray = customIdString.split('_');
-                const ratingType = customIdPartsArray[1]; 
-                const ratingStars = customIdPartsArray[2];
-                const ratedTargetId = customIdPartsArray[3];
-                const currentGuildId = customIdPartsArray[4]; 
-
-                // بناء نافذة التعليق الإضافي
-                const feedbackModal = new ModalBuilder();
                 
-                const generatedModalId = `modalrate_${ratingType}_${ratingStars}_${ratedTargetId}_${currentGuildId}`;
-                feedbackModal.setCustomId(generatedModalId);
+                const interactionPrefix = customIdPartsArray[0]; 
+                const ratingTargetTypeString = customIdPartsArray[1]; 
+                const ratingStarsSelectedString = customIdPartsArray[2]; 
+                const ratedTargetUserIdString = customIdPartsArray[3]; 
+                const currentGuildIdString = customIdPartsArray[4]; 
+
+                const feedbackModalObject = new ModalBuilder();
+                
+                let generatedModalIdString = '';
+                generatedModalIdString += 'modalrate_';
+                generatedModalIdString += ratingTargetTypeString + '_';
+                generatedModalIdString += ratingStarsSelectedString + '_';
+                generatedModalIdString += ratedTargetUserIdString + '_';
+                generatedModalIdString += currentGuildIdString;
+                
+                feedbackModalObject.setCustomId(generatedModalIdString);
                 
                 const modalTitleString = 'إضافة تعليق (اختياري)';
-                feedbackModal.setTitle(modalTitleString);
+                feedbackModalObject.setTitle(modalTitleString);
 
-                // بناء حقل النص للتعليق
-                const commentTextInput = new TextInputBuilder();
-                commentTextInput.setCustomId('rating_comment');
-                commentTextInput.setLabel('هل لديك أي تعليق إضافي؟');
-                commentTextInput.setStyle(TextInputStyle.Paragraph);
-                commentTextInput.setRequired(false); 
-
-                const modalActionRow = new ActionRowBuilder();
-                modalActionRow.addComponents(commentTextInput);
+                const commentTextInputObject = new TextInputBuilder();
                 
-                feedbackModal.addComponents(modalActionRow);
-
-                // إظهار النافذة للعضو
-                await interaction.showModal(feedbackModal);
+                const inputCustomIdString = 'rating_comment';
+                commentTextInputObject.setCustomId(inputCustomIdString);
                 
-                return; // إنهاء التنفيذ هنا
+                const inputLabelString = 'هل لديك أي تعليق إضافي للإدارة؟';
+                commentTextInputObject.setLabel(inputLabelString);
+                
+                const inputStyleType = TextInputStyle.Paragraph;
+                commentTextInputObject.setStyle(inputStyleType);
+                
+                const isInputRequiredBoolean = false;
+                commentTextInputObject.setRequired(isInputRequiredBoolean); 
+                
+                const inputPlaceholderString = 'اكتب تعليقك هنا... (يمكنك تركه فارغاً)';
+                commentTextInputObject.setPlaceholder(inputPlaceholderString);
+
+                const modalActionRowObject = new ActionRowBuilder();
+                modalActionRowObject.addComponents(commentTextInputObject);
+                
+                feedbackModalObject.addComponents(modalActionRowObject);
+
+                try {
+                    await interaction.showModal(feedbackModalObject);
+                } catch (showModalError) {
+                    console.log("Error showing rating modal.");
+                }
+                
+                return; 
             }
         }
 
         // =====================================================================
-        // ⭐ 2. استلام تعليق التقييم وإرسال اللوج للإدارة (مع سحب التريد)
+        // ⭐ القسم الثاني: استلام تعليق التقييم وإرسال اللوج (مع سحب تفاصيل التريد)
         // =====================================================================
-        if (interaction.isModalSubmit() === true) {
+        const isInteractionAModalSubmit = interaction.isModalSubmit();
+        
+        if (isInteractionAModalSubmit === true) {
             
             const customIdString = interaction.customId;
-            const isRateModal = customIdString.startsWith('modalrate_');
+            const isRateModalAction = customIdString.startsWith('modalrate_');
             
-            if (isRateModal === true) {
+            if (isRateModalAction === true) {
                 
-                // الرد السريع لتجنب تعليق النافذة أو ظهور خطأ
                 try {
                     await interaction.deferUpdate();
-                } catch (deferError) {
-                    console.log("Error deferring update in rating modal:", deferError);
-                }
+                } catch (deferError) {}
 
-                // استخراج البيانات من الآي دي
                 const customIdPartsArray = customIdString.split('_');
-                const ratingType = customIdPartsArray[1];
+                
+                const ratingTargetTypeString = customIdPartsArray[1];
                 const ratingStarsString = customIdPartsArray[2];
                 const ratingStarsNumber = parseInt(ratingStarsString);
-                const ratedTargetId = customIdPartsArray[3];
-                const currentGuildId = customIdPartsArray[4];
+                const ratedTargetUserIdString = customIdPartsArray[3];
+                const currentGuildIdString = customIdPartsArray[4];
                 
-                // جلب التعليق المكتوب من النافذة
-                let userFeedbackText = interaction.fields.getTextInputValue('rating_comment');
+                const inputCustomIdString = 'rating_comment';
+                let userFeedbackTextString = interaction.fields.getTextInputValue(inputCustomIdString);
                 
-                // التحقق من وجود تعليق أو تعيين قيمة افتراضية
-                if (!userFeedbackText || userFeedbackText.trim() === '') {
-                    userFeedbackText = 'لا يوجد تعليق مضاف من العضو.';
+                const isFeedbackEmpty = (!userFeedbackTextString || userFeedbackTextString.trim() === '');
+                
+                if (isFeedbackEmpty === true) {
+                    userFeedbackTextString = 'لا يوجد تعليق مضاف من العضو.';
                 }
 
-                // جلب الإعدادات من الداتابيز
-                let serverConfigDocument = await GuildConfig.findOne({ guildId: currentGuildId });
+                const guildConfigFilterObject = { guildId: currentGuildIdString };
+                let serverConfigDocument = await GuildConfig.findOne(guildConfigFilterObject);
                 
                 if (!serverConfigDocument) {
-                    return; // التوقف إذا لم توجد إعدادات
+                    return; 
                 }
 
-                // تحديد روم اللوج بناءً على نوع التقييم (الإدارة أو الـ MiddleMan)
-                let targetLogChannelId = null;
+                let targetLogChannelIdString = null;
                 
-                if (ratingType === 'staff') {
-                    targetLogChannelId = serverConfigDocument.staffRatingChannelId;
-                } else if (ratingType === 'mediator') { 
-                    targetLogChannelId = serverConfigDocument.middlemanRatingChannelId; 
+                const isStaffRating = (ratingTargetTypeString === 'staff');
+                const isMediatorRating = (ratingTargetTypeString === 'mediator');
+                
+                if (isStaffRating === true) {
+                    targetLogChannelIdString = serverConfigDocument.staffRatingChannelId;
+                } else if (isMediatorRating === true) { 
+                    targetLogChannelIdString = serverConfigDocument.middlemanRatingChannelId; 
                 }
 
-                // جلب السيرفر من الكاش
-                const discordGuildObject = client.guilds.cache.get(currentGuildId);
+                const discordGuildObject = client.guilds.cache.get(currentGuildIdString);
                 
-                if (discordGuildObject && targetLogChannelId) {
+                if (discordGuildObject && targetLogChannelIdString) {
                     
-                    const logChannelObject = discordGuildObject.channels.cache.get(targetLogChannelId);
+                    const guildChannelsCollection = discordGuildObject.channels.cache;
+                    const logChannelObject = guildChannelsCollection.get(targetLogChannelIdString);
                     
                     if (logChannelObject) {
                         
-                        // 🔥 سحب تفاصيل التريد من رسالة التقييم في الخاص (إن وُجدت)
-                        let tradeDetailsIncludedText = 'لا يوجد تفاصيل (تم التقييم بدون نافذة تريد).';
+                        let tradeDetailsIncludedTextString = 'لا يوجد تفاصيل (تم التقييم بدون نافذة تريد).';
+                        const interactionMessageObject = interaction.message;
                         
-                        const interactionMessage = interaction.message;
-                        
-                        if (interactionMessage && interactionMessage.embeds && interactionMessage.embeds.length > 0) {
+                        if (interactionMessageObject && interactionMessageObject.embeds) {
                             
-                            const firstEmbed = interactionMessage.embeds[0];
-                            const oldEmbedDescription = firstEmbed.description;
+                            const embedsArray = interactionMessageObject.embeds;
                             
-                            if (oldEmbedDescription && oldEmbedDescription.includes('**📦 تفاصيل المعاملة:**')) {
+                            if (embedsArray.length > 0) {
                                 
-                                const splitDescriptionArray = oldEmbedDescription.split('**📦 تفاصيل المعاملة:**');
+                                const firstEmbedObject = embedsArray[0];
+                                const oldEmbedDescriptionString = firstEmbedObject.description;
                                 
-                                if (splitDescriptionArray.length > 1) {
-                                    const rawTradeDetails = splitDescriptionArray[1];
-                                    tradeDetailsIncludedText = rawTradeDetails.trim();
+                                const hasTradeDetailsSection = oldEmbedDescriptionString && oldEmbedDescriptionString.includes('**📦 تفاصيل المعاملة:**');
+                                
+                                if (hasTradeDetailsSection === true) {
+                                    
+                                    const splitDescriptionArray = oldEmbedDescriptionString.split('**📦 تفاصيل المعاملة:**');
+                                    
+                                    if (splitDescriptionArray.length > 1) {
+                                        const rawTradeDetailsString = splitDescriptionArray[1];
+                                        tradeDetailsIncludedTextString = rawTradeDetailsString.trim();
+                                    }
                                 }
                             }
                         }
 
-                        // تحديث العدادات الشاملة للسيرفر
-                        let currentServerTotalCount = serverConfigDocument.totalServerRatings;
+                        let currentServerTotalCountNumber = serverConfigDocument.totalServerRatings;
                         
-                        if (!currentServerTotalCount) {
-                            currentServerTotalCount = 0;
+                        if (!currentServerTotalCountNumber) {
+                            currentServerTotalCountNumber = 0;
                         }
                         
-                        currentServerTotalCount = currentServerTotalCount + 1;
-                        serverConfigDocument.totalServerRatings = currentServerTotalCount;
+                        currentServerTotalCountNumber = currentServerTotalCountNumber + 1;
+                        serverConfigDocument.totalServerRatings = currentServerTotalCountNumber;
 
-                        // تحديث عدادات التقييم الفردية
                         let individualRatingCountNumber = 1;
 
-                        if (ratingType === 'staff') {
-                            
-                            let oldStaffCountNumber = serverConfigDocument.staffRatingsCount.get(ratedTargetId);
+                        if (isStaffRating === true) {
+                            const staffRatingsMap = serverConfigDocument.staffRatingsCount;
+                            let oldStaffCountNumber = staffRatingsMap.get(ratedTargetUserIdString);
                             
                             if (!oldStaffCountNumber) {
                                 oldStaffCountNumber = 0;
                             }
                             
                             individualRatingCountNumber = oldStaffCountNumber + 1;
-                            serverConfigDocument.staffRatingsCount.set(ratedTargetId, individualRatingCountNumber);
+                            serverConfigDocument.staffRatingsCount.set(ratedTargetUserIdString, individualRatingCountNumber);
                             
-                        } else {
-                            
-                            let oldMiddlemanCountNumber = serverConfigDocument.middlemanRatingsCount.get(ratedTargetId);
+                        } else if (isMediatorRating === true) {
+                            const middlemanRatingsMap = serverConfigDocument.middlemanRatingsCount;
+                            let oldMiddlemanCountNumber = middlemanRatingsMap.get(ratedTargetUserIdString);
                             
                             if (!oldMiddlemanCountNumber) {
                                 oldMiddlemanCountNumber = 0;
                             }
                             
                             individualRatingCountNumber = oldMiddlemanCountNumber + 1;
-                            serverConfigDocument.middlemanRatingsCount.set(ratedTargetId, individualRatingCountNumber);
+                            serverConfigDocument.middlemanRatingsCount.set(ratedTargetUserIdString, individualRatingCountNumber);
                         }
                         
-                        // حفظ التغييرات في قاعدة البيانات
-                        await serverConfigDocument.save();
+                        try {
+                            await serverConfigDocument.save();
+                        } catch (saveError) {}
 
-                        // بناء شكل النجوم
                         let starsEmojiString = '';
-                        for (let i = 0; i < ratingStarsNumber; i++) {
+                        for (let index = 0; index < ratingStarsNumber; index++) {
                             starsEmojiString = starsEmojiString + '⭐';
                         }
 
-                        // تجهيز المتغيرات الخاصة باللوج
                         let logAuthorTitleString = '';
-                        let logEmbedColorHex = '';
+                        let logEmbedColorHexCode = '';
                         let ratedPersonLabelString = '';
 
-                        // سحب الألوان والمسميات (Staff vs MiddleMan)
-                        if (ratingType === 'staff') {
+                        if (isStaffRating === true) {
                             logAuthorTitleString = `${discordGuildObject.name} STAFF REVIEW`;
                             
-                            let staffColorValue = serverConfigDocument.staffRatingColor;
-                            if (!staffColorValue) {
-                                staffColorValue = '#3ba55d';
+                            let staffColorValueString = serverConfigDocument.staffRatingColor;
+                            if (!staffColorValueString) {
+                                staffColorValueString = '#3ba55d';
                             }
-                            logEmbedColorHex = staffColorValue;
-                            
+                            logEmbedColorHexCode = staffColorValueString;
                             ratedPersonLabelString = 'الإداري 👮';
                             
-                        } else {
+                        } else if (isMediatorRating === true) {
                             logAuthorTitleString = `${discordGuildObject.name} MIDDLEMAN REVIEW`;
                             
-                            let middlemanColorValue = serverConfigDocument.basicRatingColor;
-                            if (!middlemanColorValue) {
-                                middlemanColorValue = '#f2a658';
+                            let middlemanColorValueString = serverConfigDocument.basicRatingColor;
+                            if (!middlemanColorValueString) {
+                                middlemanColorValueString = '#f2a658';
                             }
-                            logEmbedColorHex = middlemanColorValue;
-                            
+                            logEmbedColorHexCode = middlemanColorValueString;
                             ratedPersonLabelString = 'الوسيط (MiddleMan) 🛡️';
                         }
 
-                        // بناء إيمبد اللوج للإدارة
                         const ratingLogEmbedObject = new EmbedBuilder();
+                        const guildDynamicIconUrl = discordGuildObject.iconURL({ dynamic: true });
                         
                         ratingLogEmbedObject.setAuthor({ 
                             name: `📊 ${logAuthorTitleString}`, 
-                            iconURL: discordGuildObject.iconURL({ dynamic: true }) 
+                            iconURL: guildDynamicIconUrl 
                         });
                         
-                        ratingLogEmbedObject.setThumbnail(discordGuildObject.iconURL({ dynamic: true }));
+                        ratingLogEmbedObject.setThumbnail(guildDynamicIconUrl);
                         
-                        // بناء الوصف بشكل مفصل ومطول
-                        let embedDescriptionTextString = ``;
+                        let embedDescriptionTextString = '';
                         embedDescriptionTextString += `**العميل (المُقيِّم) 👤**\n`;
                         embedDescriptionTextString += `<@${interaction.user.id}>\n\n`;
                         
                         embedDescriptionTextString += `**${ratedPersonLabelString}**\n`;
-                        embedDescriptionTextString += `<@${ratedTargetId}>\n\n`;
+                        embedDescriptionTextString += `<@${ratedTargetUserIdString}>\n\n`;
                         
-                        // دمج تفاصيل التريد في اللوج إذا كان تقييم وساطة
-                        if (ratingType === 'mediator') {
+                        if (isMediatorRating === true) {
                             embedDescriptionTextString += `**📦 تفاصيل التريد:**\n`;
-                            embedDescriptionTextString += `${tradeDetailsIncludedText}\n\n`;
+                            embedDescriptionTextString += `${tradeDetailsIncludedTextString}\n\n`;
                         }
 
                         embedDescriptionTextString += `**الإحصائيات 📈**\n`;
                         embedDescriptionTextString += `عدد التقييمات #${individualRatingCountNumber}\n`;
-                        embedDescriptionTextString += `إجمالي السيرفر #${currentServerTotalCount}\n\n`;
+                        embedDescriptionTextString += `إجمالي السيرفر #${currentServerTotalCountNumber}\n\n`;
                         embedDescriptionTextString += `-------------------------\n\n`;
-                        
                         embedDescriptionTextString += `**التقييم ⭐**\n`;
                         embedDescriptionTextString += `**${starsEmojiString} (${ratingStarsNumber}/5)**\n\n`;
-                        
                         embedDescriptionTextString += `**التعليق 💬**\n`;
-                        embedDescriptionTextString += `\`\`\`${userFeedbackText}\`\`\``;
+                        embedDescriptionTextString += `\`\`\`${userFeedbackTextString}\`\`\``;
 
                         ratingLogEmbedObject.setDescription(embedDescriptionTextString);
-                        ratingLogEmbedObject.setColor(logEmbedColorHex);
+                        ratingLogEmbedObject.setColor(logEmbedColorHexCode);
+                        
+                        const interactionUserAvatarUrl = interaction.user.displayAvatarURL({ dynamic: true });
+                        const footerTextString = `Rated by: ${interaction.user.username}`;
                         
                         ratingLogEmbedObject.setFooter({ 
-                            text: `Rated by: ${interaction.user.username}`, 
-                            iconURL: interaction.user.displayAvatarURL({ dynamic: true }) 
+                            text: footerTextString, 
+                            iconURL: interactionUserAvatarUrl 
                         });
-                        
                         ratingLogEmbedObject.setTimestamp();
 
-                        const logMessageContentString = `**New Rating for <@${ratedTargetId}>!**`;
+                        const logMessageContentString = `**New Rating for <@${ratedTargetUserIdString}>!**`;
                         
-                        // إرسال اللوج إلى الروم المخصصة
                         try {
                             await logChannelObject.send({ 
                                 content: logMessageContentString, 
                                 embeds: [ratingLogEmbedObject] 
                             });
-                        } catch (logSendError) {
-                            console.log("Error sending rating log:", logSendError);
-                        }
+                        } catch (logSendError) {}
                     }
                 }
                 
-                // تعديل رسالة الخاص للعضو لشكره على التقييم وإخفاء الأزرار
                 const thankYouEmbedObject = new EmbedBuilder();
-                thankYouEmbedObject.setDescription(`**✅ شكراً لك! تم إرسال تقييمك للإدارة بنجاح.**\n\nالنجوم: ${ratingStarsNumber}/5`);
-                thankYouEmbedObject.setColor('#3ba55d');
+                let thankYouDescriptionString = `**✅ شكراً لك! تم إرسال تقييمك للإدارة بنجاح.**\n\n`;
+                thankYouDescriptionString += `النجوم: ${ratingStarsNumber}/5`;
+                
+                thankYouEmbedObject.setDescription(thankYouDescriptionString);
+                
+                const thankYouColorHexCode = '#3ba55d'; 
+                thankYouEmbedObject.setColor(thankYouColorHexCode);
                 
                 try { 
+                    const emptyComponentsArray = [];
                     await interaction.editReply({ 
                         embeds: [thankYouEmbedObject], 
-                        components: [] 
+                        components: emptyComponentsArray 
                     }); 
-                } catch (editReplyError) { 
-                    console.log("Error editing reply in DMs:", editReplyError);
-                }
+                } catch (editReplyError) {}
                 
-                return; // إنهاء التنفيذ
+                return; 
             }
         }
 
         // =====================================================================
-        // التأكد الدائم أن التفاعل داخل سيرفر (ليس في الخاص)
+        // ⭐ القسم الثالث: التأكد الدائم أن التفاعل داخل سيرفر (ليس في الخاص)
         // =====================================================================
         const interactionGuildObject = interaction.guild;
         
         if (!interactionGuildObject) {
-            return; // تجاهل التفاعلات القادمة من الخاص للأوامر التالية
+            return; 
         }
         
         const guildIdString = interactionGuildObject.id;
-        const guildConfigDocument = await GuildConfig.findOne({ guildId: guildIdString });
+        const guildConfigFilterObject = { guildId: guildIdString };
+        const guildConfigDocument = await GuildConfig.findOne(guildConfigFilterObject);
         
         if (!guildConfigDocument) {
-            return; // التوقف إذا لم توجد إعدادات للسيرفر
+            return; 
         }
 
         // =====================================================================
-        // ⚖️ 3. تفاعلات نافذة أمر التريد (!trade) والموافقة (إغلاق الثغرات)
+        // ⚖️ القسم الرابع: تفاعلات نافذة أمر التريد (!trade) والموافقة
         // =====================================================================
-        if (interaction.isButton() === true) {
+        const isTradeInteractionButton = interaction.isButton();
+        
+        if (isTradeInteractionButton === true) {
             
             const customIdString = interaction.customId;
+            const isOpenTradeModalAction = (customIdString === 'open_trade_modal');
             
-            if (customIdString === 'open_trade_modal') {
+            if (isOpenTradeModalAction === true) {
                 
                 const tradeModalObject = new ModalBuilder();
-                tradeModalObject.setCustomId('submit_trade_modal');
-                tradeModalObject.setTitle('Trade Details');
+                
+                const tradeModalCustomIdString = 'submit_trade_modal';
+                tradeModalObject.setCustomId(tradeModalCustomIdString);
+                
+                const tradeModalTitleString = 'Trade Details';
+                tradeModalObject.setTitle(tradeModalTitleString);
                 
                 const tradeInputObject = new TextInputBuilder();
-                tradeInputObject.setCustomId('trade_details_input');
-                tradeInputObject.setLabel('ما هي تفاصيل التريد؟ (الحساب، السعر..)');
-                tradeInputObject.setStyle(TextInputStyle.Paragraph);
-                tradeInputObject.setRequired(true);
+                
+                const tradeInputCustomIdString = 'trade_details_input';
+                tradeInputObject.setCustomId(tradeInputCustomIdString);
+                
+                const tradeInputLabelString = 'ما هي تفاصيل التريد؟ (الحساب، السعر، إلخ..)';
+                tradeInputObject.setLabel(tradeInputLabelString);
+                
+                const tradeInputStyleType = TextInputStyle.Paragraph;
+                tradeInputObject.setStyle(tradeInputStyleType);
+                
+                const isTradeInputRequired = true;
+                tradeInputObject.setRequired(isTradeInputRequired);
                 
                 const tradeActionRowObject = new ActionRowBuilder();
                 tradeActionRowObject.addComponents(tradeInputObject);
                 
                 tradeModalObject.addComponents(tradeActionRowObject);
                 
-                await interaction.showModal(tradeModalObject);
-                return;
+                try {
+                    await interaction.showModal(tradeModalObject);
+                } catch (tradeModalError) {}
+                
+                return; 
             }
         }
 
-        if (interaction.isModalSubmit() === true) {
+        const isTradeModalSubmit = interaction.isModalSubmit();
+        
+        if (isTradeModalSubmit === true) {
             
             const customIdString = interaction.customId;
+            const isSubmitTradeModalAction = (customIdString === 'submit_trade_modal');
             
-            if (customIdString === 'submit_trade_modal') {
+            if (isSubmitTradeModalAction === true) {
                 
-                const tradeDetailsTextString = interaction.fields.getTextInputValue('trade_details_input');
+                const tradeInputCustomIdString = 'trade_details_input';
+                const tradeDetailsTextString = interaction.fields.getTextInputValue(tradeInputCustomIdString);
                 
-                // 🔥 تعطيل زر التريد الأصلي حتى لا يضغط عليه العضو مرة أخرى (جعله شفافاً)
-                const originalInteractionMessage = interaction.message;
+                const originalInteractionMessageObject = interaction.message;
                 
-                if (originalInteractionMessage) {
-                    
-                    const messageComponentsArray = originalInteractionMessage.components;
+                if (originalInteractionMessageObject) {
+                    const messageComponentsArray = originalInteractionMessageObject.components;
                     
                     if (messageComponentsArray && messageComponentsArray.length > 0) {
-                        
                         const originalActionRowObject = messageComponentsArray[0];
                         const rowComponentsArray = originalActionRowObject.components;
                         
                         if (rowComponentsArray && rowComponentsArray.length > 0) {
-                            
                             const originalButtonObject = rowComponentsArray[0];
                             const disabledButtonObject = ButtonBuilder.from(originalButtonObject);
                             
-                            disabledButtonObject.setDisabled(true);
-                            disabledButtonObject.setStyle(ButtonStyle.Secondary); // تغيير اللون للرمادي
+                            const isButtonDisabledBoolean = true;
+                            disabledButtonObject.setDisabled(isButtonDisabledBoolean);
+                            
+                            const disabledButtonStyleType = ButtonStyle.Secondary; 
+                            disabledButtonObject.setStyle(disabledButtonStyleType); 
                             
                             const newDisabledRowObject = new ActionRowBuilder();
                             newDisabledRowObject.addComponents(disabledButtonObject);
                             
                             try {
-                                await originalInteractionMessage.edit({ 
+                                await originalInteractionMessageObject.edit({ 
                                     components: [newDisabledRowObject] 
                                 });
-                            } catch (editError) {
-                                console.log("Error disabling trade button:", editError);
-                            }
+                            } catch (editButtonError) {}
                         }
                     }
                 }
 
-                // بناء إيمبد طلب الموافقة الجديد
                 const tradeRequestEmbedObject = new EmbedBuilder();
-                tradeRequestEmbedObject.setTitle('⚖️ Trade Approval Request');
+                const tradeRequestTitleString = '⚖️ Trade Approval Request';
+                tradeRequestEmbedObject.setTitle(tradeRequestTitleString);
                 
                 let tradeDescriptionString = '';
-                tradeDescriptionString += `**MiddleMan:** <@${interaction.user.id}>\n\n`;
-                
-                // إضافة الخط الجانبي لتفاصيل التريد لتكون متناسقة وواضحة
-                tradeDescriptionString += `**Details:**\n>>> ${tradeDetailsTextString}\n\n`;
+                const interactionUserIdString = interaction.user.id;
+                tradeDescriptionString += `**MiddleMan:** <@${interactionUserIdString}>\n\n`;
+                tradeDescriptionString += `**Details:**\n`;
+                tradeDescriptionString += `>>> ${tradeDetailsTextString}\n\n`;
                 tradeDescriptionString += `⏳ *Waiting for approval...*`;
                 
                 tradeRequestEmbedObject.setDescription(tradeDescriptionString);
                 
-                let tradeEmbedColorHex = guildConfigDocument.tradeEmbedColor;
-                if (!tradeEmbedColorHex) {
-                    tradeEmbedColorHex = '#f2a658';
+                let tradeEmbedColorHexCode = guildConfigDocument.tradeEmbedColor;
+                if (!tradeEmbedColorHexCode) {
+                    tradeEmbedColorHexCode = '#f2a658';
                 }
                 
-                tradeRequestEmbedObject.setColor(tradeEmbedColorHex);
+                tradeRequestEmbedObject.setColor(tradeEmbedColorHexCode);
                 tradeRequestEmbedObject.setTimestamp();
 
                 const approvalActionRowObject = new ActionRowBuilder();
-                
                 const approveButtonObject = new ButtonBuilder();
-                approveButtonObject.setCustomId('trade_approve');
-                approveButtonObject.setLabel('Approve ✅');
-                approveButtonObject.setStyle(ButtonStyle.Success);
+                const approveCustomIdString = 'trade_approve';
+                approveButtonObject.setCustomId(approveCustomIdString);
+                const approveLabelString = 'Approve ✅';
+                approveButtonObject.setLabel(approveLabelString);
+                const approveStyleType = ButtonStyle.Success;
+                approveButtonObject.setStyle(approveStyleType);
                 
                 const rejectButtonObject = new ButtonBuilder();
-                rejectButtonObject.setCustomId('trade_reject');
-                rejectButtonObject.setLabel('Reject ❌');
-                rejectButtonObject.setStyle(ButtonStyle.Danger);
+                const rejectCustomIdString = 'trade_reject';
+                rejectButtonObject.setCustomId(rejectCustomIdString);
+                const rejectLabelString = 'Reject ❌';
+                rejectButtonObject.setLabel(rejectLabelString);
+                const rejectStyleType = ButtonStyle.Danger;
+                rejectButtonObject.setStyle(rejectStyleType);
                 
                 approvalActionRowObject.addComponents(approveButtonObject, rejectButtonObject);
 
-                // 🔥 عمل منشن للرتب العليا هنا فقط (عند نزول طلب الموافقة وليس في الأمر الأساسي)
                 let finalMentionString = '';
                 const tradeMentionRolesArray = guildConfigDocument.tradeMentionRoles;
                 
                 if (tradeMentionRolesArray && tradeMentionRolesArray.length > 0) {
-                    for (let i = 0; i < tradeMentionRolesArray.length; i++) {
-                        const roleIdString = tradeMentionRolesArray[i];
+                    for (let index = 0; index < tradeMentionRolesArray.length; index++) {
+                        const roleIdString = tradeMentionRolesArray[index];
                         finalMentionString += `<@&${roleIdString}> `;
                     }
                 }
@@ -437,97 +491,113 @@ module.exports = (client) => {
                     messageContentToDrop = `**🔔 نداء للموافقات العليا:** ${finalMentionString}`;
                 }
 
-                // إرسال طلب الموافقة كرد جديد في الشات مع المنشن
-                await interaction.reply({ 
-                    content: messageContentToDrop,
-                    embeds: [tradeRequestEmbedObject], 
-                    components: [approvalActionRowObject] 
-                });
+                try {
+                    await interaction.reply({ 
+                        content: messageContentToDrop,
+                        embeds: [tradeRequestEmbedObject], 
+                        components: [approvalActionRowObject] 
+                    });
+                } catch (replyError) {}
                 
-                return;
+                return; 
             }
         }
 
-        // =====================================================================
-        // تفاعل أزرار الموافقة والرفض للتريد
-        // =====================================================================
-        if (interaction.isButton() === true) {
+        const isApprovalButtonInteraction = interaction.isButton();
+        
+        if (isApprovalButtonInteraction === true) {
             
             const customIdString = interaction.customId;
             const isTradeApproveAction = (customIdString === 'trade_approve');
             const isTradeRejectAction = (customIdString === 'trade_reject');
-            const isTradeAction = (isTradeApproveAction || isTradeRejectAction);
+            const isAnyTradeAction = (isTradeApproveAction || isTradeRejectAction);
             
-            if (isTradeAction === true) {
+            if (isAnyTradeAction === true) {
                 
-                // منع التخطي: فحص صلاحيات من يضغط على الزر
                 let tradeAllowedRolesArray = guildConfigDocument.tradeApproveRoles;
+                const isTradeApproveRolesEmpty = (!tradeAllowedRolesArray || tradeAllowedRolesArray.length === 0);
                 
-                if (!tradeAllowedRolesArray || tradeAllowedRolesArray.length === 0) {
+                if (isTradeApproveRolesEmpty === true) {
                     tradeAllowedRolesArray = guildConfigDocument.highMiddlemanRoles; 
                 }
                 
-                let hasTradePermission = false;
+                let hasTradePermissionBoolean = false;
                 const interactionMemberObject = interaction.member;
+                const memberPermissionsObject = interactionMemberObject.permissions;
+                const hasAdminPermission = memberPermissionsObject.has('Administrator');
                 
-                if (interactionMemberObject.permissions.has('Administrator')) {
-                    hasTradePermission = true;
+                if (hasAdminPermission === true) {
+                    hasTradePermissionBoolean = true;
                 } else {
-                    for (let i = 0; i < tradeAllowedRolesArray.length; i++) {
-                        const requiredRoleId = tradeAllowedRolesArray[i];
-                        if (interactionMemberObject.roles.cache.has(requiredRoleId)) {
-                            hasTradePermission = true;
-                            break;
+                    const memberRolesCollection = interactionMemberObject.roles.cache;
+                    if (tradeAllowedRolesArray && tradeAllowedRolesArray.length > 0) {
+                        for (let index = 0; index < tradeAllowedRolesArray.length; index++) {
+                            const requiredRoleIdString = tradeAllowedRolesArray[index];
+                            const memberHasRole = memberRolesCollection.has(requiredRoleIdString);
+                            if (memberHasRole === true) {
+                                hasTradePermissionBoolean = true;
+                                break;
+                            }
                         }
                     }
                 }
                 
-                if (hasTradePermission === false) {
-                    return interaction.reply({ 
-                        content: '**❌ عذراً، لا تمتلك صلاحية للموافقة أو الرفض على هذا الطلب!**', 
-                        ephemeral: true 
-                    });
+                if (hasTradePermissionBoolean === false) {
+                    const noPermissionMessageContent = '**❌ عذراً، لا تمتلك صلاحية للموافقة أو الرفض على هذا الطلب!**';
+                    try {
+                        return await interaction.reply({ content: noPermissionMessageContent, ephemeral: true });
+                    } catch (replyError) { return; }
                 }
 
-                // تحديث الإيمبد بناءً على الإجراء
-                const oldEmbedObject = interaction.message.embeds[0];
+                const originalInteractionMessageObject = interaction.message;
+                const originalEmbedsArray = originalInteractionMessageObject.embeds;
+                const oldEmbedObject = originalEmbedsArray[0];
                 const updatedTradeEmbedObject = EmbedBuilder.from(oldEmbedObject);
+                const interactionUserIdString = interaction.user.id;
                 
                 if (isTradeApproveAction === true) {
-                    updatedTradeEmbedObject.setColor('#3ba55d');
-                    updatedTradeEmbedObject.addFields({ 
-                        name: 'Status:', 
-                        value: `**✅ Approved by <@${interaction.user.id}>**` 
-                    });
-                } else {
-                    updatedTradeEmbedObject.setColor('#ed4245');
-                    updatedTradeEmbedObject.addFields({ 
-                        name: 'Status:', 
-                        value: `**❌ Rejected by <@${interaction.user.id}>**` 
-                    });
+                    const approveColorHexCode = '#3ba55d';
+                    updatedTradeEmbedObject.setColor(approveColorHexCode);
+                    const statusFieldNameString = 'Status:';
+                    const statusFieldValueString = `**✅ Approved by <@${interactionUserIdString}>**`;
+                    updatedTradeEmbedObject.addFields({ name: statusFieldNameString, value: statusFieldValueString });
+                } else if (isTradeRejectAction === true) {
+                    const rejectColorHexCode = '#ed4245';
+                    updatedTradeEmbedObject.setColor(rejectColorHexCode);
+                    const statusFieldNameString = 'Status:';
+                    const statusFieldValueString = `**❌ Rejected by <@${interactionUserIdString}>**`;
+                    updatedTradeEmbedObject.addFields({ name: statusFieldNameString, value: statusFieldValueString });
                 }
 
-                await interaction.update({ 
-                    embeds: [updatedTradeEmbedObject], 
-                    components: [] 
-                });
+                try {
+                    const emptyComponentsArray = [];
+                    await interaction.update({ embeds: [updatedTradeEmbedObject], components: emptyComponentsArray });
+                } catch (updateError) {}
                 
-                return;
+                return; 
             }
         }
+// ==================== نهاية الجزء الأول ====================
 
         // =====================================================================
-        // 🟢 4. زر تحميل الترانسكريبت المباشر (Direct Transcript)
+        // 🟢 القسم الخامس: زر تحميل الترانسكريبت المباشر (Direct Transcript)
         // =====================================================================
-        if (interaction.isButton() === true) {
+        const isTranscriptButton = interaction.isButton();
+        
+        if (isTranscriptButton === true) {
             
             const customIdString = interaction.customId;
+            const isDirectTranscriptAction = (customIdString === 'direct_transcript_btn');
             
-            if (customIdString === 'direct_transcript_btn') {
+            if (isDirectTranscriptAction === true) {
                 
-                await interaction.deferReply({ ephemeral: true });
+                try {
+                    await interaction.deferReply({ ephemeral: true });
+                } catch (deferError) {}
                 
-                const logMessageContentString = interaction.message.content;
+                const interactionMessageObject = interaction.message;
+                const logMessageContentString = interactionMessageObject.content;
+                
                 let ticketChannelNameString = logMessageContentString.replace('**📄 Transcript for ', '');
                 ticketChannelNameString = ticketChannelNameString.replace('**', '');
                 
@@ -541,35 +611,37 @@ module.exports = (client) => {
                         saveImages: true 
                     });
                     
+                    const successTranscriptMessage = '**✅ Here is your direct transcript file:**';
+                    
                     await interaction.editReply({ 
-                        content: '**✅ Here is your direct transcript file:**', 
+                        content: successTranscriptMessage, 
                         files: [htmlFileAttachmentObject] 
                     });
                     
                 } catch (transcriptError) {
-                    console.log("Error generating transcript:", transcriptError);
-                    await interaction.editReply({ 
-                        content: '**❌ Error generating the direct transcript.**' 
-                    });
+                    console.log("Error generating transcript: ", transcriptError);
+                    const errorTranscriptMessage = '**❌ Error generating the direct transcript.**';
+                    await interaction.editReply({ content: errorTranscriptMessage });
                 }
                 
-                return;
+                return; 
             }
         }
 
         // =====================================================================
-        // 🎟️ 5. فتح التكت من البانرات المتعددة (Multi-Panels Engine)
+        // 🎟️ القسم السادس: فتح التكت من البانرات المتعددة (Multi-Panels)
         // =====================================================================
-        if (interaction.isButton() === true) {
+        const isTicketOpenButtonInteraction = interaction.isButton();
+        
+        if (isTicketOpenButtonInteraction === true) {
             
             const customIdString = interaction.customId;
-            const isTicketOpenButton = customIdString.startsWith('ticket_open_');
+            const isTicketOpenAction = customIdString.startsWith('ticket_open_');
             
-            if (isTicketOpenButton === true) {
+            if (isTicketOpenAction === true) {
                 
                 const buttonRealIdString = customIdString.replace('ticket_open_', '');
                 
-                // البحث التفصيلي عن الزر في جميع البانلات الموجودة في قاعدة البيانات
                 let targetButtonDataObject = null;
                 let targetPanelDataObject = null;
                 
@@ -577,16 +649,16 @@ module.exports = (client) => {
                 
                 if (ticketPanelsArray && ticketPanelsArray.length > 0) {
                     
-                    for (let pIndex = 0; pIndex < ticketPanelsArray.length; pIndex++) {
+                    for (let panelIndex = 0; panelIndex < ticketPanelsArray.length; panelIndex++) {
                         
-                        const currentPanelObject = ticketPanelsArray[pIndex];
+                        const currentPanelObject = ticketPanelsArray[panelIndex];
                         const panelButtonsArray = currentPanelObject.buttons;
                         
                         if (panelButtonsArray && panelButtonsArray.length > 0) {
                             
-                            for (let bIndex = 0; bIndex < panelButtonsArray.length; bIndex++) {
+                            for (let buttonIndex = 0; buttonIndex < panelButtonsArray.length; buttonIndex++) {
                                 
-                                const currentButtonObject = panelButtonsArray[bIndex];
+                                const currentButtonObject = panelButtonsArray[buttonIndex];
                                 
                                 if (currentButtonObject.id === buttonRealIdString) {
                                     targetButtonDataObject = currentButtonObject;
@@ -597,22 +669,20 @@ module.exports = (client) => {
                         }
                         
                         if (targetButtonDataObject) {
-                            break; // تم العثور على الزر، نخرج من الحلقة الخارجية
+                            break; 
                         }
                     }
                 }
                 
                 if (!targetButtonDataObject) {
-                    return interaction.reply({ 
-                        content: '**❌ This button is no longer available in the database.**', 
-                        ephemeral: true 
-                    });
+                    const noButtonMessage = '**❌ This button is no longer available in the database.**';
+                    return interaction.reply({ content: noButtonMessage, ephemeral: true });
                 }
 
-                // فحص الحد الأقصى للتكتات المفتوحة للعضو الواحد
-                let maximumTicketsNumber = guildConfigDocument.maxTicketsPerUser;
-                if (!maximumTicketsNumber) {
-                    maximumTicketsNumber = 1;
+                let maximumTicketsAllowedNumber = guildConfigDocument.maxTicketsPerUser;
+                
+                if (!maximumTicketsAllowedNumber) {
+                    maximumTicketsAllowedNumber = 1;
                 }
 
                 const allGuildChannelsCollection = interaction.guild.channels.cache;
@@ -629,19 +699,16 @@ module.exports = (client) => {
                         isOwnedByCurrentUser = true;
                     }
                     
-                    return isTicketNameFormat && isOwnedByCurrentUser;
+                    return (isTicketNameFormat === true && isOwnedByCurrentUser === true);
                 });
                 
-                const existingOpenTicketsCount = existingOpenTicketsCollection.size;
+                const existingOpenTicketsCountNumber = existingOpenTicketsCollection.size;
                 
-                if (existingOpenTicketsCount >= maximumTicketsNumber) {
-                    return interaction.reply({ 
-                        content: `**❌ You can only have ${maximumTicketsNumber} open ticket(s) at the same time.**`, 
-                        ephemeral: true 
-                    });
+                if (existingOpenTicketsCountNumber >= maximumTicketsAllowedNumber) {
+                    const maxTicketsMessage = `**❌ You can only have ${maximumTicketsAllowedNumber} open ticket(s) at the same time.**`;
+                    return interaction.reply({ content: maxTicketsMessage, ephemeral: true });
                 }
 
-                // التحقق من وجود أسئلة لتشغيل النافذة
                 let hasModalFieldsBoolean = false;
                 const buttonModalFieldsArray = targetButtonDataObject.modalFields;
                 
@@ -659,27 +726,30 @@ module.exports = (client) => {
                     ticketModalObject.setCustomId(generatedModalCustomId);
                     
                     let modalTitleString = targetButtonDataObject.modalTitle;
+                    
                     if (!modalTitleString) {
                         modalTitleString = 'Ticket Details';
                     }
+                    
                     ticketModalObject.setTitle(modalTitleString);
 
-                    for (let i = 0; i < buttonModalFieldsArray.length; i++) {
+                    for (let fieldIndex = 0; fieldIndex < buttonModalFieldsArray.length; fieldIndex++) {
                         
-                        const currentFieldObject = buttonModalFieldsArray[i];
-                        
+                        const currentFieldObject = buttonModalFieldsArray[fieldIndex];
                         const inputFieldObject = new TextInputBuilder();
                         
-                        const generatedFieldCustomId = `field_${i}`;
+                        const generatedFieldCustomId = `field_${fieldIndex}`;
                         inputFieldObject.setCustomId(generatedFieldCustomId);
                         
                         let safeLabelString = currentFieldObject.label;
                         if (safeLabelString.length > 45) {
-                            safeLabelString = safeLabelString.substring(0, 45); // حماية من أخطاء الديسكورد
+                            safeLabelString = safeLabelString.substring(0, 45); 
                         }
+                        
                         inputFieldObject.setLabel(safeLabelString);
                         
-                        inputFieldObject.setStyle(TextInputStyle.Paragraph);
+                        const textInputStyleType = TextInputStyle.Paragraph;
+                        inputFieldObject.setStyle(textInputStyleType);
                         
                         let safePlaceholderString = currentFieldObject.placeholder;
                         if (!safePlaceholderString) {
@@ -691,6 +761,7 @@ module.exports = (client) => {
                         if (currentFieldObject.required === true || String(currentFieldObject.required) === 'true') {
                             isFieldRequiredBoolean = true;
                         }
+                        
                         inputFieldObject.setRequired(isFieldRequiredBoolean);
                         
                         const fieldActionRowObject = new ActionRowBuilder();
@@ -699,33 +770,39 @@ module.exports = (client) => {
                         ticketModalObject.addComponents(fieldActionRowObject);
                     }
                     
-                    await interaction.showModal(ticketModalObject);
+                    try {
+                        await interaction.showModal(ticketModalObject);
+                    } catch (modalShowError) {
+                        console.log("Error showing ticket modal: ", modalShowError);
+                    }
                     
                 } else {
                     
-                    // الرد السريع لعدم التعليق في حالة عدم وجود نافذة
-                    await interaction.deferReply({ ephemeral: true });
+                    try {
+                        await interaction.deferReply({ ephemeral: true });
+                    } catch (deferError) {}
                     
                     const emptyAnswersArray = [];
-                    await openNewTicket(interaction, targetButtonDataObject, guildConfigDocument, emptyAnswersArray, targetPanelDataObject);
+                    await openNewTicketFunction(interaction, targetButtonDataObject, guildConfigDocument, emptyAnswersArray, targetPanelDataObject);
                 }
             }
         }
 
         // =====================================================================
-        // 📝 6. استلام إجابات النافذة وفتح التكت (مع البانلات المتعددة)
+        // 📝 القسم السابع: استلام إجابات النافذة وفتح التكت
         // =====================================================================
-        if (interaction.isModalSubmit() === true) {
+        const isModalTicketSubmitInteraction = interaction.isModalSubmit();
+        
+        if (isModalTicketSubmitInteraction === true) {
             
             const customIdString = interaction.customId;
-            const isModalTicketSubmit = customIdString.startsWith('modalticket_');
+            const isModalTicketSubmitAction = customIdString.startsWith('modalticket_');
             
-            if (isModalTicketSubmit === true) {
+            if (isModalTicketSubmitAction === true) {
                 
-                // 🔥 الرد الصاروخي لمنع ظهور خطأ (Something went wrong) للعضو
                 try {
                     await interaction.deferReply({ ephemeral: true });
-                } catch (deferErr) {}
+                } catch (deferError) {}
 
                 const buttonRealIdString = customIdString.replace('modalticket_', '');
                 
@@ -736,16 +813,16 @@ module.exports = (client) => {
                 
                 if (ticketPanelsArray && ticketPanelsArray.length > 0) {
                     
-                    for (let pIndex = 0; pIndex < ticketPanelsArray.length; pIndex++) {
+                    for (let panelIndex = 0; panelIndex < ticketPanelsArray.length; panelIndex++) {
                         
-                        const currentPanelObject = ticketPanelsArray[pIndex];
+                        const currentPanelObject = ticketPanelsArray[panelIndex];
                         const panelButtonsArray = currentPanelObject.buttons;
                         
                         if (panelButtonsArray && panelButtonsArray.length > 0) {
                             
-                            for (let bIndex = 0; bIndex < panelButtonsArray.length; bIndex++) {
+                            for (let buttonIndex = 0; buttonIndex < panelButtonsArray.length; buttonIndex++) {
                                 
-                                const currentButtonObject = panelButtonsArray[bIndex];
+                                const currentButtonObject = panelButtonsArray[buttonIndex];
                                 
                                 if (currentButtonObject.id === buttonRealIdString) {
                                     targetButtonDataObject = currentButtonObject;
@@ -762,17 +839,17 @@ module.exports = (client) => {
                 }
                 
                 if (!targetButtonDataObject) {
-                    return; // إيقاف التنفيذ إذا لم يتم العثور على الزر
+                    return; 
                 }
                 
                 const userAnswersCollectedArray = [];
                 const buttonModalFieldsArray = targetButtonDataObject.modalFields;
                 
-                for (let i = 0; i < buttonModalFieldsArray.length; i++) {
+                for (let fieldIndex = 0; fieldIndex < buttonModalFieldsArray.length; fieldIndex++) {
                     
-                    const fieldConfigObject = buttonModalFieldsArray[i];
+                    const fieldConfigObject = buttonModalFieldsArray[fieldIndex];
+                    const generatedFieldCustomId = `field_${fieldIndex}`;
                     
-                    const generatedFieldCustomId = `field_${i}`;
                     const writtenValueString = interaction.fields.getTextInputValue(generatedFieldCustomId);
                     
                     const answerObject = {
@@ -783,61 +860,68 @@ module.exports = (client) => {
                     userAnswersCollectedArray.push(answerObject);
                 }
                 
-                await openNewTicket(interaction, targetButtonDataObject, guildConfigDocument, userAnswersCollectedArray, targetPanelDataObject);
+                await openNewTicketFunction(interaction, targetButtonDataObject, guildConfigDocument, userAnswersCollectedArray, targetPanelDataObject);
             }
         }
+// ==================== نهاية الجزء الثاني ====================
 
+              // =====================================================================
+        // ⚙️ القسم الثامن: أزرار التحكم داخل التكت (Close, Claim, Delete, Add User)
         // =====================================================================
-        // ⚙️ 7. أزرار التحكم داخل التكت (Claim, Close, Add User, Delete)
-        // =====================================================================
-        if (interaction.isButton() === true) {
+        const isTicketControlButtonInteraction = interaction.isButton();
+        
+        if (isTicketControlButtonInteraction === true) {
             
             const customIdString = interaction.customId;
             
             // -------------------------------------------------------------
-            // 🔒 زر الإغلاق 1: ظهور رسالة التأكيد في الخاص بالعضو (مرحلتين)
+            // 🔒 1. زر الإغلاق المبدئي (رسالة التأكيد)
             // -------------------------------------------------------------
             if (customIdString === 'ticket_close') {
                 
                 const confirmationActionRowObject = new ActionRowBuilder();
                 
-                const confirmButtonObject = new ButtonBuilder();
-                confirmButtonObject.setCustomId('confirm_close');
-                confirmButtonObject.setLabel('Confirm Close');
-                confirmButtonObject.setStyle(ButtonStyle.Danger);
+                const confirmCloseButtonObject = new ButtonBuilder();
+                confirmCloseButtonObject.setCustomId('confirm_close');
+                confirmCloseButtonObject.setLabel('Confirm Close');
+                confirmCloseButtonObject.setStyle(ButtonStyle.Danger);
                 
-                const cancelButtonObject = new ButtonBuilder();
-                cancelButtonObject.setCustomId('cancel_close');
-                cancelButtonObject.setLabel('Cancel');
-                cancelButtonObject.setStyle(ButtonStyle.Secondary);
+                const cancelCloseButtonObject = new ButtonBuilder();
+                cancelCloseButtonObject.setCustomId('cancel_close');
+                cancelCloseButtonObject.setLabel('Cancel');
+                cancelCloseButtonObject.setStyle(ButtonStyle.Secondary);
                 
-                confirmationActionRowObject.addComponents(confirmButtonObject, cancelButtonObject);
+                confirmationActionRowObject.addComponents(confirmCloseButtonObject, cancelCloseButtonObject);
                 
                 const replyMessageString = '**⚠️ Are you sure you want to close this ticket?**';
                 
-                await interaction.reply({ 
-                    content: replyMessageString, 
-                    components: [confirmationActionRowObject], 
-                    ephemeral: true 
-                });
+                try {
+                    await interaction.reply({ 
+                        content: replyMessageString, 
+                        components: [confirmationActionRowObject], 
+                        ephemeral: true 
+                    });
+                } catch (replyError) {}
             }
 
             if (customIdString === 'cancel_close') {
-                
                 const cancelMessageString = '**✅ Cancelled.**';
-                
-                await interaction.update({ 
-                    content: cancelMessageString, 
-                    components: [] 
-                });
+                try {
+                    await interaction.update({ 
+                        content: cancelMessageString, 
+                        components: [] 
+                    });
+                } catch (updateError) {}
             }
 
             // -------------------------------------------------------------
-            // ✅ تأكيد الإغلاق الفعلي وإرسال بانل التحكم (مطابق للصورة 2)
+            // ✅ 2. تأكيد الإغلاق الفعلي وإرسال بانل التحكم (مطابق للصورة 2)
             // -------------------------------------------------------------
             if (customIdString === 'confirm_close') {
                 
-                await interaction.deferUpdate(); 
+                try {
+                    await interaction.deferUpdate(); 
+                } catch (deferError) {}
                 
                 const currentChannelObject = interaction.channel;
                 
@@ -848,8 +932,6 @@ module.exports = (client) => {
                 
                 const topicPartsArray = currentTopicString.split('_');
                 
-                // الصيغة المعتمدة للتوبيك:
-                // OwnerID_BtnID_ClaimerID_AddedUsers_CloserID_IsMiddleMan
                 const ticketOwnerIdString = topicPartsArray[0];
                 const usedButtonIdString = topicPartsArray[1];
                 
@@ -863,7 +945,7 @@ module.exports = (client) => {
                     isMiddleManTicketBoolean = true;
                 }
 
-                // تغيير اسم الروم إلى closed- مع الاحتفاظ بالرقم
+                // تغيير اسم الروم إلى closed-
                 const oldChannelNameString = currentChannelObject.name;
                 const namePartsArray = oldChannelNameString.split('-');
                 
@@ -876,25 +958,27 @@ module.exports = (client) => {
                 
                 try {
                     await currentChannelObject.setName(newClosedChannelName);
-                } catch (setNameError) {
-                    console.log("Error renaming channel to closed:", setNameError);
-                }
+                } catch (setNameError) {}
 
-                const closingNotificationMessage = `**🔒 The ticket has been closed by <@${interaction.user.id}>**`;
-                await currentChannelObject.send(closingNotificationMessage);
+                const interactionUserIdString = interaction.user.id;
+                const closingNotificationMessage = `**🔒 The ticket has been closed by <@${interactionUserIdString}>**`;
+                
+                try {
+                    await currentChannelObject.send(closingNotificationMessage);
+                } catch (sendError) {}
 
                 // 🔥 منع التقييم المزدوج والتحقق من إعدادات التقييم في الزر
                 let specificButtonDataObject = null;
                 const ticketPanelsArray = guildConfigDocument.ticketPanels;
                 
-                if (ticketPanelsArray) {
-                    for (let pIndex = 0; pIndex < ticketPanelsArray.length; pIndex++) {
-                        const panelObject = ticketPanelsArray[pIndex];
+                if (ticketPanelsArray && ticketPanelsArray.length > 0) {
+                    for (let panelIndex = 0; panelIndex < ticketPanelsArray.length; panelIndex++) {
+                        const panelObject = ticketPanelsArray[panelIndex];
                         const panelButtonsArray = panelObject.buttons;
                         
-                        if (panelButtonsArray) {
-                            for (let bIndex = 0; bIndex < panelButtonsArray.length; bIndex++) {
-                                const currentButtonObject = panelButtonsArray[bIndex];
+                        if (panelButtonsArray && panelButtonsArray.length > 0) {
+                            for (let buttonIndex = 0; buttonIndex < panelButtonsArray.length; buttonIndex++) {
+                                const currentButtonObject = panelButtonsArray[buttonIndex];
                                 
                                 if (currentButtonObject.id === usedButtonIdString) {
                                     specificButtonDataObject = currentButtonObject;
@@ -902,13 +986,14 @@ module.exports = (client) => {
                                 }
                             }
                         }
-                        if (specificButtonDataObject) break;
+                        if (specificButtonDataObject) {
+                            break;
+                        }
                     }
                 }
 
                 let shouldSendStaffRatingBoolean = true;
                 
-                // منع قاطع: لو التكت ميدل مان، مستحيل يبعت تقييم الإدارة
                 if (isMiddleManTicketBoolean === true || (specificButtonDataObject && specificButtonDataObject.isMiddleMan === true)) {
                     shouldSendStaffRatingBoolean = false; 
                 } else if (specificButtonDataObject && specificButtonDataObject.enableRating === false) {
@@ -917,11 +1002,12 @@ module.exports = (client) => {
 
                 const hasRatingChannelString = guildConfigDocument.staffRatingChannelId;
                 
-                // إرسال تقييم الإدارة في الخاص لو مسموح
                 if (shouldSendStaffRatingBoolean === true && ticketOwnerIdString && claimedByAdminIdString && hasRatingChannelString) {
+                    
                     try {
-                        const ticketOwnerUserObject = await interaction.guild.members.fetch(ticketOwnerIdString);
-                        const guildNameString = interaction.guild.name;
+                        const interactionGuildObject = interaction.guild;
+                        const ticketOwnerUserObject = await interactionGuildObject.members.fetch(ticketOwnerIdString);
+                        const guildNameString = interactionGuildObject.name;
                         
                         const ratingEmbedObject = new EmbedBuilder();
                         
@@ -944,7 +1030,6 @@ module.exports = (client) => {
                             
                         } else {
                             embedTitleString = 'تقييم فريق العمل';
-                            
                             embedDescriptionString = `شكرا لتواصلك مع الدعم الفني الخاص بسيرفر **${guildNameString}**\n\n`;
                             embedDescriptionString += `يرجى تقييم مستوى الخدمة التي تلقيتها من <@${claimedByAdminIdString}>، رأيك يهمنا ويساعدنا في تحسين جودة الخدمة.`;
                         }
@@ -952,25 +1037,23 @@ module.exports = (client) => {
                         ratingEmbedObject.setTitle(embedTitleString);
                         ratingEmbedObject.setDescription(embedDescriptionString);
                         
-                        let staffColorHex = guildConfigDocument.staffRatingColor;
-                        if (!staffColorHex) {
-                            staffColorHex = '#3ba55d';
+                        let staffColorHexCode = guildConfigDocument.staffRatingColor;
+                        if (!staffColorHexCode) {
+                            staffColorHexCode = '#3ba55d';
                         }
-                        ratingEmbedObject.setColor(staffColorHex);
+                        ratingEmbedObject.setColor(staffColorHexCode);
                         
-                        ratingEmbedObject.setFooter({ 
-                            text: guildNameString, 
-                            iconURL: interaction.guild.iconURL({ dynamic: true }) 
-                        });
+                        const guildIconUrl = interactionGuildObject.iconURL({ dynamic: true });
+                        ratingEmbedObject.setFooter({ text: guildNameString, iconURL: guildIconUrl });
                         ratingEmbedObject.setTimestamp();
                         
                         const starsActionRowObject = new ActionRowBuilder();
                         
-                        const star1Button = new ButtonBuilder().setCustomId(`rate_staff_1_${claimedByAdminIdString}_${interaction.guild.id}`).setLabel('⭐').setStyle(ButtonStyle.Secondary);
-                        const star2Button = new ButtonBuilder().setCustomId(`rate_staff_2_${claimedByAdminIdString}_${interaction.guild.id}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary);
-                        const star3Button = new ButtonBuilder().setCustomId(`rate_staff_3_${claimedByAdminIdString}_${interaction.guild.id}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary);
-                        const star4Button = new ButtonBuilder().setCustomId(`rate_staff_4_${claimedByAdminIdString}_${interaction.guild.id}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
-                        const star5Button = new ButtonBuilder().setCustomId(`rate_staff_5_${claimedByAdminIdString}_${interaction.guild.id}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                        const star1Button = new ButtonBuilder().setCustomId(`rate_staff_1_${claimedByAdminIdString}_${interactionGuildObject.id}`).setLabel('⭐').setStyle(ButtonStyle.Secondary);
+                        const star2Button = new ButtonBuilder().setCustomId(`rate_staff_2_${claimedByAdminIdString}_${interactionGuildObject.id}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary);
+                        const star3Button = new ButtonBuilder().setCustomId(`rate_staff_3_${claimedByAdminIdString}_${interactionGuildObject.id}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                        const star4Button = new ButtonBuilder().setCustomId(`rate_staff_4_${claimedByAdminIdString}_${interactionGuildObject.id}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                        const star5Button = new ButtonBuilder().setCustomId(`rate_staff_5_${claimedByAdminIdString}_${interactionGuildObject.id}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
                         
                         starsActionRowObject.addComponents(star1Button, star2Button, star3Button, star4Button, star5Button);
                         
@@ -979,7 +1062,7 @@ module.exports = (client) => {
                             components: [starsActionRowObject] 
                         });
                         
-                    } catch (errorLog) { 
+                    } catch (ratingError) { 
                         console.log("Could not send rating to user.");
                     }
                 }
@@ -999,7 +1082,7 @@ module.exports = (client) => {
                     topicPartsArray.push('none');
                 }
                 
-                topicPartsArray[4] = interaction.user.id; // خانة الـ Closer
+                topicPartsArray[4] = interactionUserIdString; // خانة الـ Closer
                 
                 const newTopicStringForChannel = topicPartsArray.join('_');
                 
@@ -1009,16 +1092,17 @@ module.exports = (client) => {
 
                 // 🔥 بناء بانل التحكم مطابق للصورة رقم 2 تماماً!
                 const controlEmbedObject = new EmbedBuilder();
-                controlEmbedObject.setTitle('Ticket control');
+                const controlTitleString = 'Ticket control';
+                controlEmbedObject.setTitle(controlTitleString);
                 
-                const closedByDescription = `Closed By: <@${interaction.user.id}>\n(${interaction.user.id})`;
-                controlEmbedObject.setDescription(closedByDescription);
+                const closedByDescriptionString = `Closed By: <@${interactionUserIdString}>\n(${interactionUserIdString})`;
+                controlEmbedObject.setDescription(closedByDescriptionString);
                 
-                let closeEmbedColorHex = guildConfigDocument.closeEmbedColor;
-                if (!closeEmbedColorHex) {
-                    closeEmbedColorHex = '#2b2d31'; // اللون الداكن الافتراضي
+                let closeEmbedColorHexCode = guildConfigDocument.closeEmbedColor;
+                if (!closeEmbedColorHexCode) {
+                    closeEmbedColorHexCode = '#2b2d31';
                 }
-                controlEmbedObject.setColor(closeEmbedColorHex);
+                controlEmbedObject.setColor(closeEmbedColorHexCode);
                 
                 // الصف الأول: Reopen (رمادي) و Delete (أحمر)
                 const controlRow1Object = new ActionRowBuilder();
@@ -1046,19 +1130,22 @@ module.exports = (client) => {
                 controlRow2Object.addComponents(deleteReasonButtonObject);
                 
                 // إرسال البانل
-                await currentChannelObject.send({ 
-                    embeds: [controlEmbedObject], 
-                    components: [controlRow1Object, controlRow2Object] 
-                });
-                
-                // حذف الرسالة الأصلية لتنظيف الشات
                 try {
-                    await interaction.message.delete();
-                } catch (delError) {}
+                    await currentChannelObject.send({ 
+                        embeds: [controlEmbedObject], 
+                        components: [controlRow1Object, controlRow2Object] 
+                    });
+                } catch (sendControlError) {}
+                
+                // حذف الرسالة الأصلية
+                const originalInteractionMessageObject = interaction.message;
+                try {
+                    await originalInteractionMessageObject.delete();
+                } catch (deleteMsgError) {}
             }
 
             // -------------------------------------------------------------
-            // 🛡️ زر الاستلام (Claim) السرعة الصاروخية الجبارة 0.001s
+            // 🛡️ 3. زر الاستلام (Claim) السرعة الصاروخية
             // -------------------------------------------------------------
             if (customIdString === 'ticket_claim') {
                 
@@ -1072,18 +1159,17 @@ module.exports = (client) => {
                 const topicPartsArray = currentTopicString.split('_');
                 const usedButtonIdString = topicPartsArray[1];
                 
-                // البحث عن الزر لمعرفة رتب الاستلام المخصصة
                 let specificButtonDataObject = null;
                 const ticketPanelsArray = guildConfigDocument.ticketPanels;
                 
-                if (ticketPanelsArray) {
-                    for (let pIndex = 0; pIndex < ticketPanelsArray.length; pIndex++) {
-                        const panelObject = ticketPanelsArray[pIndex];
+                if (ticketPanelsArray && ticketPanelsArray.length > 0) {
+                    for (let panelIndex = 0; panelIndex < ticketPanelsArray.length; panelIndex++) {
+                        const panelObject = ticketPanelsArray[panelIndex];
                         const panelButtonsArray = panelObject.buttons;
                         
-                        if (panelButtonsArray) {
-                            for (let bIndex = 0; bIndex < panelButtonsArray.length; bIndex++) {
-                                const currentButtonObject = panelButtonsArray[bIndex];
+                        if (panelButtonsArray && panelButtonsArray.length > 0) {
+                            for (let buttonIndex = 0; buttonIndex < panelButtonsArray.length; buttonIndex++) {
+                                const currentButtonObject = panelButtonsArray[buttonIndex];
                                 
                                 if (currentButtonObject.id === usedButtonIdString) {
                                     specificButtonDataObject = currentButtonObject;
@@ -1091,20 +1177,19 @@ module.exports = (client) => {
                                 }
                             }
                         }
-                        if (specificButtonDataObject) break;
+                        if (specificButtonDataObject) {
+                            break;
+                        }
                     }
                 }
 
                 let allowedToClaimRolesArray = [];
-                let hasCustomClaimRolesBoolean = false;
                 
-                if (specificButtonDataObject && specificButtonDataObject.allowedClaimRoles && specificButtonDataObject.allowedClaimRoles.length > 0) {
-                    
-                    hasCustomClaimRolesBoolean = true;
+                const hasCustomClaimRoles = (specificButtonDataObject && specificButtonDataObject.allowedClaimRoles && specificButtonDataObject.allowedClaimRoles.length > 0);
+                
+                if (hasCustomClaimRoles === true) {
                     allowedToClaimRolesArray = specificButtonDataObject.allowedClaimRoles;
-                    
                 } else {
-                    
                     const allStaffRolesArray = [
                         guildConfigDocument.adminRoleId, 
                         guildConfigDocument.middlemanRoleId,
@@ -1112,24 +1197,27 @@ module.exports = (client) => {
                         ...guildConfigDocument.highMiddlemanRoles
                     ];
                     
-                    for (let i = 0; i < allStaffRolesArray.length; i++) {
-                        const staffRoleId = allStaffRolesArray[i];
-                        if (staffRoleId) {
-                            allowedToClaimRolesArray.push(staffRoleId);
+                    for (let index = 0; index < allStaffRolesArray.length; index++) {
+                        const staffRoleIdString = allStaffRolesArray[index];
+                        if (staffRoleIdString) {
+                            allowedToClaimRolesArray.push(staffRoleIdString);
                         }
                     }
                 }
 
-                // التحقق من الصلاحيات
                 let canClaimTicketBoolean = false;
                 const interactionMemberObject = interaction.member;
+                const memberPermissionsObject = interactionMemberObject.permissions;
+                const hasAdminPermission = memberPermissionsObject.has('Administrator');
                 
-                if (interactionMemberObject.permissions.has('Administrator')) {
+                if (hasAdminPermission === true) {
                     canClaimTicketBoolean = true;
                 } else {
-                    for (let i = 0; i < allowedToClaimRolesArray.length; i++) {
-                        const requiredRoleId = allowedToClaimRolesArray[i];
-                        if (interactionMemberObject.roles.cache.has(requiredRoleId)) {
+                    const memberRolesCollection = interactionMemberObject.roles.cache;
+                    for (let index = 0; index < allowedToClaimRolesArray.length; index++) {
+                        const requiredRoleIdString = allowedToClaimRolesArray[index];
+                        const memberHasRole = memberRolesCollection.has(requiredRoleIdString);
+                        if (memberHasRole === true) {
                             canClaimTicketBoolean = true;
                             break;
                         }
@@ -1137,31 +1225,33 @@ module.exports = (client) => {
                 }
 
                 if (canClaimTicketBoolean === false) {
-                    return interaction.reply({ 
-                        content: '**❌ You do not have permission to claim this ticket.**', 
-                        ephemeral: true 
-                    });
+                    const noPermissionMessageContent = '**❌ You do not have permission to claim this ticket.**';
+                    return interaction.reply({ content: noPermissionMessageContent, ephemeral: true });
                 }
 
-                // 🔥 الحل السحري للسرعة: تحديث الزرار فوراً لديسكورد (يخضر في 0.001 ثانية)
-                const originalMessageComponentsArray = interaction.message.components;
+                // تحديث الزرار فوراً (0.001s)
+                const originalInteractionMessageObject = interaction.message;
+                const originalMessageComponentsArray = originalInteractionMessageObject.components;
                 const newComponentsArray = [];
                 
-                for (let i = 0; i < originalMessageComponentsArray.length; i++) {
+                for (let rowIndex = 0; rowIndex < originalMessageComponentsArray.length; rowIndex++) {
                     
-                    const oldActionRowObject = originalMessageComponentsArray[i];
+                    const oldActionRowObject = originalMessageComponentsArray[rowIndex];
                     const newActionRowObject = new ActionRowBuilder();
                     
                     const rowComponentsArray = oldActionRowObject.components;
                     
-                    for (let j = 0; j < rowComponentsArray.length; j++) {
+                    for (let buttonIndex = 0; buttonIndex < rowComponentsArray.length; buttonIndex++) {
                         
-                        const oldButtonObject = rowComponentsArray[j];
+                        const oldButtonObject = rowComponentsArray[buttonIndex];
                         const clonedButtonObject = ButtonBuilder.from(oldButtonObject);
                         
                         if (oldButtonObject.customId === 'ticket_claim') {
-                            clonedButtonObject.setDisabled(true); // تعميم الزر
-                            clonedButtonObject.setStyle(ButtonStyle.Success); // تحويله للأخضر
+                            const isButtonDisabledBoolean = true;
+                            clonedButtonObject.setDisabled(isButtonDisabledBoolean); 
+                            
+                            const successStyleType = ButtonStyle.Success;
+                            clonedButtonObject.setStyle(successStyleType); 
                         }
                         
                         newActionRowObject.addComponents(clonedButtonObject);
@@ -1170,39 +1260,40 @@ module.exports = (client) => {
                     newComponentsArray.push(newActionRowObject);
                 }
                 
-                // التحديث الفوري للرسالة
                 try {
                     await interaction.update({ components: newComponentsArray });
                 } catch (updateError) {}
                 
-                // إرسال رسالة الاستلام
-                const claimNotificationMessage = `**✅ The ticket has been claimed by <@${interaction.user.id}>**`;
-                await currentChannelObject.send(claimNotificationMessage).catch(()=>{});
+                const interactionUserIdString = interaction.user.id;
+                const claimNotificationMessage = `**✅ The ticket has been claimed by <@${interactionUserIdString}>**`;
+                
+                try {
+                    await currentChannelObject.send(claimNotificationMessage);
+                } catch (sendClaimMsgError) {}
 
                 // ==========================================
-                // تعديل الصلاحيات في الخلفية بناءً على الإعدادات
+                // 🔥 تعديل الصلاحيات في الخلفية بناءً على الإعدادات (Hide / Read-Only)
                 // ==========================================
                 const currentChannelOverwritesCollection = currentChannelObject.permissionOverwrites.cache;
                 const newOverwritesDataArray = [];
                 
-                // نسخ الصلاحيات الحالية
                 currentChannelOverwritesCollection.forEach((overwriteObj) => {
-                    newOverwritesDataArray.push({
+                    const mappedOverwriteObject = {
                         id: overwriteObj.id,
                         allow: overwriteObj.allow.toArray(),
                         deny: overwriteObj.deny.toArray()
-                    });
+                    };
+                    newOverwritesDataArray.push(mappedOverwriteObject);
                 });
 
-                // تعديل صلاحيات باقي الإدارة (إخفاء أو قراءة فقط)
-                for (let i = 0; i < allowedToClaimRolesArray.length; i++) {
+                for (let index = 0; index < allowedToClaimRolesArray.length; index++) {
                     
-                    const staffRoleIdString = allowedToClaimRolesArray[i];
+                    const staffRoleIdString = allowedToClaimRolesArray[index];
                     let roleOverwriteObject = null;
                     
-                    for (let k = 0; k < newOverwritesDataArray.length; k++) {
-                        if (newOverwritesDataArray[k].id === staffRoleIdString) {
-                            roleOverwriteObject = newOverwritesDataArray[k];
+                    for (let arrayIndex = 0; arrayIndex < newOverwritesDataArray.length; arrayIndex++) {
+                        if (newOverwritesDataArray[arrayIndex].id === staffRoleIdString) {
+                            roleOverwriteObject = newOverwritesDataArray[arrayIndex];
                             break;
                         }
                     }
@@ -1212,62 +1303,72 @@ module.exports = (client) => {
                         newOverwritesDataArray.push(roleOverwriteObject);
                     }
                     
-                    const hideTicketSetting = guildConfigDocument.hideTicketOnClaim;
-                    const readOnlySetting = guildConfigDocument.readOnlyStaffOnClaim;
+                    const hideTicketSettingBoolean = guildConfigDocument.hideTicketOnClaim;
+                    const readOnlySettingBoolean = guildConfigDocument.readOnlyStaffOnClaim;
                     
-                    if (hideTicketSetting === true) {
-                        // إخفاء كامل
-                        if (!roleOverwriteObject.deny.includes('ViewChannel')) {
-                            roleOverwriteObject.deny.push('ViewChannel');
-                        }
-                        // إزالة السماح لو كان موجود
-                        roleOverwriteObject.allow = roleOverwriteObject.allow.filter(perm => perm !== 'ViewChannel');
+                    if (hideTicketSettingBoolean === true) {
                         
-                    } else if (readOnlySetting === true) {
-                        // قراءة فقط (السماح بالرؤية، منع الكتابة)
-                        if (!roleOverwriteObject.allow.includes('ViewChannel')) {
-                            roleOverwriteObject.allow.push('ViewChannel');
+                        const viewChannelPermissionString = 'ViewChannel';
+                        const denyArrayIncludesViewChannel = roleOverwriteObject.deny.includes(viewChannelPermissionString);
+                        
+                        if (denyArrayIncludesViewChannel === false) {
+                            roleOverwriteObject.deny.push(viewChannelPermissionString);
                         }
-                        if (!roleOverwriteObject.deny.includes('SendMessages')) {
-                            roleOverwriteObject.deny.push('SendMessages');
+                        
+                        roleOverwriteObject.allow = roleOverwriteObject.allow.filter(perm => perm !== viewChannelPermissionString);
+                        
+                    } else if (readOnlySettingBoolean === true) {
+                        
+                        const viewChannelPermissionString = 'ViewChannel';
+                        const sendMessagesPermissionString = 'SendMessages';
+                        
+                        const allowArrayIncludesViewChannel = roleOverwriteObject.allow.includes(viewChannelPermissionString);
+                        if (allowArrayIncludesViewChannel === false) {
+                            roleOverwriteObject.allow.push(viewChannelPermissionString);
                         }
-                        // إزالة السماح بالكتابة لو كان موجود
-                        roleOverwriteObject.allow = roleOverwriteObject.allow.filter(perm => perm !== 'SendMessages');
+                        
+                        const denyArrayIncludesSendMessages = roleOverwriteObject.deny.includes(sendMessagesPermissionString);
+                        if (denyArrayIncludesSendMessages === false) {
+                            roleOverwriteObject.deny.push(sendMessagesPermissionString);
+                        }
+                        
+                        roleOverwriteObject.allow = roleOverwriteObject.allow.filter(perm => perm !== sendMessagesPermissionString);
                     }
                 }
                 
-                // إعطاء المستلم الصلاحية الكاملة
                 let claimerOverwriteObject = null;
-                const claimerUserIdString = interaction.user.id;
+                const claimerUserIdString = interactionUserIdString;
                 
-                for (let k = 0; k < newOverwritesDataArray.length; k++) {
-                    if (newOverwritesDataArray[k].id === claimerUserIdString) {
-                        claimerOverwriteObject = newOverwritesDataArray[k];
+                for (let arrayIndex = 0; arrayIndex < newOverwritesDataArray.length; arrayIndex++) {
+                    if (newOverwritesDataArray[arrayIndex].id === claimerUserIdString) {
+                        claimerOverwriteObject = newOverwritesDataArray[arrayIndex];
                         break;
                     }
                 }
                 
                 if (!claimerOverwriteObject) {
-                    newOverwritesDataArray.push({ 
+                    const newClaimerPermObject = { 
                         id: claimerUserIdString, 
                         allow: ['ViewChannel', 'SendMessages'], 
                         deny: [] 
-                    });
+                    };
+                    newOverwritesDataArray.push(newClaimerPermObject);
                 } else {
-                    if (!claimerOverwriteObject.allow.includes('ViewChannel')) {
+                    const allowArrayIncludesViewChannel = claimerOverwriteObject.allow.includes('ViewChannel');
+                    if (allowArrayIncludesViewChannel === false) {
                         claimerOverwriteObject.allow.push('ViewChannel');
                     }
-                    if (!claimerOverwriteObject.allow.includes('SendMessages')) {
+                    
+                    const allowArrayIncludesSendMessages = claimerOverwriteObject.allow.includes('SendMessages');
+                    if (allowArrayIncludesSendMessages === false) {
                         claimerOverwriteObject.allow.push('SendMessages');
                     }
                 }
 
-                // تطبيق الصلاحيات الجديدة على الروم
                 try {
                     await currentChannelObject.permissionOverwrites.set(newOverwritesDataArray);
                 } catch (permSetError) {}
                 
-                // تحديث التوبيك لحفظ المستلم
                 while(topicPartsArray.length < 6) {
                     topicPartsArray.push('none');
                 }
@@ -1282,7 +1383,7 @@ module.exports = (client) => {
             }
 
             // -------------------------------------------------------------
-            // 🔓 زر إعادة الفتح (Reopen)
+            // 🔓 4. زر إعادة الفتح (Reopen)
             // -------------------------------------------------------------
             if (customIdString === 'ticket_reopen') {
                 
@@ -1320,88 +1421,128 @@ module.exports = (client) => {
                 } catch (renameError) {}
                 
                 const reopenSuccessMessage = '**✅ Ticket has been reopened.**';
-                await interaction.reply(reopenSuccessMessage);
-                
                 try {
-                    await interaction.message.delete();
+                    await interaction.reply(reopenSuccessMessage);
+                } catch (replyError) {}
+                
+                const originalInteractionMessageObject = interaction.message;
+                try {
+                    await originalInteractionMessageObject.delete();
                 } catch (deleteError) {}
             }
 
             // -------------------------------------------------------------
-            // 🗑️ زر الحذف المباشر (Delete)
+            // 🗑️ 5. زر الحذف المباشر (Delete)
             // -------------------------------------------------------------
             if (customIdString === 'ticket_delete') {
                 
                 const deletingMessage = '**🗑️ Deleting the ticket...**';
-                await interaction.reply({ content: deletingMessage, ephemeral: true });
+                
+                try {
+                    await interaction.reply({ content: deletingMessage, ephemeral: true });
+                } catch (replyError) {}
                 
                 const currentChannelObject = interaction.channel;
                 const interactionUserObject = interaction.user;
-                const defaultReason = "Manual Delete";
+                const defaultReasonString = "Manual Delete";
                 
-                await executeDeleteAndLog(currentChannelObject, interactionUserObject, guildConfigDocument, defaultReason);
+                await executeDeleteAndLog(currentChannelObject, interactionUserObject, guildConfigDocument, defaultReasonString);
             }
 
             // -------------------------------------------------------------
-            // 📝 زر الحذف مع سبب (Delete With Reason)
+            // 📝 6. زر الحذف مع سبب (Delete With Reason)
             // -------------------------------------------------------------
             if (customIdString === 'ticket_delete_reason') {
                 
                 const deleteModalObject = new ModalBuilder();
-                deleteModalObject.setCustomId('modal_delete_reason');
-                deleteModalObject.setTitle('Delete Reason');
+                
+                const deleteModalCustomIdString = 'modal_delete_reason';
+                deleteModalObject.setCustomId(deleteModalCustomIdString);
+                
+                const deleteModalTitleString = 'Delete Reason';
+                deleteModalObject.setTitle(deleteModalTitleString);
                 
                 const reasonInputObject = new TextInputBuilder();
-                reasonInputObject.setCustomId('delete_reason');
-                reasonInputObject.setLabel('Reason:');
-                reasonInputObject.setStyle(TextInputStyle.Short);
-                reasonInputObject.setRequired(true);
                 
-                const deleteModalActionRow = new ActionRowBuilder();
-                deleteModalActionRow.addComponents(reasonInputObject);
+                const reasonInputCustomIdString = 'delete_reason';
+                reasonInputObject.setCustomId(reasonInputCustomIdString);
                 
-                deleteModalObject.addComponents(deleteModalActionRow);
+                const reasonInputLabelString = 'Reason:';
+                reasonInputObject.setLabel(reasonInputLabelString);
                 
-                await interaction.showModal(deleteModalObject);
+                const reasonInputStyleType = TextInputStyle.Short;
+                reasonInputObject.setStyle(reasonInputStyleType);
+                
+                const isReasonInputRequiredBoolean = true;
+                reasonInputObject.setRequired(isReasonInputRequiredBoolean);
+                
+                const deleteModalActionRowObject = new ActionRowBuilder();
+                deleteModalActionRowObject.addComponents(reasonInputObject);
+                
+                deleteModalObject.addComponents(deleteModalActionRowObject);
+                
+                try {
+                    await interaction.showModal(deleteModalObject);
+                } catch (showModalError) {}
             }
 
             // -------------------------------------------------------------
-            // ➕ زر إضافة عضو (Add User)
+            // ➕ 7. زر إضافة عضو (Add User)
             // -------------------------------------------------------------
             if (customIdString === 'ticket_add_user') {
                 
                 const addUserModalObject = new ModalBuilder();
-                addUserModalObject.setCustomId('modal_add_user');
-                addUserModalObject.setTitle('Add User');
+                
+                const addUserModalCustomIdString = 'modal_add_user';
+                addUserModalObject.setCustomId(addUserModalCustomIdString);
+                
+                const addUserModalTitleString = 'Add User';
+                addUserModalObject.setTitle(addUserModalTitleString);
                 
                 const userIdInputObject = new TextInputBuilder();
-                userIdInputObject.setCustomId('user_id_to_add');
-                userIdInputObject.setLabel('User ID:');
-                userIdInputObject.setStyle(TextInputStyle.Short);
-                userIdInputObject.setRequired(true);
                 
-                const addUserActionRow = new ActionRowBuilder();
-                addUserActionRow.addComponents(userIdInputObject);
+                const userIdInputCustomIdString = 'user_id_to_add';
+                userIdInputObject.setCustomId(userIdInputCustomIdString);
                 
-                addUserModalObject.addComponents(addUserActionRow);
+                const userIdInputLabelString = 'User ID:';
+                userIdInputObject.setLabel(userIdInputLabelString);
                 
-                await interaction.showModal(addUserModalObject);
+                const userIdInputStyleType = TextInputStyle.Short;
+                userIdInputObject.setStyle(userIdInputStyleType);
+                
+                const isUserIdInputRequiredBoolean = true;
+                userIdInputObject.setRequired(isUserIdInputRequiredBoolean);
+                
+                const addUserActionRowObject = new ActionRowBuilder();
+                addUserActionRowObject.addComponents(userIdInputObject);
+                
+                addUserModalObject.addComponents(addUserActionRowObject);
+                
+                try {
+                    await interaction.showModal(addUserModalObject);
+                } catch (showModalError) {}
             }
         }
 
         // =====================================================================
-        // 🧩 معالجة النوافذ المنبثقة للإدارة (إجابات الإدارة)
+        // 🧩 القسم التاسع: معالجة النوافذ المنبثقة للإدارة (Delete Reason / Add User)
         // =====================================================================
-        if (interaction.isModalSubmit() === true) {
+        const isModalSubmitInteraction = interaction.isModalSubmit();
+        
+        if (isModalSubmitInteraction === true) {
             
             const customIdString = interaction.customId;
             
             if (customIdString === 'modal_delete_reason') {
                 
-                const writtenReasonString = interaction.fields.getTextInputValue('delete_reason');
+                const deleteReasonInputCustomId = 'delete_reason';
+                const writtenReasonString = interaction.fields.getTextInputValue(deleteReasonInputCustomId);
                 
-                const deletingMessage = '**🗑️ Deleting the ticket...**';
-                await interaction.reply({ content: deletingMessage, ephemeral: true });
+                const deletingMessageContent = '**🗑️ Deleting the ticket...**';
+                
+                try {
+                    await interaction.reply({ content: deletingMessageContent, ephemeral: true });
+                } catch (replyError) {}
                 
                 const currentChannelObject = interaction.channel;
                 const interactionUserObject = interaction.user;
@@ -1411,7 +1552,9 @@ module.exports = (client) => {
 
             if (customIdString === 'modal_add_user') {
                 
-                const userIdToAddString = interaction.fields.getTextInputValue('user_id_to_add');
+                const userIdInputCustomId = 'user_id_to_add';
+                const userIdToAddString = interaction.fields.getTextInputValue(userIdInputCustomId);
+                
                 const interactionGuildObject = interaction.guild;
                 const currentChannelObject = interaction.channel;
                 
@@ -1446,33 +1589,44 @@ module.exports = (client) => {
                     
                     const newTopicString = topicPartsArray.join('_');
                     
-                    await currentChannelObject.setTopic(newTopicString).catch(()=>{});
+                    try {
+                        await currentChannelObject.setTopic(newTopicString);
+                    } catch (topicSetError) {}
 
-                    const successAddMessage = `**✅ <@${userIdToAddString}> was added to the ticket by <@${interaction.user.id}>**`;
-                    await interaction.reply(successAddMessage);
+                    const interactionUserIdString = interaction.user.id;
+                    const successAddMessageContent = `**✅ <@${userIdToAddString}> was added to the ticket by <@${interactionUserIdString}>**`;
+                    
+                    try {
+                        await interaction.reply(successAddMessageContent);
+                    } catch (replyError) {}
                     
                 } catch (addError) { 
-                    const notFoundMessage = '**❌ User not found in this server.**';
-                    await interaction.reply({ content: notFoundMessage, ephemeral: true }); 
+                    const notFoundMessageContent = '**❌ User not found in this server.**';
+                    try {
+                        await interaction.reply({ content: notFoundMessageContent, ephemeral: true }); 
+                    } catch (replyError) {}
                 }
             }
         }
     });
 
     // =====================================================================
-    // 🛠️ دالة الدعم: فتح تكت جديد وبناء الإيمبدات المفصولة والخطوط
+    // 🛠️ دوال الدعم (Helper Functions)
     // =====================================================================
-    async function openNewTicket(interaction, buttonDataObject, configDocument, answersArray, targetPanelDataObject) {
+    
+    // دالة فتح تكت جديد وبناء الإيمبدات المفصولة والخطوط
+    async function openNewTicketFunction(interactionObject, buttonDataObject, configDocument, answersArray, targetPanelDataObject) {
         
         let currentTicketCountNumber = configDocument.ticketCount;
+        
         if (!currentTicketCountNumber) {
             currentTicketCountNumber = 0;
         }
         
         const newTicketNumber = currentTicketCountNumber + 1;
         
-        // جلب الكتاجوري الخاص بالبانل الحالي، أو الأساسي
         let targetCategoryIdString = null;
+        
         if (targetPanelDataObject) {
             targetCategoryIdString = targetPanelDataObject.ticketCategoryId;
         }
@@ -1481,19 +1635,23 @@ module.exports = (client) => {
             targetCategoryIdString = configDocument.defaultCategoryId;
         }
         
-        const permissionsArray = [];
+        const permissionsDataArray = [];
         
-        const everyoneRolePermission = { 
-            id: interaction.guild.id, 
+        const interactionGuildObject = interactionObject.guild;
+        const interactionGuildIdString = interactionGuildObject.id;
+        const everyoneRolePermissionObject = { 
+            id: interactionGuildIdString, 
             deny: [PermissionFlagsBits.ViewChannel] 
         };
-        permissionsArray.push(everyoneRolePermission);
+        permissionsDataArray.push(everyoneRolePermissionObject);
         
-        const userPermission = { 
-            id: interaction.user.id, 
+        const interactionUserObject = interactionObject.user;
+        const interactionUserIdString = interactionUserObject.id;
+        const userPermissionObject = { 
+            id: interactionUserIdString, 
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] 
         };
-        permissionsArray.push(userPermission);
+        permissionsDataArray.push(userPermissionObject);
         
         const staffRolesArrayList = [
             configDocument.adminRoleId, 
@@ -1502,45 +1660,58 @@ module.exports = (client) => {
             ...configDocument.highMiddlemanRoles 
         ];
         
-        for (let i = 0; i < staffRolesArrayList.length; i++) {
-            const roleIdString = staffRolesArrayList[i];
+        for (let index = 0; index < staffRolesArrayList.length; index++) {
+            const roleIdString = staffRolesArrayList[index];
             if (roleIdString) {
-                const rolePermission = { 
+                const rolePermissionObject = { 
                     id: roleIdString, 
                     allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] 
                 };
-                permissionsArray.push(rolePermission);
+                permissionsDataArray.push(rolePermissionObject);
             }
         }
 
         let isMiddleManString = 'false';
-        if (buttonDataObject.isMiddleMan === true) {
+        const buttonIsMiddleManBoolean = buttonDataObject.isMiddleMan;
+        
+        if (buttonIsMiddleManBoolean === true) {
             isMiddleManString = 'true';
         }
         
-        const initialTopicDataString = `${interaction.user.id}_${buttonDataObject.id}_none_none_none_${isMiddleManString}`;
+        const buttonIdString = buttonDataObject.id;
+        const initialTopicDataString = `${interactionUserIdString}_${buttonIdString}_none_none_none_${isMiddleManString}`;
 
-        const interactionGuildObject = interaction.guild;
         const newChannelNameString = `ticket-${newTicketNumber}`;
+        const guildChannelsManager = interactionGuildObject.channels;
         
-        const createdChannelObject = await interactionGuildObject.channels.create({
-            name: newChannelNameString, 
-            type: ChannelType.GuildText, 
-            parent: targetCategoryIdString, 
-            topic: initialTopicDataString, 
-            permissionOverwrites: permissionsArray
-        });
+        let createdChannelObject = null;
         
-        // تحديث العداد في الداتابيز
-        const guildIdFilter = { guildId: interactionGuildObject.id };
-        const incrementUpdate = { $inc: { ticketCount: 1 } };
-        await GuildConfig.findOneAndUpdate(guildIdFilter, incrementUpdate);
+        try {
+            createdChannelObject = await guildChannelsManager.create({
+                name: newChannelNameString, 
+                type: ChannelType.GuildText, 
+                parent: targetCategoryIdString, 
+                topic: initialTopicDataString, 
+                permissionOverwrites: permissionsDataArray
+            });
+        } catch (createChannelError) {
+            console.log("Error creating ticket channel: ", createChannelError);
+            return;
+        }
+        
+        const guildIdFilterObject = { guildId: interactionGuildIdString };
+        const incrementUpdateObject = { $inc: { ticketCount: 1 } };
+        
+        try {
+            await GuildConfig.findOneAndUpdate(guildIdFilterObject, incrementUpdateObject);
+        } catch (updateDbError) {}
 
-        const welcomeMessageContent = `**Welcome <@${interaction.user.id}>**\n**Reason:** ${buttonDataObject.label}`;
+        const buttonLabelString = buttonDataObject.label;
+        const welcomeMessageContentString = `**Welcome <@${interactionUserIdString}>**\n**Reason:** ${buttonLabelString}`;
         
         const embedsListArray = [];
 
-        // 🟢 الإيمبد الأول: الترحيب والقوانين (كما في الصورة)
+        // 🟢 الإيمبد الأول: الترحيب والقوانين
         const infoEmbedObject = new EmbedBuilder();
         
         let titleValueString = buttonDataObject.insideEmbedTitle;
@@ -1555,35 +1726,38 @@ module.exports = (client) => {
         }
         infoEmbedObject.setDescription(descriptionValueString);
         
-        let colorValueHex = buttonDataObject.insideEmbedColor;
-        if (!colorValueHex) {
-            colorValueHex = '#2b2d31';
+        let colorValueHexCode = buttonDataObject.insideEmbedColor;
+        if (!colorValueHexCode) {
+            colorValueHexCode = '#2b2d31';
         }
-        infoEmbedObject.setColor(colorValueHex);
+        infoEmbedObject.setColor(colorValueHexCode);
         
         embedsListArray.push(infoEmbedObject);
 
-        // 🟢 الإيمبد الثاني: إجابات النافذة بالخط الجانبي الشيك (>>>) (كما في الصورة 4)
-        if (answersArray && answersArray.length > 0) {
+        // 🟢 الإيمبد الثاني: إجابات النافذة بالخط الجانبي الشيك (>>> )
+        const hasAnswersBoolean = (answersArray && answersArray.length > 0);
+        
+        if (hasAnswersBoolean === true) {
             
             const answersEmbedObject = new EmbedBuilder();
             
-            let answersColorHex = configDocument.answersEmbedColor;
-            if (!answersColorHex) {
-                answersColorHex = '#2b2d31';
+            let answersColorHexCode = configDocument.answersEmbedColor;
+            if (!answersColorHexCode) {
+                answersColorHexCode = '#2b2d31';
             }
-            answersEmbedObject.setColor(answersColorHex);
+            answersEmbedObject.setColor(answersColorHexCode);
             
-            for (let i = 0; i < answersArray.length; i++) {
+            for (let index = 0; index < answersArray.length; index++) {
                 
-                const singleAnswerObject = answersArray[i];
+                const singleAnswerObject = answersArray[index];
                 
                 let valueToDisplayString = singleAnswerObject.value;
-                if (!valueToDisplayString || valueToDisplayString === '') {
+                const isValueEmpty = (!valueToDisplayString || valueToDisplayString === '');
+                
+                if (isValueEmpty === true) {
                     valueToDisplayString = 'N/A';
                 }
                 
-                // 🔥 تطبيق الخط الجانبي (Blockquote) المخصص للديسكورد بإضافة >>> قبل الإجابة
                 const formattedAnswerString = `>>> ${valueToDisplayString}`;
                 const formattedLabelString = `**${singleAnswerObject.label}**`;
                 
@@ -1596,54 +1770,55 @@ module.exports = (client) => {
             embedsListArray.push(answersEmbedObject);
         }
 
-        // 🔥 بناء الزراير لتطابق الصورة الأولى (Row 1 و Row 2)
-        const controlsActionRow1 = new ActionRowBuilder();
+        // 🔥 بناء الزراير لتطابق الصورة الأولى
+        const controlsActionRow1Object = new ActionRowBuilder();
         
-        const addUserButton = new ButtonBuilder();
-        addUserButton.setCustomId('ticket_add_user');
-        addUserButton.setLabel('Add User');
-        addUserButton.setStyle(ButtonStyle.Secondary); // لون رمادي
+        const addUserButtonObject = new ButtonBuilder();
+        addUserButtonObject.setCustomId('ticket_add_user');
+        addUserButtonObject.setLabel('Add User');
+        addUserButtonObject.setStyle(ButtonStyle.Secondary); 
         
-        const claimButton = new ButtonBuilder();
-        claimButton.setCustomId('ticket_claim');
-        claimButton.setLabel('Claim');
-        claimButton.setStyle(ButtonStyle.Success); // لون أخضر
+        const claimButtonObject = new ButtonBuilder();
+        claimButtonObject.setCustomId('ticket_claim');
+        claimButtonObject.setLabel('Claim');
+        claimButtonObject.setStyle(ButtonStyle.Success); 
         
-        const closeButton = new ButtonBuilder();
-        closeButton.setCustomId('ticket_close');
-        closeButton.setLabel('Close');
-        closeButton.setStyle(ButtonStyle.Danger); // لون أحمر
+        const closeButtonObject = new ButtonBuilder();
+        closeButtonObject.setCustomId('ticket_close');
+        closeButtonObject.setLabel('Close');
+        closeButtonObject.setStyle(ButtonStyle.Danger); 
         
-        controlsActionRow1.addComponents(addUserButton, claimButton, closeButton);
+        controlsActionRow1Object.addComponents(addUserButtonObject, claimButtonObject, closeButtonObject);
 
-        const controlsActionRow2 = new ActionRowBuilder();
+        const controlsActionRow2Object = new ActionRowBuilder();
         
-        const deleteReasonButton = new ButtonBuilder();
-        deleteReasonButton.setCustomId('ticket_delete_reason');
-        deleteReasonButton.setLabel('Delete With Reason');
-        deleteReasonButton.setStyle(ButtonStyle.Danger); // لون أحمر
+        const deleteReasonButtonObject = new ButtonBuilder();
+        deleteReasonButtonObject.setCustomId('ticket_delete_reason');
+        deleteReasonButtonObject.setLabel('Delete With Reason');
+        deleteReasonButtonObject.setStyle(ButtonStyle.Danger); 
         
-        controlsActionRow2.addComponents(deleteReasonButton);
-        
-        // إرسال الرسالة الكاملة للروم الجديدة
-        await createdChannelObject.send({ 
-            content: welcomeMessageContent, 
-            embeds: embedsListArray, 
-            components: [controlsActionRow1, controlsActionRow2] 
-        });
-        
-        const successReplyMessage = `**✅ Ticket opened successfully: <#${createdChannelObject.id}>**`;
+        controlsActionRow2Object.addComponents(deleteReasonButtonObject);
         
         try {
-            await interaction.editReply(successReplyMessage);
+            await createdChannelObject.send({ 
+                content: welcomeMessageContentString, 
+                embeds: embedsListArray, 
+                components: [controlsActionRow1Object, controlsActionRow2Object] 
+            });
+        } catch (sendTicketMessageError) {}
+        
+        const successReplyMessageContent = `**✅ Ticket opened successfully: <#${createdChannelObject.id}>**`;
+        
+        try {
+            await interactionObject.editReply(successReplyMessageContent);
         } catch (editReplyError) {
-            await interaction.reply({ content: successReplyMessage, ephemeral: true });
+            try {
+                await interactionObject.reply({ content: successReplyMessageContent, ephemeral: true });
+            } catch (replyFallbackError) {}
         }
     }
 
-    // =====================================================================
-    // 🛠️ دالة الدعم: اللوجات والترانسكريبت وحذف التكت
-    // =====================================================================
+    // دالة اللوجات والترانسكريبت وحذف التكت
     async function executeDeleteAndLog(ticketChannelObject, closedByUserObject, configDocument, deleteReasonTextString) {
         
         let currentTopicString = ticketChannelObject.topic;
@@ -1668,7 +1843,9 @@ module.exports = (client) => {
             addedUsersListArray = topicPartsArray[3].split(',');
         }
         
-        let ticketClosedByIdString = closedByUserObject.id; 
+        const closedByUserIdString = closedByUserObject.id;
+        let ticketClosedByIdString = closedByUserIdString; 
+        
         if (topicPartsArray[4] && topicPartsArray[4] !== 'none') {
             ticketClosedByIdString = topicPartsArray[4]; 
         }
@@ -1686,8 +1863,8 @@ module.exports = (client) => {
         let addedDisplayString = 'None';
         if (addedUsersListArray.length > 0) {
             const mentionsArray = [];
-            for (let i = 0; i < addedUsersListArray.length; i++) {
-                const userIdString = addedUsersListArray[i];
+            for (let index = 0; index < addedUsersListArray.length; index++) {
+                const userIdString = addedUsersListArray[index];
                 mentionsArray.push(`<@${userIdString}>`);
             }
             addedDisplayString = mentionsArray.join(', ');
@@ -1695,18 +1872,23 @@ module.exports = (client) => {
 
         const mainLogEmbedObject = new EmbedBuilder();
         
-        const guildIconUrl = ticketChannelObject.guild.iconURL({ dynamic: true });
+        const ticketGuildObject = ticketChannelObject.guild;
+        const guildIconUrlString = ticketGuildObject.iconURL({ dynamic: true });
+        
         mainLogEmbedObject.setAuthor({ 
             name: 'MNC TICKET LOGS', 
-            iconURL: guildIconUrl 
+            iconURL: guildIconUrlString 
         });
         
-        mainLogEmbedObject.setTitle('🗑️ Ticket Deleted');
+        const logTitleString = '🗑️ Ticket Deleted';
+        mainLogEmbedObject.setTitle(logTitleString);
+        
+        const ticketChannelNameString = ticketChannelObject.name;
         
         let logDescriptionString = '';
-        logDescriptionString += `**Ticket:** ${ticketChannelObject.name} was deleted.\n\n`;
+        logDescriptionString += `**Ticket:** ${ticketChannelNameString} was deleted.\n\n`;
         logDescriptionString += `👑 **Owner**\n${ownerDisplayString}\n\n`;
-        logDescriptionString += `🗑️ **Deleted By**\n<@${closedByUserObject.id}>\n\n`;
+        logDescriptionString += `🗑️ **Deleted By**\n<@${closedByUserIdString}>\n\n`;
         logDescriptionString += `🙋 **Claimed By**\n${claimerDisplayString}\n\n`;
         logDescriptionString += `🔒 **Closed By**\n<@${ticketClosedByIdString}>\n\n`;
         logDescriptionString += `➕ **Added Users**\n${addedDisplayString}\n\n`;
@@ -1714,18 +1896,19 @@ module.exports = (client) => {
         
         mainLogEmbedObject.setDescription(logDescriptionString);
         
-        let defaultLogColorHex = configDocument.logEmbedColor;
-        if (!defaultLogColorHex) {
-            defaultLogColorHex = '#ed4245';
+        let defaultLogColorHexCode = configDocument.logEmbedColor;
+        if (!defaultLogColorHexCode) {
+            defaultLogColorHexCode = '#ed4245';
         }
-        mainLogEmbedObject.setColor(defaultLogColorHex);
         
+        mainLogEmbedObject.setColor(defaultLogColorHexCode);
         mainLogEmbedObject.setTimestamp();
 
-        // إرسال اللوج العادي
         const ticketLogChannelIdString = configDocument.ticketLogChannelId;
+        const guildChannelsCollection = ticketGuildObject.channels.cache;
+        
         if (ticketLogChannelIdString) { 
-            const pureLogChannelObject = ticketChannelObject.guild.channels.cache.get(ticketLogChannelIdString); 
+            const pureLogChannelObject = guildChannelsCollection.get(ticketLogChannelIdString); 
             if (pureLogChannelObject) {
                 try {
                     await pureLogChannelObject.send({ embeds: [mainLogEmbedObject] });
@@ -1733,11 +1916,12 @@ module.exports = (client) => {
             }
         }
         
-        // إرسال الترانسكريبت (الملف)
         const transcriptChannelIdString = configDocument.transcriptChannelId;
-        if (transcriptChannelIdString && transcriptChannelIdString !== ticketLogChannelIdString) { 
+        const isTranscriptChannelDifferent = (transcriptChannelIdString !== ticketLogChannelIdString);
+        
+        if (transcriptChannelIdString && isTranscriptChannelDifferent === true) { 
             
-            const transcriptChannelObject = ticketChannelObject.guild.channels.cache.get(transcriptChannelIdString); 
+            const transcriptChannelObject = guildChannelsCollection.get(transcriptChannelIdString); 
             
             if (transcriptChannelObject) {
                 
@@ -1745,39 +1929,39 @@ module.exports = (client) => {
                     const htmlAttachmentObject = await discordTranscripts.createTranscript(ticketChannelObject, { 
                         limit: -1, 
                         returnType: 'attachment', 
-                        filename: `${ticketChannelObject.name}.html`, 
+                        filename: `${ticketChannelNameString}.html`, 
                         saveImages: true 
                     });
                     
-                    let transcriptColorHex = configDocument.transcriptEmbedColor;
-                    if (!transcriptColorHex) {
-                        transcriptColorHex = '#2b2d31';
+                    let transcriptColorHexCode = configDocument.transcriptEmbedColor;
+                    if (!transcriptColorHexCode) {
+                        transcriptColorHexCode = '#2b2d31';
                     }
-                    mainLogEmbedObject.setColor(transcriptColorHex);
                     
-                    const directButtonActionRow = new ActionRowBuilder();
+                    mainLogEmbedObject.setColor(transcriptColorHexCode);
                     
-                    const directTranscriptButton = new ButtonBuilder();
-                    directTranscriptButton.setCustomId('direct_transcript_btn');
-                    directTranscriptButton.setLabel('Direct Transcript');
-                    directTranscriptButton.setStyle(ButtonStyle.Primary);
+                    const directButtonActionRowObject = new ActionRowBuilder();
                     
-                    directButtonActionRow.addComponents(directTranscriptButton);
+                    const directTranscriptButtonObject = new ButtonBuilder();
+                    directTranscriptButtonObject.setCustomId('direct_transcript_btn');
+                    directTranscriptButtonObject.setLabel('Direct Transcript');
+                    directTranscriptButtonObject.setStyle(ButtonStyle.Primary);
+                    
+                    directButtonActionRowObject.addComponents(directTranscriptButtonObject);
 
-                    const transcriptMessageContent = `**📄 Transcript for ${ticketChannelObject.name}**`;
+                    const transcriptMessageContentString = `**📄 Transcript for ${ticketChannelNameString}**`;
                     
                     await transcriptChannelObject.send({ 
-                        content: transcriptMessageContent, 
+                        content: transcriptMessageContentString, 
                         files: [htmlAttachmentObject], 
                         embeds: [mainLogEmbedObject], 
-                        components: [directButtonActionRow] 
+                        components: [directButtonActionRowObject] 
                     });
                     
                 } catch (transcriptProcessError) {}
             }
         }
         
-        // حذف التكت بعد 3 ثواني
         setTimeout(() => { 
             try {
                 ticketChannelObject.delete();
