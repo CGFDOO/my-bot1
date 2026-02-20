@@ -1,3 +1,6 @@
+// =====================================================================
+// استدعاء المكاتب الأساسية (مفرودة بالكامل)
+// =====================================================================
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -6,254 +9,754 @@ const {
     PermissionFlagsBits 
 } = require('discord.js');
 
+// استدعاء الداتابيز
 const GuildConfig = require('./models/GuildConfig');
 
 module.exports = (client) => {
     
+    // =====================================================================
+    // الحدث الرئيسي لقراءة الرسائل والأوامر
+    // =====================================================================
     client.on('messageCreate', async message => {
         
-        if (message.author.bot || !message.guild) return;
+        // 1. تجاهل رسائل البوتات لتخفيف الضغط
+        if (message.author.bot) {
+            return;
+        }
 
+        // 2. تجاهل رسائل الخاص (يجب أن يكون في سيرفر)
+        if (!message.guild) {
+            return;
+        }
+
+        // 3. جلب الإعدادات من الداتابيز للسيرفر الحالي
         const config = await GuildConfig.findOne({ guildId: message.guild.id });
-        if (!config) return;
+        
+        if (!config) {
+            return;
+        }
 
-        let prefix = config.prefix || '!';
-        if (!message.content.startsWith(prefix)) return;
-
-        const args = message.content.slice(prefix.length).trim().split(/ +/);
-        const commandName = args.shift().toLowerCase();
-        const fullCommand = prefix + commandName; 
-
-        // دالة فحص الصلاحيات
-        const hasRole = (allowedRoles) => {
-            if (!allowedRoles || allowedRoles.length === 0) return message.member.permissions.has('Administrator');
-            if (message.member.permissions.has('Administrator')) return true;
-            for (let i = 0; i < allowedRoles.length; i++) {
-                if (message.member.roles.cache.has(allowedRoles[i])) return true;
+        // 4. نظام الردود التلقائية (Auto Responders)
+        if (config.autoResponders && config.autoResponders.length > 0) {
+            for (let i = 0; i < config.autoResponders.length; i++) {
+                const responderObj = config.autoResponders[i];
+                if (message.content.includes(responderObj.word)) {
+                    message.reply({ content: `**${responderObj.reply}**` }).catch(() => {});
+                }
             }
+        }
+
+        // 5. إعداد البريفكس والتحقق من بدايته
+        let prefix = config.prefix;
+        if (!prefix) {
+            prefix = '!';
+        }
+        
+        if (!message.content.startsWith(prefix)) {
+            return;
+        }
+
+        // 6. فصل الأمر عن باقي الكلام (الـ Arguments)
+        const argsArray = message.content.slice(prefix.length).trim().split(/ +/);
+        const commandNameStr = argsArray.shift().toLowerCase();
+        const fullCommand = prefix + commandNameStr; 
+
+        // =====================================================================
+        // 🛠️ دالة التحقق من الصلاحيات
+        // =====================================================================
+        const checkUserRole = (allowedRolesArray) => {
+            
+            // إذا لم يتم تحديد رتب، نسمح للأدمن فقط
+            if (!allowedRolesArray || allowedRolesArray.length === 0) {
+                if (message.member.permissions.has('Administrator')) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            
+            // الأدمن دائماً مسموح له
+            if (message.member.permissions.has('Administrator')) {
+                return true;
+            }
+            
+            // فحص باقي الرتب المحددة
+            for (let i = 0; i < allowedRolesArray.length; i++) {
+                if (message.member.roles.cache.has(allowedRolesArray[i])) {
+                    return true;
+                }
+            }
+            
             return false;
         };
 
-        // دالة اللوجات
-        const sendLog = async (logChannelId, title, desc, color) => {
-            if (!logChannelId) return;
-            const logChannel = message.guild.channels.cache.get(logChannelId);
-            if (!logChannel) return;
+        // =====================================================================
+        // 🛠️ دالة إرسال اللوجات للرومات المخصصة
+        // =====================================================================
+        const sendActionLog = async (logChannelIdStr, logTitleStr, logDescStr, logColorHex) => {
             
-            const logEmbed = new EmbedBuilder();
-            logEmbed.setTitle(title);
-            logEmbed.setDescription(desc);
-            logEmbed.setColor(color);
-            logEmbed.setTimestamp();
-            logEmbed.setFooter({ text: message.guild.name, iconURL: message.guild.iconURL({ dynamic: true }) });
+            if (!logChannelIdStr) {
+                return;
+            }
             
-            await logChannel.send({ embeds: [logEmbed] }).catch(()=>{});
+            const targetLogChannel = message.guild.channels.cache.get(logChannelIdStr);
+            
+            if (!targetLogChannel) {
+                return;
+            }
+            
+            const logEmbedObj = new EmbedBuilder();
+            logEmbedObj.setTitle(logTitleStr);
+            logEmbedObj.setDescription(logDescStr);
+            logEmbedObj.setColor(logColorHex);
+            logEmbedObj.setTimestamp();
+            logEmbedObj.setFooter({ 
+                text: message.guild.name, 
+                iconURL: message.guild.iconURL({ dynamic: true }) 
+            });
+            
+            await targetLogChannel.send({ embeds: [logEmbedObj] }).catch(()=>{});
         };
 
         // =====================================================================
         // 🤝 أمر تقييم الوسيط (!done) وسحب تفاصيل التريد
         // =====================================================================
         if (fullCommand === config.cmdDone) {
-            if (!hasRole(config.cmdDoneRoles)) return message.reply('**❌ You do not have permission.**');
             
-            const topicData = message.channel.topic;
-            if (!topicData) return message.reply('**❌ This command can only be used inside a ticket.**');
+            let hasPerm = checkUserRole(config.cmdDoneRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission to use this command.**');
+            }
             
-            const parts = topicData.split('_');
-            const ticketOwnerId = parts[0]; 
+            let currentTopic = message.channel.topic;
+            if (!currentTopic) {
+                return message.reply('**❌ This command can only be used inside a ticket.**');
+            }
             
-            if (!ticketOwnerId || ticketOwnerId === 'none') return message.reply('**❌ This command can only be used inside a ticket.**');
+            const topicPartsArr = currentTopic.split('_');
+            const ticketOwnerIdStr = topicPartsArr[0]; 
+            
+            if (!ticketOwnerIdStr || ticketOwnerIdStr === 'none') {
+                return message.reply('**❌ This command can only be used inside a ticket.**');
+            }
             
             try {
-                // سحب تفاصيل التريد من الشات لدمجها في التقييم
-                let extractedTradeDetails = 'لا يوجد تفاصيل مسجلة';
-                const fetchedMessages = await message.channel.messages.fetch({ limit: 100 });
-                const tradeMsg = fetchedMessages.find(m => m.embeds[0] && m.embeds[0].title === '⚖️ Trade Approval Request');
+                // 🔥 سحب تفاصيل التريد من الشات
+                let extractedTradeText = 'لا يوجد تفاصيل مسجلة (تم التقييم بدون نافذة تريد).';
                 
-                if (tradeMsg) {
-                    const descParts = tradeMsg.embeds[0].description.split('**Details:**\n```');
-                    if (descParts.length > 1) {
-                        extractedTradeDetails = descParts[1].split('```')[0]; 
+                const pastMessages = await message.channel.messages.fetch({ limit: 100 });
+                
+                const tradeMessageFound = pastMessages.find(msg => {
+                    let hasEmbed = msg.embeds && msg.embeds.length > 0;
+                    if (hasEmbed) {
+                        return msg.embeds[0].title === '⚖️ Trade Approval Request';
+                    }
+                    return false;
+                });
+                
+                if (tradeMessageFound) {
+                    const embedDescStr = tradeMessageFound.embeds[0].description;
+                    const descSplitByDetails = embedDescStr.split('**Details:**\n```');
+                    
+                    if (descSplitByDetails.length > 1) {
+                        let textAfterDetails = descSplitByDetails[1];
+                        let finalDetailsText = textAfterDetails.split('```')[0]; 
+                        extractedTradeText = finalDetailsText;
                     }
                 }
 
-                const owner = await message.guild.members.fetch(ticketOwnerId);
-                const guildName = message.guild.name;
+                const ticketOwnerMember = await message.guild.members.fetch(ticketOwnerIdStr);
+                const currentGuildName = message.guild.name;
                 
-                const ratingEmbed = new EmbedBuilder();
-                let embedTitle = config.customMedRatingTitle || 'تقييم الوساطة';
+                const finalRatingEmbed = new EmbedBuilder();
                 
-                let descText = `لقد أتممت معاملتك بنجاح في سيرفر **${guildName}**.\n\n`;
-                descText += `يرجى تقييم خدمة الوسيط <@${message.author.id}> بالضغط على النجوم في الأسفل.\n\n`;
-                descText += `> **📦 تفاصيل المعاملة:**\n> ${extractedTradeDetails}\n`;
+                let finalEmbedTitle = '';
+                let finalEmbedDesc = '';
                 
-                ratingEmbed.setTitle(embedTitle);
-                ratingEmbed.setDescription(descText);
-                ratingEmbed.setColor(config.basicRatingColor || '#f2a658');
-                ratingEmbed.setFooter({ text: guildName, iconURL: message.guild.iconURL({ dynamic: true }) });
+                if (config.ratingStyle === 'custom' && config.customMedRatingText) {
+                    finalEmbedTitle = config.customMedRatingTitle;
+                    if (!finalEmbedTitle) {
+                        finalEmbedTitle = 'تقييم الوساطة';
+                    }
+                    
+                    finalEmbedDesc = config.customMedRatingText;
+                    finalEmbedDesc = finalEmbedDesc.replace(/\[staff\]/g, `<@${message.author.id}>`);
+                    finalEmbedDesc = finalEmbedDesc.replace(/\[user\]/g, `<@${ticketOwnerMember.id}>`);
+                    finalEmbedDesc = finalEmbedDesc.replace(/\[server\]/g, currentGuildName);
+                } else {
+                    finalEmbedTitle = 'تقييم الوساطة';
+                    finalEmbedDesc = `لقد أتممت معاملتك بنجاح في سيرفر **${currentGuildName}**.\n\n`;
+                    finalEmbedDesc += `يرجى تقييم خدمة الوسيط <@${message.author.id}> بالضغط على النجوم في الأسفل.\n`;
+                }
                 
-                const ratingRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`rate_mediator_1_${message.author.id}_${message.guild.id}`).setLabel('⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_2_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_3_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_4_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_5_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
-                );
+                // دمج تفاصيل التريد في إيمبد التقييم الخاص بالعميل
+                finalEmbedDesc += `\n-------------------------\n`;
+                finalEmbedDesc += `> **📦 تفاصيل المعاملة:**\n`;
+                finalEmbedDesc += `> ${extractedTradeText}\n`;
                 
-                await owner.send({ embeds: [ratingEmbed], components: [ratingRow] });
+                finalRatingEmbed.setTitle(finalEmbedTitle);
+                finalRatingEmbed.setDescription(finalEmbedDesc);
+                
+                let mediatorColor = config.basicRatingColor;
+                if (!mediatorColor) {
+                    mediatorColor = '#f2a658';
+                }
+                finalRatingEmbed.setColor(mediatorColor);
+                
+                finalRatingEmbed.setFooter({ 
+                    text: currentGuildName, 
+                    iconURL: message.guild.iconURL({ dynamic: true }) 
+                });
+                
+                const starsActionRow = new ActionRowBuilder();
+                
+                const btnStar1 = new ButtonBuilder();
+                btnStar1.setCustomId(`rate_mediator_1_${message.author.id}_${message.guild.id}`);
+                btnStar1.setLabel('⭐');
+                btnStar1.setStyle(ButtonStyle.Secondary);
+                
+                const btnStar2 = new ButtonBuilder();
+                btnStar2.setCustomId(`rate_mediator_2_${message.author.id}_${message.guild.id}`);
+                btnStar2.setLabel('⭐⭐');
+                btnStar2.setStyle(ButtonStyle.Secondary);
+                
+                const btnStar3 = new ButtonBuilder();
+                btnStar3.setCustomId(`rate_mediator_3_${message.author.id}_${message.guild.id}`);
+                btnStar3.setLabel('⭐⭐⭐');
+                btnStar3.setStyle(ButtonStyle.Secondary);
+                
+                const btnStar4 = new ButtonBuilder();
+                btnStar4.setCustomId(`rate_mediator_4_${message.author.id}_${message.guild.id}`);
+                btnStar4.setLabel('⭐⭐⭐⭐');
+                btnStar4.setStyle(ButtonStyle.Secondary);
+                
+                const btnStar5 = new ButtonBuilder();
+                btnStar5.setCustomId(`rate_mediator_5_${message.author.id}_${message.guild.id}`);
+                btnStar5.setLabel('⭐⭐⭐⭐⭐');
+                btnStar5.setStyle(ButtonStyle.Secondary);
+                
+                starsActionRow.addComponents(btnStar1, btnStar2, btnStar3, btnStar4, btnStar5);
+                
+                await ticketOwnerMember.send({ 
+                    embeds: [finalRatingEmbed], 
+                    components: [starsActionRow] 
+                });
+                
                 return message.reply('**✅ تم إرسال طلب التقييم (مع تفاصيل التريد) للعضو في الخاص بنجاح.**');
+                
             } catch (err) { 
                 return message.reply('**❌ لا يمكن إرسال رسالة لهذا العضو (الخاص مغلق).**'); 
             }
         }
 
         // =====================================================================
-        // ⚖️ أمر التريد والموافقة (!trade)
+        // ⚖️ أمر التريد (!trade) مع المنشن الفوري للرتب العليا
         // =====================================================================
         if (fullCommand === config.cmdTrade) {
-            if (!hasRole(config.cmdTradeRoles)) return message.reply('**❌ You do not have permission.**');
+            
+            let hasPerm = checkUserRole(config.cmdTradeRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             
             const tradeInitEmbed = new EmbedBuilder();
             tradeInitEmbed.setTitle('📝 تفاصيل التريد');
             tradeInitEmbed.setDescription('يرجى الضغط على الزر أدناه لكتابة تفاصيل التريد.');
-            tradeInitEmbed.setColor(config.tradeEmbedColor || '#f2a658');
+            
+            let tradeCol = config.tradeEmbedColor;
+            if (!tradeCol) {
+                tradeCol = '#f2a658';
+            }
+            tradeInitEmbed.setColor(tradeCol);
 
-            const tradeRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('open_trade_modal').setLabel('كتابة تفاصيل التريد ✍️').setStyle(ButtonStyle.Primary)
-            );
+            const tradeRow = new ActionRowBuilder();
+            
+            const openTradeModalBtn = new ButtonBuilder();
+            openTradeModalBtn.setCustomId('open_trade_modal');
+            openTradeModalBtn.setLabel('كتابة تفاصيل التريد ✍️');
+            openTradeModalBtn.setStyle(ButtonStyle.Primary);
+            
+            tradeRow.addComponents(openTradeModalBtn);
 
+            // 🔥 عمل منشن للرتب العليا المحددة في الداشبورد
+            let mentionString = '';
+            if (config.tradeMentionRoles && config.tradeMentionRoles.length > 0) {
+                for (let i = 0; i < config.tradeMentionRoles.length; i++) {
+                    mentionString += `<@&${config.tradeMentionRoles[i]}> `;
+                }
+            }
+
+            // مسح رسالة الأمر للتنظيف
             await message.delete().catch(()=>{});
-            return message.channel.send({ embeds: [tradeInitEmbed], components: [tradeRow] });
+            
+            // إرسال الإيمبد ومعه المنشن
+            let msgContentToDrop = '';
+            if (mentionString !== '') {
+                msgContentToDrop = `**🔔 نداء للموافقات العليا:** ${mentionString}`;
+            }
+
+            return message.channel.send({ 
+                content: msgContentToDrop !== '' ? msgContentToDrop : null,
+                embeds: [tradeInitEmbed], 
+                components: [tradeRow] 
+            });
         }
 
         // =====================================================================
-        // ⏳ أمر التايم أوت مع مُحلل الوقت (Time Parser) والتصميم الفخم
+        // ⏳ أمر التايم أوت (!timeout) مع مُحلل الوقت والتصميم الفخم
         // =====================================================================
         if (fullCommand === config.cmdTimeout) {
-            if (!hasRole(config.cmdTimeoutRoles)) return message.reply('**❌ You do not have permission.**');
             
-            let userToMute = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            if (!userToMute) return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            let hasPerm = checkUserRole(config.cmdTimeoutRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             
-            let timeString = args[1] || '5m'; // الافتراضي 5 دقائق
-            let durationMs = 0;
-            let displayTime = '';
+            let userToMute = message.mentions.members.first();
+            if (!userToMute) {
+                userToMute = message.guild.members.cache.get(argsArray[0]);
+            }
+            
+            if (!userToMute) {
+                return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            }
+            
+            let timeStringInput = argsArray[1];
+            if (!timeStringInput) {
+                timeStringInput = '5m'; // الافتراضي 5 دقائق
+            }
+            
+            let calculatedDurationMs = 0;
+            let displayTimeString = '';
 
-            // 🔥 مُحلل الوقت (حساب الأيام، الساعات، الدقائق)
-            if (timeString.endsWith('d')) {
-                let val = parseInt(timeString.replace('d', ''));
-                durationMs = val * 24 * 60 * 60 * 1000;
-                displayTime = `${val} Days`;
-            } else if (timeString.endsWith('h')) {
-                let val = parseInt(timeString.replace('h', ''));
-                durationMs = val * 60 * 60 * 1000;
-                displayTime = `${val} Hours`;
-            } else if (timeString.endsWith('m')) {
-                let val = parseInt(timeString.replace('m', ''));
-                durationMs = val * 60 * 1000;
-                displayTime = `${val} Minutes`;
-            } else if (timeString.endsWith('s')) {
-                let val = parseInt(timeString.replace('s', ''));
-                durationMs = val * 1000;
-                displayTime = `${val} Seconds`;
-            } else {
-                let val = parseInt(timeString); // لو كتب رقم بس يعتبره دقايق
-                durationMs = val * 60 * 1000;
-                displayTime = `${val} Minutes`;
+            // 🔥 مُحلل الوقت (Time Parser)
+            if (timeStringInput.endsWith('d')) {
+                let numberValue = parseInt(timeStringInput.replace('d', ''));
+                calculatedDurationMs = numberValue * 24 * 60 * 60 * 1000;
+                displayTimeString = `${numberValue} Days (أيام)`;
+            } 
+            else if (timeStringInput.endsWith('h')) {
+                let numberValue = parseInt(timeStringInput.replace('h', ''));
+                calculatedDurationMs = numberValue * 60 * 60 * 1000;
+                displayTimeString = `${numberValue} Hours (ساعات)`;
+            } 
+            else if (timeStringInput.endsWith('m')) {
+                let numberValue = parseInt(timeStringInput.replace('m', ''));
+                calculatedDurationMs = numberValue * 60 * 1000;
+                displayTimeString = `${numberValue} Minutes (دقائق)`;
+            } 
+            else if (timeStringInput.endsWith('s')) {
+                let numberValue = parseInt(timeStringInput.replace('s', ''));
+                calculatedDurationMs = numberValue * 1000;
+                displayTimeString = `${numberValue} Seconds (ثواني)`;
+            } 
+            else {
+                let numberValue = parseInt(timeStringInput); 
+                calculatedDurationMs = numberValue * 60 * 1000;
+                displayTimeString = `${numberValue} Minutes (دقائق)`;
             }
 
-            if (isNaN(durationMs) || durationMs <= 0) return message.reply('**⚠️ Invalid time format. Use: 3d, 12h, 5m**');
+            if (isNaN(calculatedDurationMs) || calculatedDurationMs <= 0) {
+                return message.reply('**⚠️ Invalid time format. Use: 3d, 12h, 5m**');
+            }
 
-            let reason = args.slice(2).join(' ') || 'No reason provided';
+            let punishmentReason = argsArray.slice(2).join(' ');
+            if (!punishmentReason) {
+                punishmentReason = 'بدون سبب (No reason provided)';
+            }
 
             try {
-                await userToMute.timeout(durationMs, `${reason} - By: ${message.author.tag}`);
+                await userToMute.timeout(calculatedDurationMs, `${punishmentReason} - By: ${message.author.tag}`);
                 
-                // تصميم فخم وكبير لإيمبد التايم أوت
                 const muteReplyEmbed = new EmbedBuilder();
-                muteReplyEmbed.setAuthor({ name: '⏳ Member Timed Out', iconURL: userToMute.user.displayAvatarURL({ dynamic: true }) });
                 
-                let desc = ``;
-                desc += `**👤 User:** <@${userToMute.id}>\n`;
-                desc += `**🛡️ Moderator:** <@${message.author.id}>\n\n`;
-                desc += `**⏱️ Duration:** \`${displayTime}\`\n`;
-                desc += `**📝 Reason:** \n> ${reason}\n`;
+                let tOutColor = config.timeoutEmbedColor;
+                if (!tOutColor) {
+                    tOutColor = '#f2a658';
+                }
+
+                if (config.punishmentStyle === 'custom') {
+                    
+                    let customTitleStr = config.customTimeoutTitle;
+                    if (!customTitleStr) customTitleStr = '⏳ Timed Out';
+                    
+                    let customDescStr = config.customTimeoutDesc;
+                    if (!customDescStr) customDescStr = 'User [user] timed out by [moderator] for [duration].\nReason: [reason]';
+                    
+                    customDescStr = customDescStr.replace(/\[user\]/g, `<@${userToMute.id}>`);
+                    customDescStr = customDescStr.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    customDescStr = customDescStr.replace(/\[reason\]/g, punishmentReason);
+                    customDescStr = customDescStr.replace(/\[duration\]/g, displayTimeString);
+                    
+                    muteReplyEmbed.setTitle(customTitleStr);
+                    muteReplyEmbed.setDescription(customDescStr);
+                    
+                } else {
+                    
+                    muteReplyEmbed.setAuthor({ 
+                        name: '⏳ تمت المعاقبة بالتايم أوت', 
+                        iconURL: userToMute.user.displayAvatarURL({ dynamic: true }) 
+                    });
+                    
+                    let formattedDesc = ``;
+                    formattedDesc += `**👤 العضو:** <@${userToMute.id}>\n`;
+                    formattedDesc += `**🛡️ بواسطة:** <@${message.author.id}>\n\n`;
+                    formattedDesc += `**⏱️ المدة:** \`${displayTimeString}\`\n`;
+                    formattedDesc += `**📝 السبب:** \n> ${punishmentReason}\n`;
+                    
+                    muteReplyEmbed.setDescription(formattedDesc);
+                    muteReplyEmbed.setThumbnail(message.guild.iconURL({ dynamic: true }));
+                }
                 
-                muteReplyEmbed.setDescription(desc);
-                muteReplyEmbed.setColor('#f2a658');
-                muteReplyEmbed.setThumbnail(message.guild.iconURL({ dynamic: true }));
+                muteReplyEmbed.setColor(tOutColor);
                 muteReplyEmbed.setTimestamp();
                 
                 message.reply({ embeds: [muteReplyEmbed] });
 
-                sendLog(config.logTimeoutId, '⏳ Member Timed Out', desc, '#f2a658');
+                let logDescString = `**User:** ${userToMute}\n**By:** ${message.author}\n**Duration:** ${displayTimeString}\n**Reason:** ${punishmentReason}`;
+                sendActionLog(config.logTimeoutId, '⏳ Member Timed Out', logDescString, tOutColor);
+                
             } catch (err) { 
-                message.reply('**❌ I cannot timeout this user. Check my roles.**'); 
+                message.reply('**❌ I cannot timeout this user. Check my roles hierarchy.**'); 
+            }
+            return;
+        }
+
+        if (fullCommand === config.cmdUntimeout) {
+            
+            let hasPerm = checkUserRole(config.cmdUntimeoutRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let userToUnmute = message.mentions.members.first();
+            if (!userToUnmute) {
+                userToUnmute = message.guild.members.cache.get(argsArray[0]);
+            }
+            
+            if (!userToUnmute) {
+                return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            }
+
+            try {
+                await userToUnmute.timeout(null, `Untimeout by: ${message.author.tag}`);
+                
+                const unmuteReplyEmbed = new EmbedBuilder();
+                
+                let unMuteColor = config.untimeoutEmbedColor;
+                if (!unMuteColor) {
+                    unMuteColor = '#3ba55d';
+                }
+                
+                if (config.punishmentStyle === 'custom') {
+                    
+                    let customTitleStr = config.customUntimeoutTitle;
+                    if (!customTitleStr) customTitleStr = '🔊 Untimed Out';
+                    
+                    let customDescStr = config.customUntimeoutDesc;
+                    if (!customDescStr) customDescStr = 'User [user] untimed out by [moderator].';
+                    
+                    customDescStr = customDescStr.replace(/\[user\]/g, `<@${userToUnmute.id}>`);
+                    customDescStr = customDescStr.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    
+                    unmuteReplyEmbed.setTitle(customTitleStr);
+                    unmuteReplyEmbed.setDescription(customDescStr);
+                    
+                } else {
+                    unmuteReplyEmbed.setTitle('🔊 تم فك التايم أوت بنجاح');
+                    unmuteReplyEmbed.setDescription(`**👤 العضو:** <@${userToUnmute.id}>\n**🛡️ بواسطة:** <@${message.author.id}>`);
+                }
+                
+                unmuteReplyEmbed.setColor(unMuteColor);
+                message.reply({ embeds: [unmuteReplyEmbed] });
+
+                let logDescString = `**User:** ${userToUnmute}\n**By:** ${message.author}`;
+                sendActionLog(config.logTimeoutId, '🔊 Timeout Removed', logDescString, unMuteColor);
+                
+            } catch (err) { 
+                message.reply('**❌ Could not remove timeout for this user.**'); 
             }
             return;
         }
 
         // =====================================================================
-        // 🔨 أمر الباند (تصميم فخم)
+        // 🔨 أمر الباند وفكه (!ban / !unban) مع الإيمبدات الفخمة
         // =====================================================================
         if (fullCommand === config.cmdBan) {
-            if (!hasRole(config.cmdBanRoles)) return message.reply('**❌ You do not have permission.**');
-            let userToBan = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            if (!userToBan) return message.reply('**⚠️ Please mention a user or provide their ID.**');
-            let reason = args.slice(1).join(' ') || 'No reason provided';
+            
+            let hasPerm = checkUserRole(config.cmdBanRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let userToBan = message.mentions.members.first();
+            if (!userToBan) {
+                userToBan = message.guild.members.cache.get(argsArray[0]);
+            }
+            
+            if (!userToBan) {
+                return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            }
+            
+            let punishmentReason = argsArray.slice(1).join(' ');
+            if (!punishmentReason) {
+                punishmentReason = 'بدون سبب (No reason provided)';
+            }
             
             try {
-                await userToBan.ban({ reason: `${reason} - By: ${message.author.tag}` });
+                await userToBan.ban({ reason: `${punishmentReason} - By: ${message.author.tag}` });
                 
                 const banReplyEmbed = new EmbedBuilder();
-                banReplyEmbed.setAuthor({ name: '🔨 Member Banned', iconURL: userToBan.user.displayAvatarURL({ dynamic: true }) });
                 
-                let desc = ``;
-                desc += `**👤 User:** <@${userToBan.id}>\n`;
-                desc += `**🛡️ Moderator:** <@${message.author.id}>\n\n`;
-                desc += `**📝 Reason:** \n> ${reason}\n`;
+                let banColorHex = config.banEmbedColor;
+                if (!banColorHex) {
+                    banColorHex = '#ed4245';
+                }
                 
-                banReplyEmbed.setDescription(desc);
-                banReplyEmbed.setColor('#ed4245');
-                banReplyEmbed.setThumbnail(message.guild.iconURL({ dynamic: true }));
+                if (config.punishmentStyle === 'custom') {
+                    
+                    let customTitleStr = config.customBanTitle;
+                    if (!customTitleStr) customTitleStr = '🔨 Banned';
+                    
+                    let customDescStr = config.customBanDesc;
+                    if (!customDescStr) customDescStr = 'User [user] was banned by [moderator].\nReason: [reason]';
+                    
+                    customDescStr = customDescStr.replace(/\[user\]/g, `<@${userToBan.id}>`);
+                    customDescStr = customDescStr.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    customDescStr = customDescStr.replace(/\[reason\]/g, punishmentReason);
+                    
+                    banReplyEmbed.setTitle(customTitleStr);
+                    banReplyEmbed.setDescription(customDescStr);
+                    
+                } else {
+                    
+                    banReplyEmbed.setAuthor({ 
+                        name: '🔨 تمت المعاقبة بالحظر (Ban)', 
+                        iconURL: userToBan.user.displayAvatarURL({ dynamic: true }) 
+                    });
+                    
+                    let formattedDesc = ``;
+                    formattedDesc += `**👤 العضو:** <@${userToBan.id}>\n`;
+                    formattedDesc += `**🛡️ بواسطة:** <@${message.author.id}>\n\n`;
+                    formattedDesc += `**📝 السبب:** \n> ${punishmentReason}\n`;
+                    
+                    banReplyEmbed.setDescription(formattedDesc);
+                    banReplyEmbed.setThumbnail(message.guild.iconURL({ dynamic: true }));
+                }
+                
+                banReplyEmbed.setColor(banColorHex);
                 banReplyEmbed.setTimestamp();
 
                 message.reply({ embeds: [banReplyEmbed] });
-                sendLog(config.logBanId, '🔨 Member Banned', desc, '#ed4245');
-            } catch (err) { message.reply('**❌ I cannot ban this user.**'); }
+
+                let logDescString = `**User:** ${userToBan}\n**By:** ${message.author}\n**Reason:** ${punishmentReason}`;
+                sendActionLog(config.logBanId, '🔨 Member Banned', logDescString, banColorHex);
+                
+            } catch (err) { 
+                message.reply('**❌ I cannot ban this user. Check my roles hierarchy.**'); 
+            }
             return;
         }
 
-        // باقي أوامر الفك والنقل (نفس القديمة وتعمل بكفاءة)
         if (fullCommand === config.cmdUnban) {
-            if (!hasRole(config.cmdUnbanRoles)) return message.reply('**❌ You do not have permission.**');
-            const userId = args[0];
-            if (!userId) return message.reply('**⚠️ Please provide the user ID to unban.**');
+            
+            let hasPerm = checkUserRole(config.cmdUnbanRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            const userIdToUnban = argsArray[0];
+            if (!userIdToUnban) {
+                return message.reply('**⚠️ Please provide the user ID to unban.**');
+            }
+            
             try {
-                await message.guild.members.unban(userId);
-                message.reply(`**✅ Successfully unbanned ID: ${userId}.**`);
-            } catch (err) { message.reply('**❌ Could not unban this user.**'); }
+                await message.guild.members.unban(userIdToUnban);
+                
+                const unbanReplyEmbed = new EmbedBuilder();
+                
+                let unbanColorHex = config.unbanEmbedColor;
+                if (!unbanColorHex) {
+                    unbanColorHex = '#3ba55d';
+                }
+                
+                if (config.punishmentStyle === 'custom') {
+                    
+                    let customTitleStr = config.customUnbanTitle;
+                    if (!customTitleStr) customTitleStr = '🕊️ Unbanned';
+                    
+                    let customDescStr = config.customUnbanDesc;
+                    if (!customDescStr) customDescStr = 'User [user] was unbanned by [moderator].';
+                    
+                    customDescStr = customDescStr.replace(/\[user\]/g, `<@${userIdToUnban}>`);
+                    customDescStr = customDescStr.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    
+                    unbanReplyEmbed.setTitle(customTitleStr);
+                    unbanReplyEmbed.setDescription(customDescStr);
+                    
+                } else {
+                    unbanReplyEmbed.setTitle('🕊️ تم فك الحظر بنجاح');
+                    unbanReplyEmbed.setDescription(`**👤 ايدي العضو:** <@${userIdToUnban}>\n**🛡️ بواسطة:** <@${message.author.id}>`);
+                }
+                
+                unbanReplyEmbed.setColor(unbanColorHex);
+                message.reply({ embeds: [unbanReplyEmbed] });
+
+                let logDescString = `**User ID:** ${userIdToUnban}\n**By:** ${message.author}`;
+                sendActionLog(config.logBanId, '🕊️ Member Unbanned', logDescString, unbanColorHex);
+                
+            } catch (err) { 
+                message.reply('**❌ Could not unban this user. Are you sure they are banned?**'); 
+            }
             return;
         }
 
-        if (fullCommand === config.cmdUntimeout) {
-            if (!hasRole(config.cmdUntimeoutRoles)) return message.reply('**❌ You do not have permission.**');
-            let userToUnmute = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            if (!userToUnmute) return message.reply('**⚠️ Please mention a user.**');
+        // =====================================================================
+        // 🎙️ أوامر النقل الصوتي (!move / !vmove)
+        // =====================================================================
+        if (fullCommand === config.cmdVmove) {
+            
+            let hasPerm = checkUserRole(config.cmdVmoveRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            const targetUser = message.mentions.members.first();
+            if (!targetUser || !targetUser.voice.channel) {
+                return message.reply('**⚠️ Please mention a user who is currently in a voice channel.**');
+            }
+            
+            const authorVoiceChannel = message.member.voice.channel;
+            if (!authorVoiceChannel) {
+                return message.reply('**⚠️ You must be in a voice channel yourself.**');
+            }
+            
             try {
-                await userToUnmute.timeout(null, `Untimeout by: ${message.author.tag}`);
-                message.reply(`**✅ Successfully removed timeout for ${userToUnmute.user.tag}.**`);
-            } catch (err) { message.reply('**❌ Could not remove timeout.**'); }
+                await targetUser.voice.setChannel(authorVoiceChannel);
+                message.reply(`**✅ Moved ${targetUser} to your channel successfully.**`);
+            } catch (err) { 
+                message.reply('**❌ An error occurred while moving the user.**'); 
+            }
             return;
         }
 
         if (fullCommand === config.cmdMove) {
-            if (!hasRole(config.cmdMoveRoles)) return message.reply('**❌ You do not have permission.**');
-            let targetUser = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            let targetChannel = message.mentions.channels.first() || message.guild.channels.cache.get(args[1]);
-            if (!targetUser || !targetUser.voice.channel || !targetChannel) return message.reply('**⚠️ Invalid user or channel.**');
-            try { await targetUser.voice.setChannel(targetChannel); message.reply(`**✅ Moved successfully.**`); } catch (err) {}
+            
+            let hasPerm = checkUserRole(config.cmdMoveRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let targetUser = message.mentions.members.first();
+            if (!targetUser) {
+                targetUser = message.guild.members.cache.get(argsArray[0]);
+            }
+            
+            if (!targetUser || !targetUser.voice.channel) {
+                return message.reply('**⚠️ Please mention a user who is currently in a voice channel.**');
+            }
+
+            let targetChannel = message.mentions.channels.first();
+            if (!targetChannel) {
+                targetChannel = message.guild.channels.cache.get(argsArray[1]);
+            }
+            
+            if (!targetChannel || targetChannel.type !== 2) { 
+                return message.reply('**⚠️ Please mention a valid voice channel. (e.g., !move @user #Voice-1)**');
+            }
+
+            try {
+                await targetUser.voice.setChannel(targetChannel);
+                message.reply(`**✅ Moved ${targetUser} to ${targetChannel} successfully.**`);
+            } catch (err) { 
+                message.reply('**❌ An error occurred while moving the user.**'); 
+            }
             return;
+        }
+
+        // =====================================================================
+        // 🧹 أوامر المسح والقفل والنداء
+        // =====================================================================
+        if (fullCommand === config.cmdClear) {
+            
+            let hasPerm = checkUserRole(config.cmdClearRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let amountToDelete = parseInt(argsArray[0]);
+            if (isNaN(amountToDelete) || amountToDelete < 1 || amountToDelete > 100) {
+                return message.reply('**⚠️ Please provide a valid number between 1 and 100.**');
+            }
+            
+            try {
+                await message.channel.bulkDelete(amountToDelete, true);
+                
+                const replyMsg = await message.channel.send(`**✅ Successfully deleted ${amountToDelete} messages.**`);
+                
+                setTimeout(() => { 
+                    replyMsg.delete().catch(()=>{}); 
+                }, 3000);
+                
+            } catch (err) {}
+            return;
+        }
+
+        if (fullCommand === config.cmdLock) {
+            
+            let hasPerm = checkUserRole(config.cmdLockRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            try {
+                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, { 
+                    SendMessages: false 
+                });
+                message.reply('**🔒 Channel has been Locked.**');
+            } catch (err) {}
+            return;
+        }
+
+        if (fullCommand === config.cmdUnlock) {
+            
+            let hasPerm = checkUserRole(config.cmdUnlockRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            try {
+                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, { 
+                    SendMessages: true 
+                });
+                message.reply('**🔓 Channel has been Unlocked.**');
+            } catch (err) {}
+            return;
+        }
+
+        // =====================================================================
+        // 📢 أمر النداء المباشر (!req-high) مع المنشن
+        // =====================================================================
+        if (fullCommand === config.cmdReqHigh) {
+            
+            let hasPerm = checkUserRole(config.cmdReqHighRoles);
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let mentionRolesString = '';
+            
+            if (config.tradeMentionRoles && config.tradeMentionRoles.length > 0) {
+                for (let i = 0; i < config.tradeMentionRoles.length; i++) {
+                    mentionRolesString += `<@&${config.tradeMentionRoles[i]}> `;
+                }
+            } else if (config.highMediatorRoles && config.highMediatorRoles.length > 0) {
+                for (let i = 0; i < config.highMediatorRoles.length; i++) {
+                    mentionRolesString += `<@&${config.highMediatorRoles[i]}> `;
+                }
+            }
+            
+            return message.channel.send(`**🚨 نداء للإدارة والموافقات العليا!** ${mentionRolesString}\nRequested by: ${message.author}`);
         }
     });
 };
