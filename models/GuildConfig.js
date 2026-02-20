@@ -19,7 +19,7 @@ const modalFieldSchema = new mongoose.Schema({
 });
 
 // =====================================================================
-// 🔘 Schema for Ticket Buttons (زراير التكت)
+// 🔘 Schema for Ticket Buttons (زراير التكتات المخصصة)
 // =====================================================================
 const ticketButtonSchema = new mongoose.Schema({
     id: { 
@@ -91,10 +91,13 @@ const autoResponderSchema = new mongoose.Schema({
 });
 
 // =====================================================================
-// 👑 THE MAIN GUILD CONFIGURATION (الإعدادات الشاملة)
+// 👑 THE MAIN GUILD CONFIGURATION (الإعدادات الشاملة للسيرفر)
 // =====================================================================
 const guildConfigSchema = new mongoose.Schema({
     
+    // ---------------------------------------------------
+    // ⚙️ Core Settings
+    // ---------------------------------------------------
     guildId: { 
         type: String, 
         required: true, 
@@ -117,6 +120,9 @@ const guildConfigSchema = new mongoose.Schema({
         default: null 
     },
     
+    // ---------------------------------------------------
+    // 🎮 Games & Leveling System
+    // ---------------------------------------------------
     gamesEnabled: { 
         type: Boolean, 
         default: false 
@@ -138,6 +144,9 @@ const guildConfigSchema = new mongoose.Schema({
         default: null 
     },
     
+    // ---------------------------------------------------
+    // 🖼️ Welcome System
+    // ---------------------------------------------------
     welcomeChannelId: { 
         type: String, 
         default: null 
@@ -159,6 +168,9 @@ const guildConfigSchema = new mongoose.Schema({
         default: '#5865F2' 
     }, 
     
+    // ---------------------------------------------------
+    // ⚠️ Warn Panel System
+    // ---------------------------------------------------
     warnPanelChannelId: { 
         type: String, 
         default: null 
@@ -192,6 +204,9 @@ const guildConfigSchema = new mongoose.Schema({
         default: ['مخالفة القوانين', 'ألفاظ خارجة', 'سرقة زبائن'] 
     }, 
     
+    // ---------------------------------------------------
+    // 🎟️ External Ticket Panel Settings
+    // ---------------------------------------------------
     panelChannelId: { 
         type: String, 
         default: null 
@@ -234,6 +249,9 @@ const guildConfigSchema = new mongoose.Schema({
         default: [] 
     },
 
+    // ---------------------------------------------------
+    // 👨‍⚖️ Staff & Mediator Roles
+    // ---------------------------------------------------
     adminRoleId: { 
         type: String, 
         default: null 
@@ -260,45 +278,57 @@ const guildConfigSchema = new mongoose.Schema({
         default: false 
     },
     
+    // ---------------------------------------------------
+    // ⌨️ Commands & Permissions
+    // ---------------------------------------------------
     cmdAdd: { type: String, default: '!add' }, 
     cmdAddRoles: { type: [String], default: [] },
+    
     cmdDone: { type: String, default: '!done' }, 
     cmdDoneRoles: { type: [String], default: [] },
+    
     cmdReqHigh: { type: String, default: '!req-high' }, 
     cmdReqHighRoles: { type: [String], default: [] },
+    
     cmdCome: { type: String, default: '!come' }, 
     cmdComeRoles: { type: [String], default: [] },
     
-    // ==================================================
-    // 🔥 إعدادات أمر التريد والموافقات العليا
-    // ==================================================
+    // إعدادات التريد
     cmdTrade: { type: String, default: '!trade' }, 
     cmdTradeRoles: { type: [String], default: [] },
-    tradeApproveRoles: { type: [String], default: [] }, // من يضغط على أزرار الموافقة
-    tradeMentionRoles: { type: [String], default: [] }, // من يتم عمل منشن لهم عند الطلب
+    tradeApproveRoles: { type: [String], default: [] }, 
+    tradeMentionRoles: { type: [String], default: [] }, 
     
     cmdClear: { type: String, default: '!clear' }, 
     cmdClearRoles: { type: [String], default: [] },
+    
     cmdLock: { type: String, default: '!lock' }, 
     cmdLockRoles: { type: [String], default: [] },
+    
     cmdUnlock: { type: String, default: '!unlock' }, 
     cmdUnlockRoles: { type: [String], default: [] },
+    
     cmdVmove: { type: String, default: '!vmove' }, 
     cmdVmoveRoles: { type: [String], default: [] },
+    
     cmdBan: { type: String, default: '!ban' }, 
     cmdBanRoles: { type: [String], default: [] },
+    
     cmdTimeout: { type: String, default: '!timeout' }, 
     cmdTimeoutRoles: { type: [String], default: [] },
+    
     cmdUnban: { type: String, default: '!unban' }, 
     cmdUnbanRoles: { type: [String], default: [] },
+    
     cmdUntimeout: { type: String, default: '!untimeout' }, 
     cmdUntimeoutRoles: { type: [String], default: [] },
+    
     cmdMove: { type: String, default: '!move' }, 
     cmdMoveRoles: { type: [String], default: [] },
 
-    // ==================================================
-    // 🎨 تحكم الألوان الشامل
-    // ==================================================
+    // ---------------------------------------------------
+    // 🎨 Embed Colors Customization (التحكم الشامل بالألوان)
+    // ---------------------------------------------------
     logEmbedColor: { type: String, default: '#ed4245' }, 
     transcriptEmbedColor: { type: String, default: '#2b2d31' }, 
     basicRatingColor: { type: String, default: '#f2a658' }, 
@@ -311,18 +341,18 @@ const guildConfigSchema = new mongoose.Schema({
     timeoutEmbedColor: { type: String, default: '#f2a658' },
     untimeoutEmbedColor: { type: String, default: '#3ba55d' },
     
-    // ==================================================
-    // ⭐ التقييمات
-    // ==================================================
+    // ---------------------------------------------------
+    // ⭐ Ratings Customization (تخصيص التقييم)
+    // ---------------------------------------------------
     ratingStyle: { type: String, default: 'basic' }, 
     customRatingTitle: { type: String, default: 'تقييم فريق العمل' },
     customRatingText: { type: String, default: 'مرحباً [user]، يرجى تقييم خدمة الإداري [staff].' },
     customMedRatingTitle: { type: String, default: 'تقييم الوساطة' },
     customMedRatingText: { type: String, default: 'مرحباً [user]، يرجى تقييم خدمة الوسيط [staff].' },
 
-    // ==================================================
-    // 🔨 العقوبات
-    // ==================================================
+    // ---------------------------------------------------
+    // 🔨 Punishments Customization (تخصيص العقوبات)
+    // ---------------------------------------------------
     punishmentStyle: { type: String, default: 'basic' },
     customBanTitle: { type: String, default: '🔨 تم حظر عضو' },
     customBanDesc: { type: String, default: 'تم حظر [user] بواسطة [moderator].\nالسبب: [reason]' },
@@ -333,6 +363,9 @@ const guildConfigSchema = new mongoose.Schema({
     customUntimeoutTitle: { type: String, default: '🔊 تم فك التايم أوت' },
     customUntimeoutDesc: { type: String, default: 'تم فك التايم أوت عن [user] بواسطة [moderator].' },
 
+    // ---------------------------------------------------
+    // 📁 Universal Logging Channels
+    // ---------------------------------------------------
     transcriptChannelId: { type: String, default: null }, 
     ticketLogChannelId: { type: String, default: null }, 
     staffRatingChannelId: { type: String, default: null }, 
@@ -350,9 +383,23 @@ const guildConfigSchema = new mongoose.Schema({
     logTimeoutId: { type: String, default: null }, 
     logUnwarnId: { type: String, default: null },
     
-    staffRatingsCount: { type: Map, of: Number, default: {} },
-    mediatorRatingsCount: { type: Map, of: Number, default: {} },
-    totalServerRatings: { type: Number, default: 0 }
+    // ---------------------------------------------------
+    // 📊 Global Rating Counters
+    // ---------------------------------------------------
+    staffRatingsCount: { 
+        type: Map, 
+        of: Number, 
+        default: {} 
+    },
+    mediatorRatingsCount: { 
+        type: Map, 
+        of: Number, 
+        default: {} 
+    },
+    totalServerRatings: { 
+        type: Number, 
+        default: 0 
+    }
 });
 
 module.exports = mongoose.model('GuildConfig', guildConfigSchema);
