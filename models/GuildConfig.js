@@ -261,6 +261,8 @@ const guildConfigSchema = new mongoose.Schema({
         type: Number, 
         default: 1 
     }, 
+    
+    // 🔥 خيارات إخفاء التكت عن الإدارة
     hideTicketOnClaim: { 
         type: Boolean, 
         default: true 
@@ -270,15 +272,6 @@ const guildConfigSchema = new mongoose.Schema({
         default: false 
     },
 
-    // (احتياطي للبانل القديم حتى لا تفقد بياناتك السابقة)
-    panelChannelId: { type: String, default: null }, 
-    defaultCategoryId: { type: String, default: null }, 
-    ticketEmbedTitle: { type: String, default: 'MNC COMMUNITY' },
-    ticketEmbedDesc: { type: String, default: 'اضغط لفتح تذكرة.' },
-    ticketEmbedColor: { type: String, default: '#0099ff' },
-    ticketEmbedImage: { type: String, default: null },
-    customButtons: { type: [ticketButtonSchema], default: [] }, 
-    
     autoResponders: { 
         type: [autoResponderSchema], 
         default: [] 
