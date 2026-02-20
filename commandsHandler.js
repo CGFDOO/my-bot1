@@ -12,50 +12,56 @@ module.exports = (client) => {
     
     client.on('messageCreate', async message => {
         
-        // =====================================================================
-        // 1. تجاهل رسائل البوتات والرسائل في الخاص
-        // =====================================================================
-        if (message.author.bot) return;
-        if (!message.guild) return;
+        // 1. تجاهل رسائل البوتات
+        if (message.author.bot) {
+            return;
+        }
 
-        // =====================================================================
-        // 2. جلب إعدادات السيرفر الحالي من قاعدة البيانات (كل سيرفر مستقل تماماً)
-        // =====================================================================
+        // 2. تجاهل رسائل الخاص (يجب أن تكون في سيرفر)
+        if (!message.guild) {
+            return;
+        }
+
+        // 3. جلب الإعدادات من الداتابيز
         const config = await GuildConfig.findOne({ guildId: message.guild.id });
-        if (!config) return;
+        if (!config) {
+            return;
+        }
 
-        // =====================================================================
-        // 3. نظام الردود التلقائية (Auto Responders)
-        // =====================================================================
+        // 4. نظام الردود التلقائية
         if (config.autoResponders && config.autoResponders.length > 0) {
             for (let i = 0; i < config.autoResponders.length; i++) {
                 const responder = config.autoResponders[i];
                 if (message.content.includes(responder.word)) {
-                    message.reply(responder.reply).catch(() => {});
+                    message.reply({ content: `**${responder.reply}**` }).catch(() => {});
                 }
             }
         }
 
-        // =====================================================================
-        // 4. التحقق من البريفكس الديناميكي
-        // =====================================================================
+        // 5. إعداد البريفكس والتحقق منه
         let prefix = config.prefix;
-        if (!prefix) prefix = '!';
+        if (!prefix) {
+            prefix = '!';
+        }
         
-        if (!message.content.startsWith(prefix)) return;
+        if (!message.content.startsWith(prefix)) {
+            return;
+        }
 
         const args = message.content.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
         const fullCommand = prefix + commandName; 
 
         // =====================================================================
-        // 🛠️ دالة مساعدة: التحقق من الصلاحيات (ديناميكية من الداشبورد)
+        // 🛠️ دالة التحقق من الصلاحيات
         // =====================================================================
         const hasRole = (allowedRoles) => {
             if (!allowedRoles || allowedRoles.length === 0) {
                 return message.member.permissions.has('Administrator');
             }
+            
             let isAllowed = false;
+            
             if (message.member.permissions.has('Administrator')) {
                 isAllowed = true;
             } else {
@@ -70,10 +76,11 @@ module.exports = (client) => {
         };
 
         // =====================================================================
-        // 🛠️ دالة مساعدة: إرسال اللوجات للرومات المخصصة
+        // 🛠️ دالة إرسال اللوجات للرومات المخصصة
         // =====================================================================
         const sendLog = async (logChannelId, title, desc, color) => {
             if (!logChannelId) return;
+            
             const logChannel = message.guild.channels.cache.get(logChannelId);
             if (!logChannel) return;
             
@@ -82,24 +89,30 @@ module.exports = (client) => {
             logEmbed.setDescription(desc);
             logEmbed.setColor(color);
             logEmbed.setTimestamp();
+            logEmbed.setFooter({ text: message.guild.name, iconURL: message.guild.iconURL({ dynamic: true }) });
             
             await logChannel.send({ embeds: [logEmbed] }).catch(()=>{});
         };
 
         // =====================================================================
-        // 🤝 أمر تقييم الوسيط (!done) - تم إصلاح القراءة من Topic
+        // 🤝 أمر تقييم الوسيط (!done)
         // =====================================================================
         if (fullCommand === config.cmdDone) {
+            
             if (!hasRole(config.cmdDoneRoles)) {
                 return message.reply('**❌ You do not have permission to use this command.**');
             }
             
-            const topicData = message.channel.topic || '';
+            const topicData = message.channel.topic;
+            if (!topicData) {
+                return message.reply('**❌ This command can only be used inside a ticket.**');
+            }
+            
             const parts = topicData.split('_');
-            const ticketOwnerId = parts[0]; // قراءة الأيدي الصحيح من الوصف
+            const ticketOwnerId = parts[0]; 
             
             if (!ticketOwnerId || ticketOwnerId === 'none') {
-                return message.reply('**❌ This command can only be used inside tickets.**');
+                return message.reply('**❌ This command can only be used inside a ticket.**');
             }
             
             try {
@@ -107,25 +120,50 @@ module.exports = (client) => {
                 const guildName = message.guild.name;
                 
                 const ratingEmbed = new EmbedBuilder();
-                ratingEmbed.setTitle('Middleman Feedback');
-                ratingEmbed.setDescription(`Thank you for completing your trade in **${guildName}**.\n\nPlease rate the middleman <@${message.author.id}> by clicking the stars below.`);
-                ratingEmbed.setColor(config.basicRatingColor || '#f2a658');
-                ratingEmbed.setFooter({ text: guildName, iconURL: message.guild.iconURL({ dynamic: true }) });
-                ratingEmbed.setTimestamp();
+                
+                let embedTitle = 'تقييم الوساطة';
+                let descText = '';
+                
+                if (config.ratingStyle === 'custom' && config.customRatingText) {
+                    embedTitle = config.customRatingTitle;
+                    if (!embedTitle) embedTitle = 'تقييم فريق العمل';
+                    
+                    descText = config.customRatingText
+                        .replace(/\[staff\]/g, `<@${message.author.id}>`)
+                        .replace(/\[user\]/g, `<@${owner.id}>`)
+                        .replace(/\[server\]/g, guildName);
+                } else {
+                    descText = `لقد أتممت معاملتك بنجاح في سيرفر **${guildName}**.\n\nيرجى تقييم خدمة الوسيط <@${message.author.id}> بالضغط على النجوم في الأسفل.`;
+                }
+                
+                ratingEmbed.setTitle(embedTitle);
+                ratingEmbed.setDescription(descText);
+                
+                let embedColor = config.basicRatingColor;
+                if (!embedColor) embedColor = '#f2a658';
+                ratingEmbed.setColor(embedColor);
+                
+                ratingEmbed.setFooter({ 
+                    text: guildName, 
+                    iconURL: message.guild.iconURL({ dynamic: true }) 
+                });
                 
                 const ratingRow = new ActionRowBuilder();
-                ratingRow.addComponents(
-                    new ButtonBuilder().setCustomId(`rate_mediator_1_${message.author.id}_${message.guild.id}`).setLabel('⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_2_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_3_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_4_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`rate_mediator_5_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
-                );
+                
+                const star1 = new ButtonBuilder().setCustomId(`rate_mediator_1_${message.author.id}_${message.guild.id}`).setLabel('⭐').setStyle(ButtonStyle.Secondary);
+                const star2 = new ButtonBuilder().setCustomId(`rate_mediator_2_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary);
+                const star3 = new ButtonBuilder().setCustomId(`rate_mediator_3_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                const star4 = new ButtonBuilder().setCustomId(`rate_mediator_4_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                const star5 = new ButtonBuilder().setCustomId(`rate_mediator_5_${message.author.id}_${message.guild.id}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                
+                ratingRow.addComponents(star1, star2, star3, star4, star5);
                 
                 await owner.send({ embeds: [ratingEmbed], components: [ratingRow] });
-                return message.reply('**✅ Rating request has been sent to the user\'s DM.**');
+                
+                return message.reply('**✅ تم إرسال طلب التقييم للعضو في الخاص بنجاح.**');
+                
             } catch (err) { 
-                return message.reply('**❌ Cannot send DM to this user (DMs are closed).**'); 
+                return message.reply('**❌ لا يمكن إرسال رسالة لهذا العضو (الخاص مغلق).**'); 
             }
         }
 
@@ -133,207 +171,359 @@ module.exports = (client) => {
         // ⚖️ أمر التريد والموافقة (!trade)
         // =====================================================================
         if (fullCommand === config.cmdTrade) {
-            if (!hasRole(config.cmdTradeRoles)) return message.reply('**❌ You do not have permission.**');
             
-            const tradeDetails = args.join(' ');
-            if (!tradeDetails) return message.reply('**⚠️ Please provide trade details. (e.g., !trade Account for 10$)**');
-
-            const tradeEmbed = new EmbedBuilder();
-            tradeEmbed.setTitle('⚖️ Trade Approval Request');
-            tradeEmbed.setDescription(`**Middleman:** <@${message.author.id}>\n\n**Details:**\n${tradeDetails}\n\n⏳ *Waiting for high staff approval...*`);
-            tradeEmbed.setColor('#f2a658');
-            tradeEmbed.setTimestamp();
-
-            const tradeRow = new ActionRowBuilder();
-            tradeRow.addComponents(
-                new ButtonBuilder().setCustomId('trade_approve').setLabel('Approve ✅').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('trade_reject').setLabel('Reject ❌').setStyle(ButtonStyle.Danger)
-            );
-
-            let highMentions = '';
-            if (config.highMediatorRoles && config.highMediatorRoles.length > 0) {
-                highMentions = config.highMediatorRoles.map(id => `<@&${id}>`).join(' ');
+            if (!hasRole(config.cmdTradeRoles)) {
+                return message.reply('**❌ You do not have permission.**');
             }
             
-            return message.channel.send({ content: `${highMentions} **Approval Required!**`, embeds: [tradeEmbed], components: [tradeRow] });
+            const tradeInitEmbed = new EmbedBuilder();
+            tradeInitEmbed.setTitle('📝 تفاصيل التريد');
+            tradeInitEmbed.setDescription('يرجى الضغط على الزر أدناه لكتابة تفاصيل التريد.');
+            
+            let tColor = config.tradeEmbedColor;
+            if (!tColor) tColor = '#f2a658';
+            tradeInitEmbed.setColor(tColor);
+
+            const tradeRow = new ActionRowBuilder();
+            
+            const tradeBtn = new ButtonBuilder();
+            tradeBtn.setCustomId('open_trade_modal');
+            tradeBtn.setLabel('كتابة تفاصيل التريد ✍️');
+            tradeBtn.setStyle(ButtonStyle.Primary);
+            
+            tradeRow.addComponents(tradeBtn);
+
+            return message.channel.send({ 
+                embeds: [tradeInitEmbed], 
+                components: [tradeRow] 
+            });
         }
 
         // =====================================================================
-        // 🔨 أوامر الباند وفك الباند (!ban / !unban)
+        // 🔨 أوامر الباند وفكه (!ban / !unban) مع الإيمبدات المخصصة
         // =====================================================================
         if (fullCommand === config.cmdBan) {
-            if (!hasRole(config.cmdBanRoles)) return message.reply('**❌ You do not have permission.**');
             
-            const userToBan = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            if (!userToBan) return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            if (!hasRole(config.cmdBanRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let userToBan = message.mentions.members.first();
+            if (!userToBan) {
+                userToBan = message.guild.members.cache.get(args[0]);
+            }
+            
+            if (!userToBan) {
+                return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            }
             
             let reason = args.slice(1).join(' ');
-            if (!reason) reason = 'No reason provided';
+            if (!reason) {
+                reason = 'No reason provided';
+            }
             
             try {
                 await userToBan.ban({ reason: `${reason} - By: ${message.author.tag}` });
-                message.reply(`**✅ Successfully banned ${userToBan.user.tag}.**`);
-                sendLog(config.logBanId, '🔨 Member Banned', `**User:** ${userToBan}\n**By:** ${message.author}\n**Reason:** ${reason}`, '#ed4245');
-            } catch (err) {
-                message.reply('**❌ I cannot ban this user. Check my role hierarchy.**');
+                
+                const banReplyEmbed = new EmbedBuilder();
+                let banColor = '#ed4245';
+                
+                if (config.punishmentStyle === 'custom') {
+                    let customTitle = config.customBanTitle || '🔨 Banned';
+                    let customDesc = config.customBanDesc || 'User [user] was banned by [moderator].';
+                    
+                    customDesc = customDesc.replace(/\[user\]/g, `<@${userToBan.id}>`);
+                    customDesc = customDesc.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    customDesc = customDesc.replace(/\[reason\]/g, reason);
+                    
+                    banReplyEmbed.setTitle(customTitle);
+                    banReplyEmbed.setDescription(customDesc);
+                } else {
+                    banReplyEmbed.setTitle('🔨 Banned Successfully');
+                    banReplyEmbed.setDescription(`**User:** <@${userToBan.id}>\n**Moderator:** <@${message.author.id}>\n**Reason:** ${reason}`);
+                }
+                
+                banReplyEmbed.setColor(banColor);
+                message.reply({ embeds: [banReplyEmbed] });
+
+                sendLog(config.logBanId, '🔨 Member Banned', `**User:** ${userToBan}\n**By:** ${message.author}\n**Reason:** ${reason}`, banColor);
+                
+            } catch (err) { 
+                message.reply('**❌ I cannot ban this user.**'); 
             }
             return;
         }
 
         if (fullCommand === config.cmdUnban) {
-            if (!hasRole(config.cmdUnbanRoles)) return message.reply('**❌ You do not have permission.**');
+            
+            if (!hasRole(config.cmdUnbanRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             
             const userId = args[0];
-            if (!userId) return message.reply('**⚠️ Please provide the user ID to unban.**');
+            if (!userId) {
+                return message.reply('**⚠️ Please provide the user ID to unban.**');
+            }
             
             try {
                 await message.guild.members.unban(userId);
-                message.reply(`**✅ Successfully unbanned ID: ${userId}.**`);
-                sendLog(config.logBanId, '🕊️ Member Unbanned', `**User ID:** ${userId}\n**By:** ${message.author}`, '#3ba55d');
-            } catch (err) {
-                message.reply('**❌ Could not unban this user. Are they really banned?**');
+                
+                const unbanReplyEmbed = new EmbedBuilder();
+                let unbanColor = '#3ba55d';
+                
+                if (config.punishmentStyle === 'custom') {
+                    let customTitle = config.customUnbanTitle || '🕊️ Unbanned';
+                    let customDesc = config.customUnbanDesc || 'User [user] was unbanned by [moderator].';
+                    
+                    customDesc = customDesc.replace(/\[user\]/g, `<@${userId}>`);
+                    customDesc = customDesc.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    
+                    unbanReplyEmbed.setTitle(customTitle);
+                    unbanReplyEmbed.setDescription(customDesc);
+                } else {
+                    unbanReplyEmbed.setTitle('🕊️ Unbanned Successfully');
+                    unbanReplyEmbed.setDescription(`**User ID:** <@${userId}>\n**Moderator:** <@${message.author.id}>`);
+                }
+                
+                unbanReplyEmbed.setColor(unbanColor);
+                message.reply({ embeds: [unbanReplyEmbed] });
+
+                sendLog(config.logBanId, '🕊️ Member Unbanned', `**User ID:** ${userId}\n**By:** ${message.author}`, unbanColor);
+                
+            } catch (err) { 
+                message.reply('**❌ Could not unban this user.**'); 
             }
             return;
         }
 
         // =====================================================================
-        // ⏳ أوامر التايم أوت وفكه (!timeout / !untimeout)
+        // ⏳ أوامر التايم أوت وفكه (!timeout / !untimeout) مع الإيمبدات المخصصة
         // =====================================================================
         if (fullCommand === config.cmdTimeout) {
-            if (!hasRole(config.cmdTimeoutRoles)) return message.reply('**❌ You do not have permission.**');
             
-            const userToMute = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            if (!userToMute) return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            if (!hasRole(config.cmdTimeoutRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let userToMute = message.mentions.members.first();
+            if (!userToMute) {
+                userToMute = message.guild.members.cache.get(args[0]);
+            }
+            
+            if (!userToMute) {
+                return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            }
             
             let durationMins = parseInt(args[1]);
-            if (isNaN(durationMins)) durationMins = 5; 
+            if (isNaN(durationMins)) {
+                durationMins = 5; 
+            }
             
             let reason = args.slice(2).join(' ');
-            if (!reason) reason = 'No reason provided';
+            if (!reason) {
+                reason = 'No reason provided';
+            }
 
             try {
                 await userToMute.timeout(durationMins * 60 * 1000, `${reason} - By: ${message.author.tag}`);
-                message.reply(`**✅ Successfully timed out ${userToMute.user.tag} for ${durationMins} minutes.**`);
-                sendLog(config.logTimeoutId, '⏳ Member Timed Out', `**User:** ${userToMute}\n**By:** ${message.author}\n**Duration:** ${durationMins} mins\n**Reason:** ${reason}`, '#f2a658');
-            } catch (err) {
-                message.reply('**❌ I cannot timeout this user.**');
+                
+                const muteReplyEmbed = new EmbedBuilder();
+                let muteColor = '#f2a658';
+                
+                if (config.punishmentStyle === 'custom') {
+                    let customTitle = config.customTimeoutTitle || '⏳ Timed Out';
+                    let customDesc = config.customTimeoutDesc || 'User [user] timed out by [moderator] for [duration] mins.';
+                    
+                    customDesc = customDesc.replace(/\[user\]/g, `<@${userToMute.id}>`);
+                    customDesc = customDesc.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    customDesc = customDesc.replace(/\[reason\]/g, reason);
+                    customDesc = customDesc.replace(/\[duration\]/g, durationMins);
+                    
+                    muteReplyEmbed.setTitle(customTitle);
+                    muteReplyEmbed.setDescription(customDesc);
+                } else {
+                    muteReplyEmbed.setTitle('⏳ Timed Out Successfully');
+                    muteReplyEmbed.setDescription(`**User:** <@${userToMute.id}>\n**Moderator:** <@${message.author.id}>\n**Duration:** ${durationMins} Mins\n**Reason:** ${reason}`);
+                }
+                
+                muteReplyEmbed.setColor(muteColor);
+                message.reply({ embeds: [muteReplyEmbed] });
+
+                sendLog(config.logTimeoutId, '⏳ Member Timed Out', `**User:** ${userToMute}\n**By:** ${message.author}\n**Duration:** ${durationMins} mins\n**Reason:** ${reason}`, muteColor);
+                
+            } catch (err) { 
+                message.reply('**❌ I cannot timeout this user.**'); 
             }
             return;
         }
 
         if (fullCommand === config.cmdUntimeout) {
-            if (!hasRole(config.cmdUntimeoutRoles)) return message.reply('**❌ You do not have permission.**');
             
-            const userToUnmute = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-            if (!userToUnmute) return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            if (!hasRole(config.cmdUntimeoutRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let userToUnmute = message.mentions.members.first();
+            if (!userToUnmute) {
+                userToUnmute = message.guild.members.cache.get(args[0]);
+            }
+            
+            if (!userToUnmute) {
+                return message.reply('**⚠️ Please mention a user or provide their ID.**');
+            }
 
             try {
                 await userToUnmute.timeout(null, `Untimeout by: ${message.author.tag}`);
-                message.reply(`**✅ Successfully removed timeout for ${userToUnmute.user.tag}.**`);
-                sendLog(config.logTimeoutId, '🔊 Timeout Removed', `**User:** ${userToUnmute}\n**By:** ${message.author}`, '#3ba55d');
-            } catch (err) {
-                message.reply('**❌ Could not remove timeout for this user.**');
+                
+                const unmuteReplyEmbed = new EmbedBuilder();
+                let unmuteColor = '#3ba55d';
+                
+                if (config.punishmentStyle === 'custom') {
+                    let customTitle = config.customUntimeoutTitle || '🔊 Untimed Out';
+                    let customDesc = config.customUntimeoutDesc || 'User [user] untimed out by [moderator].';
+                    
+                    customDesc = customDesc.replace(/\[user\]/g, `<@${userToUnmute.id}>`);
+                    customDesc = customDesc.replace(/\[moderator\]/g, `<@${message.author.id}>`);
+                    
+                    unmuteReplyEmbed.setTitle(customTitle);
+                    unmuteReplyEmbed.setDescription(customDesc);
+                } else {
+                    unmuteReplyEmbed.setTitle('🔊 Untimed Out Successfully');
+                    unmuteReplyEmbed.setDescription(`**User:** <@${userToUnmute.id}>\n**Moderator:** <@${message.author.id}>`);
+                }
+                
+                unmuteReplyEmbed.setColor(unmuteColor);
+                message.reply({ embeds: [unmuteReplyEmbed] });
+
+                sendLog(config.logTimeoutId, '🔊 Timeout Removed', `**User:** ${userToUnmute}\n**By:** ${message.author}`, unmuteColor);
+                
+            } catch (err) { 
+                message.reply('**❌ Could not remove timeout.**'); 
             }
             return;
         }
 
         // =====================================================================
-        // 🎙️ أوامر السحب الصوتي (!move / !vmove)
+        // 🎙️ أوامر النقل الصوتي (!move / !vmove)
         // =====================================================================
-        // أمر VMOVE: سحب العضو للروم اللي أنت فيها
         if (fullCommand === config.cmdVmove) {
-            if (!hasRole(config.cmdVmoveRoles)) return message.reply('**❌ You do not have permission.**');
+            
+            if (!hasRole(config.cmdVmoveRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             
             const targetUser = message.mentions.members.first();
             if (!targetUser || !targetUser.voice.channel) {
-                return message.reply('**⚠️ Please mention a user who is currently in a voice channel.**');
+                return message.reply('**⚠️ Please mention a user in a voice channel.**');
             }
             
             const authorVoice = message.member.voice.channel;
             if (!authorVoice) {
-                return message.reply('**⚠️ You must be in a voice channel to pull someone to you.**');
+                return message.reply('**⚠️ You must be in a voice channel.**');
             }
             
             try {
                 await targetUser.voice.setChannel(authorVoice);
-                message.reply(`**✅ Successfully moved ${targetUser} to your channel.**`);
-            } catch (err) {
-                message.reply('**❌ An error occurred while moving the user.**');
+                message.reply(`**✅ Moved ${targetUser} to your channel.**`);
+            } catch (err) { 
+                message.reply('**❌ An error occurred.**'); 
             }
             return;
         }
 
-        // أمر MOVE: نقل العضو لروم معينة (مثال: !move @user #channel)
         if (fullCommand === config.cmdMove) {
-            if (!hasRole(config.cmdMoveRoles)) return message.reply('**❌ You do not have permission.**');
             
-            const targetUser = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+            if (!hasRole(config.cmdMoveRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
+            let targetUser = message.mentions.members.first();
+            if (!targetUser) {
+                targetUser = message.guild.members.cache.get(args[0]);
+            }
+            
             if (!targetUser || !targetUser.voice.channel) {
-                return message.reply('**⚠️ Please mention a user who is currently in a voice channel.**');
+                return message.reply('**⚠️ Please mention a user in a voice channel.**');
             }
 
-            const targetChannel = message.mentions.channels.first() || message.guild.channels.cache.get(args[1]);
-            if (!targetChannel || targetChannel.type !== 2) { // Type 2 is Voice Channel
+            let targetChannel = message.mentions.channels.first();
+            if (!targetChannel) {
+                targetChannel = message.guild.channels.cache.get(args[1]);
+            }
+            
+            if (!targetChannel || targetChannel.type !== 2) { 
                 return message.reply('**⚠️ Please mention a valid voice channel. (e.g., !move @user #Voice-1)**');
             }
 
             try {
                 await targetUser.voice.setChannel(targetChannel);
-                message.reply(`**✅ Successfully moved ${targetUser} to ${targetChannel}.**`);
-            } catch (err) {
-                message.reply('**❌ An error occurred while moving the user.**');
+                message.reply(`**✅ Moved ${targetUser} to ${targetChannel}.**`);
+            } catch (err) { 
+                message.reply('**❌ An error occurred.**'); 
             }
             return;
         }
 
         // =====================================================================
-        // 🧹 أوامر المسح والقفل (!clear / !lock / !unlock)
+        // 🧹 أوامر المسح والقفل والنداء
         // =====================================================================
         if (fullCommand === config.cmdClear) {
-            if (!hasRole(config.cmdClearRoles)) return message.reply('**❌ You do not have permission.**');
+            
+            if (!hasRole(config.cmdClearRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             
             let amount = parseInt(args[0]);
             if (isNaN(amount) || amount < 1 || amount > 100) {
-                return message.reply('**⚠️ Please specify a number between 1 and 100.**');
+                return message.reply('**⚠️ Provide a number between 1-100.**');
             }
             
             try {
                 await message.channel.bulkDelete(amount, true);
-                const replyMsg = await message.channel.send(`**✅ Successfully deleted ${amount} messages.**`);
-                setTimeout(() => { replyMsg.delete().catch(()=>{}); }, 3000);
-            } catch (err) {
-                message.reply('**❌ An error occurred.**');
-            }
+                const replyMsg = await message.channel.send(`**✅ Deleted ${amount} messages.**`);
+                setTimeout(() => { 
+                    replyMsg.delete().catch(()=>{}); 
+                }, 3000);
+            } catch (err) {}
             return;
         }
 
         if (fullCommand === config.cmdLock) {
-            if (!hasRole(config.cmdLockRoles)) return message.reply('**❌ You do not have permission.**');
+            if (!hasRole(config.cmdLockRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             try {
-                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, { SendMessages: false });
-                message.reply('**🔒 This channel has been locked.**');
+                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, { 
+                    SendMessages: false 
+                });
+                message.reply('**🔒 Channel Locked.**');
             } catch (err) {}
             return;
         }
 
         if (fullCommand === config.cmdUnlock) {
-            if (!hasRole(config.cmdUnlockRoles)) return message.reply('**❌ You do not have permission.**');
+            if (!hasRole(config.cmdUnlockRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
             try {
-                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, { SendMessages: true });
-                message.reply('**🔓 This channel has been unlocked.**');
+                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, { 
+                    SendMessages: true 
+                });
+                message.reply('**🔓 Channel Unlocked.**');
             } catch (err) {}
             return;
         }
 
-        // =====================================================================
-        // 📢 أوامر النداء (!come / !req-high)
-        // =====================================================================
         if (fullCommand === config.cmdReqHigh) {
-            if (!hasRole(config.cmdReqHighRoles)) return message.reply('**❌ You do not have permission.**');
+            if (!hasRole(config.cmdReqHighRoles)) {
+                return message.reply('**❌ You do not have permission.**');
+            }
+            
             let highMentions = '';
             if (config.highMediatorRoles && config.highMediatorRoles.length > 0) {
                 highMentions = config.highMediatorRoles.map(id => `<@&${id}>`).join(' ');
             }
+            
             return message.channel.send(`**🚨 High Staff Required!** ${highMentions}\nRequested by: ${message.author}`);
         }
     });
