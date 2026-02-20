@@ -37,7 +37,7 @@ module.exports = (client) => {
                 
                 // استخراج المتغيرات من المعرف (ID)
                 const customIdParts = interaction.customId.split('_');
-                const ratingType = customIdParts[1]; // staff أو mediator
+                const ratingType = customIdParts[1]; 
                 const ratingStars = customIdParts[2];
                 const ratedTargetId = customIdParts[3];
                 const currentGuildId = customIdParts[4]; 
@@ -107,8 +107,8 @@ module.exports = (client) => {
                 
                 if (ratingType === 'staff') {
                     targetLogChannelId = serverConfig.staffRatingChannelId;
-                } else if (ratingType === 'mediator') { // كلمة السر في الـ ID القديم كانت mediator
-                    targetLogChannelId = serverConfig.middlemanRatingChannelId; // نستخدم المتغير الجديد
+                } else if (ratingType === 'mediator') { 
+                    targetLogChannelId = serverConfig.middlemanRatingChannelId; 
                 }
 
                 // جلب السيرفر
@@ -273,7 +273,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚖️ 3. تفاعلات نافذة أمر التريد (!trade) والموافقة
+        // ⚖️ 3. تفاعلات نافذة أمر التريد (!trade) والموافقة (مع المنشن الجديد)
         // =====================================================================
         if (interaction.isButton()) {
             
@@ -328,7 +328,8 @@ module.exports = (client) => {
                 
                 let tradeDesc = '';
                 tradeDesc += `**MiddleMan:** <@${interaction.user.id}>\n\n`;
-                tradeDesc += `**Details:**\n\`\`\`${tradeDetailsText}\`\`\`\n\n`;
+                // إضافة الخط الجانبي لتفاصيل التريد لتكون متناسقة
+                tradeDesc += `**Details:**\n>>> ${tradeDetailsText}\n\n`;
                 tradeDesc += `⏳ *Waiting for approval...*`;
                 
                 tradeRequestEmbed.setDescription(tradeDesc);
@@ -355,7 +356,22 @@ module.exports = (client) => {
                 
                 approvalRow.addComponents(approveBtn, rejectBtn);
 
+                // 🔥 عمل منشن للرتب العليا هنا فقط (عند نزول طلب الموافقة)
+                let mentionString = '';
+                if (guildConfig.tradeMentionRoles && guildConfig.tradeMentionRoles.length > 0) {
+                    for (let i = 0; i < guildConfig.tradeMentionRoles.length; i++) {
+                        mentionString += `<@&${guildConfig.tradeMentionRoles[i]}> `;
+                    }
+                }
+                
+                let msgContentToDrop = '';
+                if (mentionString !== '') {
+                    msgContentToDrop = `**🔔 نداء للموافقات العليا:** ${mentionString}`;
+                }
+
+                // إرسال طلب الموافقة كرد جديد في الشات مع المنشن
                 await interaction.reply({ 
+                    content: msgContentToDrop !== '' ? msgContentToDrop : null,
                     embeds: [tradeRequestEmbed], 
                     components: [approvalRow] 
                 });
@@ -373,7 +389,7 @@ module.exports = (client) => {
                 let tradeAllowedRoles = guildConfig.tradeApproveRoles;
                 
                 if (!tradeAllowedRoles || tradeAllowedRoles.length === 0) {
-                    tradeAllowedRoles = guildConfig.highMiddlemanRoles; // استخدام المسمى الجديد
+                    tradeAllowedRoles = guildConfig.highMiddlemanRoles; 
                 }
                 
                 let hasTradePerm = false;
@@ -467,7 +483,7 @@ module.exports = (client) => {
                 
                 const buttonRealId = interaction.customId.replace('ticket_open_', '');
                 
-                // البحث عن الزر في جميع البانلات الموجودة في الداتابيز
+                // البحث عن الزر في جميع البانلات
                 let targetButtonData = null;
                 let targetPanelData = null;
                 
@@ -495,7 +511,7 @@ module.exports = (client) => {
                     });
                 }
 
-                // فحص الحد الأقصى (للتكتات المفتوحة فقط، يتم تجاهل الـ closed)
+                // فحص الحد الأقصى
                 let maximumTickets = guildConfig.maxTicketsPerUser;
                 if (!maximumTickets) {
                     maximumTickets = 1;
@@ -569,22 +585,19 @@ module.exports = (client) => {
                     
                     await interaction.showModal(ticketModal);
                 } else {
-                    // الرد السريع لعدم التعليق
                     await interaction.deferReply({ ephemeral: true });
-                    // إرسال بيانات البانل أيضاً لتحديد القسم الخاص به
                     await openNewTicket(interaction, targetButtonData, guildConfig, [], targetPanelData);
                 }
             }
         }
 
         // =====================================================================
-        // 📝 6. استلام إجابات النافذة وفتح التكت (للبانلات المتعددة)
+        // 📝 6. استلام إجابات النافذة وفتح التكت
         // =====================================================================
         if (interaction.isModalSubmit()) {
             
             if (interaction.customId.startsWith('modalticket_')) {
                 
-                // 🔥 الرد الصاروخي لمنع الإيرور (Something went wrong)
                 await interaction.deferReply({ ephemeral: true }).catch(()=>{});
 
                 const buttonRealId = interaction.customId.replace('modalticket_', '');
@@ -628,7 +641,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚙️ 7. أزرار التحكم داخل التكت (السرعة الجبارة)
+        // ⚙️ 7. أزرار التحكم داخل التكت (Claim, Close, Add User, Delete)
         // =====================================================================
         if (interaction.isButton()) {
             
@@ -679,7 +692,7 @@ module.exports = (client) => {
                 
                 const topicParts = currentTopic.split('_');
                 
-                // Topic Format: OwnerID_BtnID_ClaimerID_AddedUsers_CloserID_IsMiddleMan
+                // Topic Format: Owner_BtnID_Claimer_Added_Closer_IsMiddleMan
                 const ticketOwnerId = topicParts[0];
                 const usedBtnId = topicParts[1];
                 
@@ -693,7 +706,7 @@ module.exports = (client) => {
                     isMiddleManTicket = true;
                 }
 
-                // تغيير اسم الروم إلى closed- ليتمكن العضو من فتح تكت جديد
+                // تغيير اسم الروم 
                 let oldChannelName = interaction.channel.name;
                 let nameParts = oldChannelName.split('-');
                 let oldNameNumber = nameParts[1];
@@ -706,13 +719,12 @@ module.exports = (client) => {
                 const closingMessage = `**🔒 The ticket has been closed by <@${interaction.user.id}>**`;
                 await interaction.channel.send(closingMessage);
 
-                // 🔥 منع التقييم المزدوج: إذا كان التكت MiddleMan، لا ترسل تقييم الإدارة
+                // منع التقييم المزدوج
                 let shouldSendStaffRating = true;
                 
                 if (isMiddleManTicket) {
                     shouldSendStaffRating = false; 
                 } else {
-                    // البحث عن إعداد الزر لنتأكد هل تم تعطيل التقييم منه أم لا
                     let specificBtnData = null;
                     if (guildConfig.ticketPanels) {
                         for (let p = 0; p < guildConfig.ticketPanels.length; p++) {
@@ -888,9 +900,9 @@ module.exports = (client) => {
                 } else {
                     const allStaffArr = [
                         guildConfig.adminRoleId, 
-                        guildConfig.middlemanRoleId, // تم التعديل
+                        guildConfig.middlemanRoleId,
                         ...guildConfig.highAdminRoles, 
-                        ...guildConfig.highMiddlemanRoles // تم التعديل
+                        ...guildConfig.highMiddlemanRoles
                     ];
                     
                     for (let i = 0; i < allStaffArr.length; i++) {
@@ -919,7 +931,7 @@ module.exports = (client) => {
                     });
                 }
 
-                // 🔥 الحل السحري للسرعة: تحديث الزرار فوراً لديسكورد (يخضر في 0.001 ثانية)
+                // 🔥 الحل السحري للسرعة
                 const oldComponents = interaction.message.components;
                 const newComponentsArr = [];
                 
@@ -1171,7 +1183,7 @@ module.exports = (client) => {
     });
 
     // =====================================================================
-    // 🛠️ Helper Function: فتح تكت جديد مع البانلات المتعددة
+    // 🛠️ Helper Function: فتح تكت جديد مع الخط الجانبي (Blockquote)
     // =====================================================================
     async function openNewTicket(interaction, buttonData, config, answersArray, targetPanelData) {
         
@@ -1202,9 +1214,9 @@ module.exports = (client) => {
         
         const staffRolesArray = [
             config.adminRoleId, 
-            config.middlemanRoleId, // تم التعديل
+            config.middlemanRoleId,
             ...config.highAdminRoles, 
-            ...config.highMiddlemanRoles // تم التعديل
+            ...config.highMiddlemanRoles
         ];
         
         for (let i = 0; i < staffRolesArray.length; i++) {
@@ -1216,7 +1228,6 @@ module.exports = (client) => {
             }
         }
 
-        // حفظ نوع التكت في الخانة السادسة: isMiddleMan
         let isMedStr = 'false';
         if (buttonData.isMiddleMan === true) {
             isMedStr = 'true';
@@ -1232,7 +1243,6 @@ module.exports = (client) => {
             permissionOverwrites: permsArray
         });
         
-        // تحديث العداد
         await GuildConfig.findOneAndUpdate({ guildId: interaction.guild.id }, { $inc: { ticketCount: 1 } });
 
         const msgContent = `**Welcome <@${interaction.user.id}>**\n**Reason:** ${buttonData.label}`;
@@ -1261,6 +1271,7 @@ module.exports = (client) => {
         
         embedsList.push(infoEmbed);
 
+        // 🔥 تطبيق الخط الجانبي (Blockquote) على الإجابات 
         if (answersArray && answersArray.length > 0) {
             
             const answersEmbed = new EmbedBuilder();
@@ -1279,9 +1290,10 @@ module.exports = (client) => {
                     valToDisplay = 'N/A';
                 }
                 
+                // استخدام >>> لعمل خط جانبي على كل سطور الإجابة
                 answersEmbed.addFields({ 
                     name: `**${singleAnswer.label}**`, 
-                    value: valToDisplay 
+                    value: `>>> ${valToDisplay}` 
                 });
             }
             
