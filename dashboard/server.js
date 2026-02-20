@@ -1,49 +1,51 @@
 const express = require('express');
 const passport = require('passport');
-const { Strategy } = require('passport-discord');
+const discordPassportStrategy = require('passport-discord').Strategy;
 const session = require('express-session');
 const path = require('path');
 
 // استدعاء قاعدة البيانات ومكاتب ديسكورد
 const GuildConfig = require('../models/GuildConfig');
-const { 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle 
-} = require('discord.js');
+const discordLibrary = require('discord.js');
+const EmbedBuilder = discordLibrary.EmbedBuilder;
+const ActionRowBuilder = discordLibrary.ActionRowBuilder;
+const ButtonBuilder = discordLibrary.ButtonBuilder;
+const ButtonStyle = discordLibrary.ButtonStyle;
 
 module.exports = (client) => {
     
     const app = express();
     
     // =====================================================================
-    // إعدادات الـ Express الأساسية
+    // ⚙️ إعدادات الـ Express الأساسية (مفرودة)
     // =====================================================================
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
     app.use(express.json({ limit: '50mb' }));
-    app.use(express.static(path.join(__dirname, 'public')));
+    
+    const publicDirectoryPath = path.join(__dirname, 'public');
+    app.use(express.static(publicDirectoryPath));
 
     // =====================================================================
-    // إعدادات الجلسات (Sessions)
+    // 🔐 إعدادات الجلسات (Sessions)
     // =====================================================================
+    const sessionSecretKey = process.env.SESSION_SECRET || 'MNC_COMMUNITY_SUPER_SECRET_KEY_2026';
+    
     app.use(session({
-        secret: process.env.SESSION_SECRET || 'MNC_COMMUNITY_SUPER_SECRET_KEY_2026',
+        secret: sessionSecretKey,
         resave: false,
         saveUninitialized: false,
         cookie: { 
-            maxAge: 60000 * 60 * 24 * 7 
+            maxAge: 60000 * 60 * 24 * 7 // أسبوع كامل
         }
     }));
 
-    // =====================================================================
-    // إعداد محرك القوالب (EJS)
-    // =====================================================================
+    // إعداد محرك القوالب
     app.set('view engine', 'ejs');
-    app.set('views', path.join(__dirname, '../views'));
+    const viewsDirectoryPath = path.join(__dirname, '../views');
+    app.set('views', viewsDirectoryPath);
 
     // =====================================================================
-    // إعدادات Discord Passport لتسجيل الدخول
+    // 🛂 إعدادات تسجيل الدخول بحساب ديسكورد (Passport)
     // =====================================================================
     passport.serializeUser((user, done) => { 
         done(null, user); 
@@ -53,12 +55,14 @@ module.exports = (client) => {
         done(null, obj); 
     });
 
-    passport.use(new Strategy({
+    const discordStrategyConfig = {
         clientID: process.env.CLIENT_ID,
         clientSecret: process.env.CLIENT_SECRET,
         callbackURL: process.env.CALLBACK_URL,
         scope: ['identify', 'guilds']
-    }, (accessToken, refreshToken, profile, done) => {
+    };
+
+    passport.use(new discordPassportStrategy(discordStrategyConfig, (accessToken, refreshToken, profile, done) => {
         process.nextTick(() => { 
             return done(null, profile); 
         });
@@ -81,16 +85,16 @@ module.exports = (client) => {
     });
     
     app.get('/logout', (req, res, next) => { 
-        req.logout(err => { 
-            if (err) { 
+        req.logout((err) => { 
+            if (err) {
                 return next(err); 
-            } 
+            }
             res.redirect('/'); 
         }); 
     });
 
     // =====================================================================
-    // 🌐 صفحة قائمة السيرفرات
+    // 🖥️ صفحة قائمة السيرفرات (Dashboard)
     // =====================================================================
     app.get('/dashboard', (req, res) => {
         
@@ -98,14 +102,15 @@ module.exports = (client) => {
             return res.redirect('/login'); 
         }
         
-        // فلترة السيرفرات لإظهار السيرفرات التي يملك فيها العضو صلاحية Administrator فقط
-        const adminGuilds = req.user.guilds.filter(guild => { 
-            return (guild.permissions & 0x8) === 0x8; 
+        const userGuildsArray = req.user.guilds;
+        const adminGuildsArray = userGuildsArray.filter((guild) => { 
+            const hasAdminPermission = (guild.permissions & 0x8) === 0x8;
+            return hasAdminPermission; 
         });
         
         res.render('dashboard', { 
             user: req.user, 
-            guilds: adminGuilds 
+            guilds: adminGuildsArray 
         });
     });
 
@@ -118,49 +123,54 @@ module.exports = (client) => {
             return res.redirect('/login'); 
         }
         
-        const targetGuildID = req.params.guildID;
-        const discordGuild = client.guilds.cache.get(targetGuildID);
+        const targetGuildIDString = req.params.guildID;
+        const discordGuildObject = client.guilds.cache.get(targetGuildIDString);
         
-        if (!discordGuild) { 
-            return res.send(`<div style="text-align:center; padding-top:50px; color:white; background:#121212; height:100vh;"><h1>❌ البوت ليس متواجداً في هذا السيرفر! قم بدعوته أولاً.</h1></div>`); 
+        if (!discordGuildObject) { 
+            const botNotInGuildMessage = `<div style="text-align:center; padding-top:50px; color:white; background:#121212; height:100vh;"><h1>❌ البوت ليس متواجداً في هذا السيرفر! قم بدعوته أولاً.</h1></div>`;
+            return res.send(botNotInGuildMessage); 
         }
 
-        const userGuildData = req.user.guilds.find(g => g.id === targetGuildID);
+        const userGuildsArray = req.user.guilds;
+        const userGuildDataObject = userGuildsArray.find((g) => g.id === targetGuildIDString);
         
-        if (!userGuildData || (userGuildData.permissions & 0x8) !== 0x8) { 
-            return res.send(`<div style="text-align:center; color:red; margin-top:50px; background:#121212; height:100vh;"><h1>❌ ليس لديك صلاحية Administrator لفتح هذه الصفحة!</h1></div>`); 
+        if (!userGuildDataObject || (userGuildDataObject.permissions & 0x8) !== 0x8) { 
+            const noPermissionMessage = `<div style="text-align:center; color:red; margin-top:50px; background:#121212; height:100vh;"><h1>❌ ليس لديك صلاحية Administrator لفتح هذه الصفحة!</h1></div>`;
+            return res.send(noPermissionMessage); 
         }
 
-        let serverConfig = await GuildConfig.findOne({ guildId: discordGuild.id });
+        let serverConfigDocument = await GuildConfig.findOne({ guildId: discordGuildObject.id });
         
-        if (!serverConfig) { 
-            serverConfig = await GuildConfig.create({ guildId: discordGuild.id }); 
+        if (!serverConfigDocument) { 
+            serverConfigDocument = await GuildConfig.create({ guildId: discordGuildObject.id }); 
         }
 
-        const textAndVoiceChannels = discordGuild.channels.cache.filter(c => { 
+        const guildChannelsCollection = discordGuildObject.channels.cache;
+        const textAndVoiceChannelsArray = guildChannelsCollection.filter((c) => { 
             return c.type === 0 || c.type === 4 || c.type === 2; 
-        }).map(c => { 
+        }).map((c) => { 
             return { id: c.id, name: c.name, type: c.type }; 
         });
         
-        const guildRoles = discordGuild.roles.cache.filter(r => { 
+        const guildRolesCollection = discordGuildObject.roles.cache;
+        const guildRolesArray = guildRolesCollection.filter((r) => { 
             return r.name !== '@everyone'; 
-        }).map(r => { 
+        }).map((r) => { 
             return { id: r.id, name: r.name }; 
         });
 
         res.render('settings', { 
-            guild: discordGuild, 
-            config: serverConfig, 
-            channels: textAndVoiceChannels, 
-            roles: guildRoles, 
+            guild: discordGuildObject, 
+            config: serverConfigDocument, 
+            channels: textAndVoiceChannelsArray, 
+            roles: guildRolesArray, 
             user: req.user, 
             success: req.query.success 
         });
     });
 
     // =====================================================================
-    // 💾 حفظ الإعدادات في الداتابيز (POST)
+    // 💾 حفظ الإعدادات في الداتابيز (POST) (مفرود بالكامل لتجنب فقدان أي متغير)
     // =====================================================================
     app.post('/settings/:guildID', async (req, res) => {
         
@@ -168,275 +178,354 @@ module.exports = (client) => {
             return res.redirect('/login'); 
         }
 
-        const formatArray = (val) => {
-            if (Array.isArray(val)) { 
+        const formatArrayFunction = (val) => {
+            if (Array.isArray(val)) {
                 return val; 
-            } else if (val) { 
+            } else if (val) {
                 return [val]; 
-            } else { 
+            } else {
                 return []; 
             }
         };
         
-        let parsedPanels = [];
-        let parsedWarnReasons = [];
+        let parsedTicketPanelsArray = [];
+        let parsedWarnReasonsARArray = [];
+        let parsedWarnReasonsENArray = [];
         
+        const bodyTicketPanelsData = req.body.ticketPanelsData;
+        const bodyWarnReasonsARData = req.body.warnReasonsARData;
+        const bodyWarnReasonsENData = req.body.warnReasonsENData;
+
         try {
-            if (req.body.ticketPanelsData) { 
-                parsedPanels = JSON.parse(req.body.ticketPanelsData); 
+            if (bodyTicketPanelsData) {
+                parsedTicketPanelsArray = JSON.parse(bodyTicketPanelsData); 
             }
-            if (req.body.warnReasonsData) { 
-                parsedWarnReasons = JSON.parse(req.body.warnReasonsData); 
+            if (bodyWarnReasonsARData) {
+                parsedWarnReasonsARArray = JSON.parse(bodyWarnReasonsARData); 
             }
-        } catch(error) { 
-            console.log("Error parsing JSON data", error); 
+            if (bodyWarnReasonsENData) {
+                parsedWarnReasonsENArray = JSON.parse(bodyWarnReasonsENData); 
+            }
+        } catch(parsingError) { 
+            console.log("Error parsing JSON data from dashboard:", parsingError); 
         }
 
-        const formData = req.body;
-        const targetGuildID = req.params.guildID;
+        const formDataObject = req.body;
+        const targetGuildIDString = req.params.guildID;
 
+        // دالة الحفظ الشاملة لجميع المتغيرات في قاعدة البيانات
         await GuildConfig.findOneAndUpdate(
-            { guildId: targetGuildID },
+            { guildId: targetGuildIDString },
             { 
-                // الإعدادات العامة
-                prefix: formData.prefix, 
-                autoRoleId: formData.autoRoleId,
-                antiLinks: formData.antiLinks === 'on', 
-                antiSpam: formData.antiSpam === 'on', 
+                // الأساسيات والحماية
+                prefix: formDataObject.prefix, 
+                autoRoleId: formDataObject.autoRoleId,
+                antiLinks: formDataObject.antiLinks === 'on', 
+                antiSpam: formDataObject.antiSpam === 'on', 
                 
                 // الألعاب والمستويات
-                gamesEnabled: formData.gamesEnabled === 'on', 
-                gamesChannelId: formData.gamesChannelId,
-                levelingEnabled: formData.levelingEnabled === 'on', 
-                levelUpChannelId: formData.levelUpChannelId, 
-                suggestionChannelId: formData.suggestionChannelId,
+                gamesEnabled: formDataObject.gamesEnabled === 'on', 
+                gamesChannelId: formDataObject.gamesChannelId,
+                levelingEnabled: formDataObject.levelingEnabled === 'on', 
+                levelUpChannelId: formDataObject.levelUpChannelId, 
+                suggestionChannelId: formDataObject.suggestionChannelId,
                 
-                // الترحيب
-                welcomeChannelId: formData.welcomeChannelId, 
-                welcomeMessage: formData.welcomeMessage, 
-                welcomeBgImage: formData.welcomeBgImage, 
-                welcomeAvatarBorderColor: formData.welcomeAvatarBorderColor,
-                welcomeEmbedColor: formData.welcomeEmbedColor,
+                // نظام الترحيب
+                welcomeChannelId: formDataObject.welcomeChannelId, 
+                welcomeMessage: formDataObject.welcomeMessage, 
+                welcomeBgImage: formDataObject.welcomeBgImage, 
+                welcomeAvatarBorderColor: formDataObject.welcomeAvatarBorderColor,
+                welcomeEmbedColor: formDataObject.welcomeEmbedColor,
                 
-                // التحذيرات
-                warnPanelChannelId: formData.warnPanelChannelId, 
-                warnLogChannelId: formData.warnLogChannelId, 
-                warnPanelTitle: formData.warnPanelTitle, 
-                warnPanelDesc: formData.warnPanelDesc, 
-                warnPanelColor: formData.warnPanelColor, 
-                warnMax: parseInt(formData.warnMax) || 3, 
-                warnAction: formData.warnAction, 
-                warnReasons: parsedWarnReasons,
+                // نظام التحذيرات المزدوج
+                warnPanelChannelId: formDataObject.warnPanelChannelId, 
+                warnLogChannelId: formDataObject.warnLogChannelId, 
+                warnPanelTitle: formDataObject.warnPanelTitle, 
+                warnPanelDesc: formDataObject.warnPanelDesc, 
+                warnPanelColor: formDataObject.warnPanelColor, 
+                warnMax: parseInt(formDataObject.warnMax) || 3, 
+                warnAction: formDataObject.warnAction, 
+                warnReasonsAR: parsedWarnReasonsARArray,
+                warnReasonsEN: parsedWarnReasonsENArray,
                 
-                // 🔥 النظام الجديد: البانلات المتعددة
-                ticketPanels: parsedPanels,
-                maxTicketsPerUser: parseInt(formData.maxTicketsPerUser) || 1, 
+                // البانلات والتكتات
+                ticketPanels: parsedTicketPanelsArray,
+                maxTicketsPerUser: parseInt(formDataObject.maxTicketsPerUser) || 1, 
+                hideTicketOnClaim: formDataObject.hideTicketOnClaim === 'on', 
+                readOnlyStaffOnClaim: formDataObject.readOnlyStaffOnClaim === 'on',
                 
-                // الرتب (تم تعديل الوساطة إلى MiddleMan)
-                adminRoleId: formData.adminRoleId, 
-                highAdminRoles: formatArray(formData.highAdminRoles), 
-                middlemanRoleId: formData.middlemanRoleId, 
-                highMiddlemanRoles: formatArray(formData.highMiddlemanRoles), 
+                // الرتب 
+                adminRoleId: formDataObject.adminRoleId, 
+                highAdminRoles: formatArrayFunction(formDataObject.highAdminRoles), 
+                middlemanRoleId: formDataObject.middlemanRoleId, 
+                highMiddlemanRoles: formatArrayFunction(formDataObject.highMiddlemanRoles), 
                 
-                hideTicketOnClaim: formData.hideTicketOnClaim === 'on', 
-                readOnlyStaffOnClaim: formData.readOnlyStaffOnClaim === 'on',
+                // الأوامر الديناميكية للغرف والتريد
+                cmdAdd: formDataObject.cmdAdd, 
+                cmdAddRoles: formatArrayFunction(formDataObject.cmdAddRoles), 
                 
-                // الأوامر (بما فيها أمر الاستدعاء !come)
-                cmdAdd: formData.cmdAdd, 
-                cmdAddRoles: formatArray(formData.cmdAddRoles), 
+                cmdDone: formDataObject.cmdDone, 
+                cmdDoneRoles: formatArrayFunction(formDataObject.cmdDoneRoles), 
                 
-                cmdDone: formData.cmdDone, 
-                cmdDoneRoles: formatArray(formData.cmdDoneRoles), 
+                cmdReqHigh: formDataObject.cmdReqHigh, 
+                cmdReqHighRoles: formatArrayFunction(formDataObject.cmdReqHighRoles), 
                 
-                cmdReqHigh: formData.cmdReqHigh, 
-                cmdReqHighRoles: formatArray(formData.cmdReqHighRoles), 
+                cmdCome: formDataObject.cmdCome, 
+                cmdComeRoles: formatArrayFunction(formDataObject.cmdComeRoles), 
                 
-                cmdCome: formData.cmdCome, 
-                cmdComeRoles: formatArray(formData.cmdComeRoles), 
+                cmdTrade: formDataObject.cmdTrade, 
+                cmdTradeRoles: formatArrayFunction(formDataObject.cmdTradeRoles), 
                 
-                cmdTrade: formData.cmdTrade, 
-                cmdTradeRoles: formatArray(formData.cmdTradeRoles), 
-                tradeApproveRoles: formatArray(formData.tradeApproveRoles),
-                tradeMentionRoles: formatArray(formData.tradeMentionRoles),
+                tradeApproveRoles: formatArrayFunction(formDataObject.tradeApproveRoles), 
+                tradeMentionRoles: formatArrayFunction(formDataObject.tradeMentionRoles),
                 
-                cmdClear: formData.cmdClear, 
-                cmdClearRoles: formatArray(formData.cmdClearRoles), 
+                cmdClear: formDataObject.cmdClear, 
+                cmdClearRoles: formatArrayFunction(formDataObject.cmdClearRoles), 
                 
-                cmdLock: formData.cmdLock, 
-                cmdLockRoles: formatArray(formData.cmdLockRoles), 
+                cmdLock: formDataObject.cmdLock, 
+                cmdLockRoles: formatArrayFunction(formDataObject.cmdLockRoles), 
                 
-                cmdUnlock: formData.cmdUnlock, 
-                cmdUnlockRoles: formatArray(formData.cmdUnlockRoles), 
+                cmdUnlock: formDataObject.cmdUnlock, 
+                cmdUnlockRoles: formatArrayFunction(formDataObject.cmdUnlockRoles), 
                 
-                cmdVmove: formData.cmdVmove, 
-                cmdVmoveRoles: formatArray(formData.cmdVmoveRoles), 
+                cmdVmove: formDataObject.cmdVmove, 
+                cmdVmoveRoles: formatArrayFunction(formDataObject.cmdVmoveRoles), 
                 
-                cmdBan: formData.cmdBan, 
-                cmdBanRoles: formatArray(formData.cmdBanRoles), 
+                // أوامر العقوبات
+                cmdBan: formDataObject.cmdBan, 
+                cmdBanRoles: formatArrayFunction(formDataObject.cmdBanRoles), 
                 
-                cmdTimeout: formData.cmdTimeout, 
-                cmdTimeoutRoles: formatArray(formData.cmdTimeoutRoles),
+                cmdTimeout: formDataObject.cmdTimeout, 
+                cmdTimeoutRoles: formatArrayFunction(formDataObject.cmdTimeoutRoles),
                 
-                cmdUnban: formData.cmdUnban, 
-                cmdUnbanRoles: formatArray(formData.cmdUnbanRoles),
+                cmdUnban: formDataObject.cmdUnban, 
+                cmdUnbanRoles: formatArrayFunction(formDataObject.cmdUnbanRoles),
                 
-                cmdUntimeout: formData.cmdUntimeout, 
-                cmdUntimeoutRoles: formatArray(formData.cmdUntimeoutRoles),
+                cmdUntimeout: formDataObject.cmdUntimeout, 
+                cmdUntimeoutRoles: formatArrayFunction(formDataObject.cmdUntimeoutRoles),
                 
-                cmdMove: formData.cmdMove, 
-                cmdMoveRoles: formatArray(formData.cmdMoveRoles),
+                cmdMove: formDataObject.cmdMove, 
+                cmdMoveRoles: formatArrayFunction(formDataObject.cmdMoveRoles),
 
-                // تحكم الألوان والإيمبدات الشامل
-                logEmbedColor: formData.logEmbedColor,
-                transcriptEmbedColor: formData.transcriptEmbedColor,
-                basicRatingColor: formData.basicRatingColor,
-                staffRatingColor: formData.staffRatingColor,
-                closeEmbedColor: formData.closeEmbedColor,
-                answersEmbedColor: formData.answersEmbedColor,
-                tradeEmbedColor: formData.tradeEmbedColor,
-                banEmbedColor: formData.banEmbedColor,
-                unbanEmbedColor: formData.unbanEmbedColor,
-                timeoutEmbedColor: formData.timeoutEmbedColor,
-                untimeoutEmbedColor: formData.untimeoutEmbedColor,
+                // تحكم الألوان الشامل
+                logEmbedColor: formDataObject.logEmbedColor,
+                transcriptEmbedColor: formDataObject.transcriptEmbedColor,
+                basicRatingColor: formDataObject.basicRatingColor,
+                staffRatingColor: formDataObject.staffRatingColor,
+                closeEmbedColor: formDataObject.closeEmbedColor,
+                answersEmbedColor: formDataObject.answersEmbedColor,
+                tradeEmbedColor: formDataObject.tradeEmbedColor,
+                banEmbedColor: formDataObject.banEmbedColor,
+                unbanEmbedColor: formDataObject.unbanEmbedColor,
+                timeoutEmbedColor: formDataObject.timeoutEmbedColor,
+                untimeoutEmbedColor: formDataObject.untimeoutEmbedColor,
                 
-                // التقييمات المخصصة
-                ratingStyle: formData.ratingStyle,
-                customRatingTitle: formData.customRatingTitle,
-                customRatingText: formData.customRatingText,
-                customMiddlemanRatingTitle: formData.customMiddlemanRatingTitle,
-                customMiddlemanRatingText: formData.customMiddlemanRatingText,
+                // التقييمات والعقوبات
+                ratingStyle: formDataObject.ratingStyle,
+                customRatingTitle: formDataObject.customRatingTitle,
+                customRatingText: formDataObject.customRatingText,
+                customMiddlemanRatingTitle: formDataObject.customMiddlemanRatingTitle,
+                customMiddlemanRatingText: formDataObject.customMiddlemanRatingText,
 
-                // العقوبات المخصصة
-                punishmentStyle: formData.punishmentStyle,
-                customBanTitle: formData.customBanTitle,
-                customBanDesc: formData.customBanDesc,
-                customUnbanTitle: formData.customUnbanTitle,
-                customUnbanDesc: formData.customUnbanDesc,
-                customTimeoutTitle: formData.customTimeoutTitle,
-                customTimeoutDesc: formData.customTimeoutDesc,
-                customUntimeoutTitle: formData.customUntimeoutTitle,
-                customUntimeoutDesc: formData.customUntimeoutDesc,
+                punishmentStyle: formDataObject.punishmentStyle,
+                customBanTitle: formDataObject.customBanTitle,
+                customBanDesc: formDataObject.customBanDesc,
+                customUnbanTitle: formDataObject.customUnbanTitle,
+                customUnbanDesc: formDataObject.customUnbanDesc,
+                customTimeoutTitle: formDataObject.customTimeoutTitle,
+                customTimeoutDesc: formDataObject.customTimeoutDesc,
+                customUntimeoutTitle: formDataObject.customUntimeoutTitle,
+                customUntimeoutDesc: formDataObject.customUntimeoutDesc,
 
-                // اللوجات الشاملة (تم التعديل إلى middlemanRatingChannelId)
-                transcriptChannelId: formData.transcriptChannelId, 
-                ticketLogChannelId: formData.ticketLogChannelId, 
-                staffRatingChannelId: formData.staffRatingChannelId, 
-                middlemanRatingChannelId: formData.middlemanRatingChannelId, 
-                logRoleCreateDeleteId: formData.logRoleCreateDeleteId, 
-                logMemberRoleUpdateId: formData.logMemberRoleUpdateId, 
-                logJoinLeaveId: formData.logJoinLeaveId, 
-                logMsgDeleteId: formData.logMsgDeleteId, 
-                logMsgUpdateId: formData.logMsgUpdateId, 
-                logImgDeleteId: formData.logImgDeleteId, 
-                logVoiceId: formData.logVoiceId, 
-                logInviteId: formData.logInviteId, 
-                logChannelThreadId: formData.logChannelThreadId, 
-                logBanId: formData.logBanId, 
-                logTimeoutId: formData.logTimeoutId, 
-                logUnwarnId: formData.logUnwarnId
+                // اللوجات الشاملة (جميع الرومات)
+                transcriptChannelId: formDataObject.transcriptChannelId, 
+                ticketLogChannelId: formDataObject.ticketLogChannelId, 
+                staffRatingChannelId: formDataObject.staffRatingChannelId, 
+                middlemanRatingChannelId: formDataObject.middlemanRatingChannelId, 
+                logRoleCreateDeleteId: formDataObject.logRoleCreateDeleteId, 
+                logMemberRoleUpdateId: formDataObject.logMemberRoleUpdateId, 
+                logJoinLeaveId: formDataObject.logJoinLeaveId, 
+                logMsgDeleteId: formDataObject.logMsgDeleteId, 
+                logMsgUpdateId: formDataObject.logMsgUpdateId, 
+                logImgDeleteId: formDataObject.logImgDeleteId, 
+                logVoiceId: formDataObject.logVoiceId, 
+                logInviteId: formDataObject.logInviteId, 
+                logChannelThreadId: formDataObject.logChannelThreadId, 
+                logBanId: formDataObject.logBanId, 
+                logTimeoutId: formDataObject.logTimeoutId, 
+                logUnwarnId: formDataObject.logUnwarnId
             },
             { upsert: true }
         );
 
-        // =====================================================================
-        // 🔥 إرسال البانلات المتعددة إلى الرومات المخصصة لها
-        // =====================================================================
-        const discordGuild = client.guilds.cache.get(targetGuildID);
+        const discordGuildObject = client.guilds.cache.get(targetGuildIDString);
         
-        if (discordGuild && parsedPanels && parsedPanels.length > 0) {
+        // =====================================================================
+        // 🔥 إرسال بانل التحذيرات (مطابق للصورة 5 تماماً: 3 زراير)
+        // =====================================================================
+        const targetWarnChannelIdString = formDataObject.warnPanelChannelId;
+        
+        if (discordGuildObject && targetWarnChannelIdString) {
             
-            for (let pIndex = 0; pIndex < parsedPanels.length; pIndex++) {
+            const warnChannelObject = discordGuildObject.channels.cache.get(targetWarnChannelIdString);
+            
+            if (warnChannelObject) {
                 
-                const panelData = parsedPanels[pIndex];
+                try {
+                    const fetchedWarnMessagesCollection = await warnChannelObject.messages.fetch({ limit: 30 });
+                    
+                    const oldWarnBotMessagesCollection = fetchedWarnMessagesCollection.filter(msgObj => { 
+                        return msgObj.author.id === client.user.id; 
+                    });
+                    
+                    await warnChannelObject.bulkDelete(oldWarnBotMessagesCollection);
+                } catch(deleteWarnMessagesError) {
+                    console.log("لا توجد صلاحية لمسح الرسائل في روم لوحة التحذيرات.");
+                }
+
+                const warnEmbedObject = new EmbedBuilder();
                 
-                if (panelData.panelChannelId) {
+                const finalWarnTitleString = formDataObject.warnPanelTitle || 'لوحة تحكم التحذير';
+                warnEmbedObject.setTitle(finalWarnTitleString);
+                
+                const finalWarnDescString = formDataObject.warnPanelDesc || 'استخدم الأزرار أدناه لإدارة تحذيرات الأعضاء.';
+                warnEmbedObject.setDescription(finalWarnDescString);
+                
+                const finalWarnColorHex = formDataObject.warnPanelColor || '#ed4245';
+                warnEmbedObject.setColor(finalWarnColorHex);
+
+                const warnActionRowObject = new ActionRowBuilder();
+                
+                const giveWarnButtonObject = new ButtonBuilder();
+                giveWarnButtonObject.setCustomId('sys_warn_give');
+                giveWarnButtonObject.setLabel('تحذير عضو');
+                giveWarnButtonObject.setStyle(ButtonStyle.Danger); 
+                
+                const removeWarnButtonObject = new ButtonBuilder();
+                removeWarnButtonObject.setCustomId('sys_warn_remove');
+                removeWarnButtonObject.setLabel('إزالة تحذير');
+                removeWarnButtonObject.setStyle(ButtonStyle.Success); 
+                
+                const viewWarnButtonObject = new ButtonBuilder();
+                viewWarnButtonObject.setCustomId('sys_warn_view');
+                viewWarnButtonObject.setLabel('عرض سجل');
+                viewWarnButtonObject.setStyle(ButtonStyle.Primary); 
+                
+                warnActionRowObject.addComponents(giveWarnButtonObject, removeWarnButtonObject, viewWarnButtonObject);
+                
+                try {
+                    await warnChannelObject.send({ 
+                        embeds: [warnEmbedObject], 
+                        components: [warnActionRowObject] 
+                    });
+                } catch (sendWarnPanelError) {
+                    console.error("خطأ أثناء إرسال بانل التحذيرات:", sendWarnPanelError);
+                }
+            }
+        }
+
+        // =====================================================================
+        // 🔥 إرسال البانلات المتعددة إلى الرومات المخصصة لها (Multi-Panels)
+        // =====================================================================
+        if (discordGuildObject && parsedTicketPanelsArray && parsedTicketPanelsArray.length > 0) {
+            
+            for (let pIndex = 0; pIndex < parsedTicketPanelsArray.length; pIndex++) {
+                
+                const panelDataObject = parsedTicketPanelsArray[pIndex];
+                const targetPanelChannelIdString = panelDataObject.panelChannelId;
+                
+                if (targetPanelChannelIdString) {
                     
-                    const targetChannel = discordGuild.channels.cache.get(panelData.panelChannelId);
+                    const targetChannelObject = discordGuildObject.channels.cache.get(targetPanelChannelIdString);
                     
-                    if (targetChannel) {
+                    if (targetChannelObject) {
                         
                         try {
-                            const fetchedMessages = await targetChannel.messages.fetch({ limit: 30 });
-                            const oldBotMessages = fetchedMessages.filter(msg => { 
-                                return msg.author.id === client.user.id; 
-                            });
-                            await targetChannel.bulkDelete(oldBotMessages);
-                        } catch(err) {
-                            console.log("لا توجد صلاحية لمسح الرسائل القديمة في روم البانل.");
-                        }
-
-                        const panelEmbed = new EmbedBuilder();
-                        
-                        let embedTitleVal = panelData.embedTitle;
-                        if (!embedTitleVal) {
-                            embedTitleVal = 'الدعم الفني';
-                        }
-                        panelEmbed.setTitle(embedTitleVal);
-                        
-                        let embedDescVal = panelData.embedDesc;
-                        if (!embedDescVal) {
-                            embedDescVal = 'اضغط على الزر لفتح تذكرة';
-                        }
-                        panelEmbed.setDescription(embedDescVal);
-                        
-                        let embedColorVal = panelData.embedColor;
-                        if (!embedColorVal) {
-                            embedColorVal = '#0099ff';
-                        }
-                        panelEmbed.setColor(embedColorVal);
-                        
-                        panelEmbed.setThumbnail(discordGuild.iconURL({ dynamic: true }));
-
-                        if (panelData.embedImage) {
-                            panelEmbed.setImage(panelData.embedImage);
-                        }
-
-                        const actionRowsArray = [];
-                        let currentRow = new ActionRowBuilder();
-
-                        if (panelData.buttons && panelData.buttons.length > 0) {
+                            const fetchedTicketMessagesCollection = await targetChannelObject.messages.fetch({ limit: 30 });
                             
-                            for (let i = 0; i < panelData.buttons.length; i++) {
+                            const oldBotMessagesCollection = fetchedTicketMessagesCollection.filter(msgObj => { 
+                                return msgObj.author.id === client.user.id; 
+                            });
+                            
+                            await targetChannelObject.bulkDelete(oldBotMessagesCollection);
+                        } catch(deleteTicketMessagesError) {
+                            console.log("لا توجد صلاحية لمسح الرسائل في روم البانل.");
+                        }
+
+                        const panelEmbedObject = new EmbedBuilder();
+                        
+                        const finalPanelTitleString = panelDataObject.embedTitle || 'الدعم الفني';
+                        panelEmbedObject.setTitle(finalPanelTitleString);
+                        
+                        const finalPanelDescString = panelDataObject.embedDesc || 'اضغط على الزر لفتح تذكرة';
+                        panelEmbedObject.setDescription(finalPanelDescString);
+                        
+                        const finalPanelColorHex = panelDataObject.embedColor || '#0099ff';
+                        panelEmbedObject.setColor(finalPanelColorHex);
+                        
+                        const guildIconUrlString = discordGuildObject.iconURL({ dynamic: true });
+                        panelEmbedObject.setThumbnail(guildIconUrlString);
+                        
+                        if (panelDataObject.embedImage) {
+                            panelEmbedObject.setImage(panelDataObject.embedImage);
+                        }
+
+                        const actionRowsArrayList = [];
+                        let currentActionRowObject = new ActionRowBuilder();
+
+                        const panelButtonsArray = panelDataObject.buttons;
+                        
+                        if (panelButtonsArray && panelButtonsArray.length > 0) {
+                            
+                            for (let i = 0; i < panelButtonsArray.length; i++) {
                                 
-                                const btnData = panelData.buttons[i];
+                                const buttonDataObject = panelButtonsArray[i];
                                 
                                 if (i > 0 && i % 5 === 0) {
-                                    actionRowsArray.push(currentRow);
-                                    currentRow = new ActionRowBuilder();
+                                    actionRowsArrayList.push(currentActionRowObject);
+                                    currentActionRowObject = new ActionRowBuilder();
                                 }
                                 
-                                let buttonStyle = ButtonStyle.Primary;
-                                if (btnData.color === 'Success') { 
-                                    buttonStyle = ButtonStyle.Success; 
-                                } else if (btnData.color === 'Danger') { 
-                                    buttonStyle = ButtonStyle.Danger; 
-                                } else if (btnData.color === 'Secondary') { 
-                                    buttonStyle = ButtonStyle.Secondary; 
+                                let finalButtonStyle = ButtonStyle.Primary;
+                                const dataColorString = buttonDataObject.color;
+                                
+                                if (dataColorString === 'Success') {
+                                    finalButtonStyle = ButtonStyle.Success; 
+                                } else if (dataColorString === 'Danger') {
+                                    finalButtonStyle = ButtonStyle.Danger; 
+                                } else if (dataColorString === 'Secondary') {
+                                    finalButtonStyle = ButtonStyle.Secondary; 
                                 }
 
-                                const newButton = new ButtonBuilder();
+                                const newTicketButtonObject = new ButtonBuilder();
                                 
-                                // المعرف البرمجي للزر أصبح يحمل ID الزر الأساسي
-                                newButton.setCustomId(`ticket_open_${btnData.id}`);
-                                newButton.setLabel(btnData.label);
-                                newButton.setStyle(buttonStyle);
+                                const finalButtonCustomId = `ticket_open_${buttonDataObject.id}`;
+                                newTicketButtonObject.setCustomId(finalButtonCustomId);
                                 
-                                currentRow.addComponents(newButton);
+                                newTicketButtonObject.setLabel(buttonDataObject.label);
+                                newTicketButtonObject.setStyle(finalButtonStyle);
+                                
+                                currentActionRowObject.addComponents(newTicketButtonObject);
                             }
                             
-                            actionRowsArray.push(currentRow);
+                            actionRowsArrayList.push(currentActionRowObject);
                         }
                         
-                        await targetChannel.send({ 
-                            embeds: [panelEmbed], 
-                            components: actionRowsArray 
-                        }).catch(console.error);
+                        try {
+                            await targetChannelObject.send({ 
+                                embeds: [panelEmbedObject], 
+                                components: actionRowsArrayList 
+                            });
+                        } catch (sendTicketPanelError) {
+                            console.error("خطأ في إرسال بانل التكت:", sendTicketPanelError);
+                        }
                     }
                 }
             }
         }
         
-        res.redirect(`/settings/${targetGuildID}?success=saved`);
+        const redirectUrlString = `/settings/${targetGuildIDString}?success=saved`;
+        res.redirect(redirectUrlString);
     });
 
     // =====================================================================
@@ -448,51 +537,64 @@ module.exports = (client) => {
             return res.redirect('/login'); 
         }
         
-        const targetGuildID = req.params.guildID;
-        const discordGuild = client.guilds.cache.get(targetGuildID);
+        const targetGuildIDString = req.params.guildID;
+        const discordGuildObject = client.guilds.cache.get(targetGuildIDString);
         
-        if (!discordGuild) { 
+        if (!discordGuildObject) { 
             return res.redirect('/dashboard'); 
         }
 
-        const targetChannel = discordGuild.channels.cache.get(req.body.embedChannelId);
+        const targetChannelIdString = req.body.embedChannelId;
+        const targetChannelObject = discordGuildObject.channels.cache.get(targetChannelIdString);
         
-        if (targetChannel) {
+        if (targetChannelObject) {
             
-            let colorHexCode = req.body.embedColor;
-            if (!colorHexCode) {
-                colorHexCode = '#5865F2';
-            }
-            colorHexCode = colorHexCode.replace('#', '');
-            
-            const customEmbedMessage = new EmbedBuilder();
-            
-            if (req.body.embedTitle) { 
-                customEmbedMessage.setTitle(req.body.embedTitle); 
+            let colorHexCodeString = req.body.embedColor;
+            if (!colorHexCodeString) {
+                colorHexCodeString = '#5865F2';
             }
             
-            if (req.body.embedDesc) { 
-                customEmbedMessage.setDescription(req.body.embedDesc); 
+            const cleanColorHexCode = colorHexCodeString.replace('#', '');
+            const parsedColorInt = parseInt(cleanColorHexCode, 16);
+            
+            const customEmbedMessageObject = new EmbedBuilder();
+            
+            const bodyEmbedTitleString = req.body.embedTitle;
+            if (bodyEmbedTitleString) { 
+                customEmbedMessageObject.setTitle(bodyEmbedTitleString); 
             }
             
-            customEmbedMessage.setColor(parseInt(colorHexCode, 16));
-            
-            if (req.body.embedImage) { 
-                customEmbedMessage.setImage(req.body.embedImage); 
+            const bodyEmbedDescString = req.body.embedDesc;
+            if (bodyEmbedDescString) { 
+                customEmbedMessageObject.setDescription(bodyEmbedDescString); 
             }
             
-            if (req.body.embedFooter) { 
-                customEmbedMessage.setFooter({ text: req.body.embedFooter }); 
+            customEmbedMessageObject.setColor(parsedColorInt);
+            
+            const bodyEmbedImageString = req.body.embedImage;
+            if (bodyEmbedImageString) { 
+                customEmbedMessageObject.setImage(bodyEmbedImageString); 
             }
             
-            await targetChannel.send({ embeds: [customEmbedMessage] }).catch(err => console.log(err));
+            const bodyEmbedFooterString = req.body.embedFooter;
+            if (bodyEmbedFooterString) { 
+                customEmbedMessageObject.setFooter({ text: bodyEmbedFooterString }); 
+            }
+            
+            try {
+                await targetChannelObject.send({ embeds: [customEmbedMessageObject] });
+            } catch (embedSendError) {
+                console.log("Error sending custom embed:", embedSendError);
+            }
         }
         
-        res.redirect(`/settings/${targetGuildID}?success=embed_sent`);
+        const successRedirectUrl = `/settings/${targetGuildIDString}?success=embed_sent`;
+        res.redirect(successRedirectUrl);
     });
 
-    const PORT = process.env.PORT || 8080;
-    app.listen(PORT, () => { 
-        console.log(`🌐 Dashboard Running smoothly on port ${PORT}`); 
+    const serverPortNumber = process.env.PORT || 8080;
+    
+    app.listen(serverPortNumber, () => { 
+        console.log(`🌐 Dashboard Running smoothly on port ${serverPortNumber}`); 
     });
 };
