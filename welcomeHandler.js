@@ -6,64 +6,92 @@ module.exports = (client) => {
     
     client.on('guildMemberAdd', async member => {
         
-        // جلب الإعدادات من الداتابيز
+        console.log(`[Welcome] عـضـو جـديـد دخل: ${member.user.tag}`);
+        
         const config = await GuildConfig.findOne({ guildId: member.guild.id });
-        if (!config || !config.welcomeChannelId) return;
+        if (!config) {
+            console.log('[Welcome] لم يتم العثور على إعدادات السيرفر في الداتابيز.');
+            return;
+        }
+        
+        if (!config.welcomeChannelId) {
+            console.log('[Welcome] روم الترحيب غير محددة.');
+            return;
+        }
 
-        // التحقق من وجود روم الترحيب
         const welcomeChannel = member.guild.channels.cache.get(config.welcomeChannelId);
-        if (!welcomeChannel) return;
+        if (!welcomeChannel) {
+            console.log('[Welcome] روم الترحيب المحددة غير موجودة في السيرفر.');
+            return;
+        }
 
-        // 1. تجهيز الرسالة النصية وتغيير المتغيرات
-        let welcomeText = config.welcomeMessage || 'حياك الله يا [user] في [server]! أنت العضو رقم [memberCount].';
-        welcomeText = welcomeText.replace(/\[user\]/g, `<@${member.id}>`)
-                                 .replace(/\[server\]/g, member.guild.name)
-                                 .replace(/\[memberCount\]/g, member.guild.memberCount);
+        // 1. تجهيز الرسالة النصية
+        let welcomeText = config.welcomeMessage;
+        if (!welcomeText) {
+            welcomeText = 'حياك الله يا [user] في [server]! أنت العضو رقم [memberCount].';
+        }
+        
+        welcomeText = welcomeText.replace(/\[user\]/g, `<@${member.id}>`);
+        welcomeText = welcomeText.replace(/\[server\]/g, member.guild.name);
+        welcomeText = welcomeText.replace(/\[memberCount\]/g, member.guild.memberCount);
 
-        // 2. التحقق من وجود صورة خلفية (إذا لم يوجد، نرسل النص فقط)
-        if (!config.welcomeBgImage) {
+        // 2. إذا لم يكن هناك صورة خلفية، نرسل النص فقط
+        if (!config.welcomeBgImage || config.welcomeBgImage.trim() === '') {
+            console.log('[Welcome] لا توجد صورة خلفية، سيتم إرسال النص فقط.');
             return welcomeChannel.send({ content: welcomeText }).catch(()=>{});
         }
 
+        // 3. إنشاء الصورة
         try {
-            // 3. إنشاء الصورة (Canvas)
+            console.log('[Welcome] جاري إنشاء صورة الترحيب...');
+            
             const canvas = Canvas.createCanvas(1024, 450);
             const ctx = canvas.getContext('2d');
 
-            // رسم الخلفية
-            const background = await Canvas.loadImage(config.welcomeBgImage);
+            // تحميل الصورة (مع التعامل مع الروابط الخاطئة)
+            let background;
+            try {
+                background = await Canvas.loadImage(config.welcomeBgImage);
+            } catch (imgError) {
+                console.log('❌ خطأ في تحميل صورة الخلفية من الرابط! سيتم إرسال نص فقط.');
+                return welcomeChannel.send({ content: welcomeText }).catch(()=>{});
+            }
+            
             ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-            // رسم طبقة تظليل خفيفة لجعل الصورة أفخم
+            // تظليل خفيف
             ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // جلب لون الإطار من الداتابيز
-            let borderColor = config.welcomeAvatarBorderColor || '#ffffff';
+            // لون الإطار
+            let borderColor = config.welcomeAvatarBorderColor;
+            if (!borderColor) {
+                borderColor = '#ffffff';
+            }
 
-            // رسم الدائرة الخاصة بالصورة الشخصية
+            // رسم دائرة الصورة
             ctx.beginPath();
-            ctx.arc(512, 180, 110, 0, Math.PI * 2, true); // مركز الصورة
+            ctx.arc(512, 180, 110, 0, Math.PI * 2, true); 
             ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 12; // عرض الإطار
+            ctx.lineWidth = 12; 
             ctx.stroke();
             ctx.closePath();
-            ctx.clip(); // قص ما بداخل الدائرة فقط
+            ctx.clip();
 
             // رسم الصورة الشخصية للعضو
             const avatarURL = member.user.displayAvatarURL({ extension: 'png', size: 256 });
             const avatar = await Canvas.loadImage(avatarURL);
             ctx.drawImage(avatar, 402, 70, 220, 220);
 
-            // تحويل الـ Canvas إلى ملف صورة
             const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'welcome-image.png' });
 
-            // إرسال الترحيب النهائي
-            await welcomeChannel.send({ content: welcomeText, files: [attachment] }).catch(()=>{});
+            console.log('[Welcome] تم إنشاء الصورة بنجاح! جاري الإرسال...');
+            await welcomeChannel.send({ content: welcomeText, files: [attachment] }).catch((e)=>{
+                console.log('❌ خطأ أثناء إرسال رسالة الترحيب للروم:', e.message);
+            });
 
         } catch (err) {
-            console.log('❌ خطأ في صنع صورة الترحيب:', err.message);
-            // إرسال النص فقط في حالة فشل الصورة لتجنب توقف البوت
+            console.log('❌ خطأ غير متوقع في نظام الترحيب:', err.message);
             welcomeChannel.send({ content: welcomeText }).catch(()=>{});
         }
     });
