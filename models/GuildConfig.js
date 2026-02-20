@@ -58,9 +58,9 @@ const ticketButtonSchema = new mongoose.Schema({
         type: String, 
         default: 'Ticket Details' 
     },
-    modalFields: {
-        type: [modalFieldSchema],
-        default: []
+    modalFields: { 
+        type: [modalFieldSchema], 
+        default: [] 
     }, 
     isMediator: { 
         type: Boolean, 
@@ -70,10 +70,9 @@ const ticketButtonSchema = new mongoose.Schema({
         type: Boolean, 
         default: true 
     },
-    // 🔥 تحديد رتب معينة لاستلام هذا التكت (مثلاً: للإدارة العليا فقط)
-    allowedClaimRoles: {
-        type: [String],
-        default: []
+    allowedClaimRoles: { 
+        type: [String], 
+        default: [] 
     }
 });
 
@@ -249,69 +248,93 @@ const guildConfigSchema = new mongoose.Schema({
     // ---------------------------------------------------
     // Staff & Mediator Roles
     // ---------------------------------------------------
-    adminRoleId: { type: String, default: null }, 
-    highAdminRoles: { type: [String], default: [] }, 
-    mediatorRoleId: { type: String, default: null }, 
-    highMediatorRoles: { type: [String], default: [] }, 
+    adminRoleId: { 
+        type: String, 
+        default: null 
+    }, 
+    highAdminRoles: { 
+        type: [String], 
+        default: [] 
+    }, 
+    mediatorRoleId: { 
+        type: String, 
+        default: null 
+    }, 
+    highMediatorRoles: { 
+        type: [String], 
+        default: [] 
+    }, 
     
-    hideTicketOnClaim: { type: Boolean, default: true },
-    readOnlyStaffOnClaim: { type: Boolean, default: false },
+    hideTicketOnClaim: { 
+        type: Boolean, 
+        default: true 
+    },
+    readOnlyStaffOnClaim: { 
+        type: Boolean, 
+        default: false 
+    },
     
     // ---------------------------------------------------
     // Commands & Permissions
     // ---------------------------------------------------
-    cmdAdd: { type: String, default: '!add' }, cmdAddRoles: { type: [String], default: [] },
-    cmdDone: { type: String, default: '!done' }, cmdDoneRoles: { type: [String], default: [] },
-    cmdReqHigh: { type: String, default: '!req-high' }, cmdReqHighRoles: { type: [String], default: [] },
-    cmdCome: { type: String, default: '!come' }, cmdComeRoles: { type: [String], default: [] },
-    cmdTrade: { type: String, default: '!trade' }, cmdTradeRoles: { type: [String], default: [] },
-    cmdClear: { type: String, default: '!clear' }, cmdClearRoles: { type: [String], default: [] },
-    cmdLock: { type: String, default: '!lock' }, cmdLockRoles: { type: [String], default: [] },
-    cmdUnlock: { type: String, default: '!unlock' }, cmdUnlockRoles: { type: [String], default: [] },
-    cmdVmove: { type: String, default: '!vmove' }, cmdVmoveRoles: { type: [String], default: [] },
-    cmdBan: { type: String, default: '!ban' }, cmdBanRoles: { type: [String], default: [] },
-    cmdTimeout: { type: String, default: '!timeout' }, cmdTimeoutRoles: { type: [String], default: [] },
+    cmdAdd: { type: String, default: '!add' }, 
+    cmdAddRoles: { type: [String], default: [] },
     
-    // 🔥 New Commands for Unban, Untimeout, and General Move
-    cmdUnban: { type: String, default: '!unban' }, cmdUnbanRoles: { type: [String], default: [] },
-    cmdUntimeout: { type: String, default: '!untimeout' }, cmdUntimeoutRoles: { type: [String], default: [] },
-    cmdMove: { type: String, default: '!move' }, cmdMoveRoles: { type: [String], default: [] },
+    cmdDone: { type: String, default: '!done' }, 
+    cmdDoneRoles: { type: [String], default: [] },
+    
+    cmdReqHigh: { type: String, default: '!req-high' }, 
+    cmdReqHighRoles: { type: [String], default: [] },
+    
+    cmdCome: { type: String, default: '!come' }, 
+    cmdComeRoles: { type: [String], default: [] },
+    
+    cmdTrade: { type: String, default: '!trade' }, 
+    cmdTradeRoles: { type: [String], default: [] },
+    
+    tradeApproveRoles: { type: [String], default: [] },
+    
+    cmdClear: { type: String, default: '!clear' }, 
+    cmdClearRoles: { type: [String], default: [] },
+    
+    cmdLock: { type: String, default: '!lock' }, 
+    cmdLockRoles: { type: [String], default: [] },
+    
+    cmdUnlock: { type: String, default: '!unlock' }, 
+    cmdUnlockRoles: { type: [String], default: [] },
+    
+    cmdVmove: { type: String, default: '!vmove' }, 
+    cmdVmoveRoles: { type: [String], default: [] },
+    
+    cmdBan: { type: String, default: '!ban' }, 
+    cmdBanRoles: { type: [String], default: [] },
+    
+    cmdTimeout: { type: String, default: '!timeout' }, 
+    cmdTimeoutRoles: { type: [String], default: [] },
+    
+    cmdUnban: { type: String, default: '!unban' }, 
+    cmdUnbanRoles: { type: [String], default: [] },
+    
+    cmdUntimeout: { type: String, default: '!untimeout' }, 
+    cmdUntimeoutRoles: { type: [String], default: [] },
+    
+    cmdMove: { type: String, default: '!move' }, 
+    cmdMoveRoles: { type: [String], default: [] },
 
     // ---------------------------------------------------
-    // 🎨 Embed Colors Customization (التحكم بألوان كل الإيمبدات)
+    // 🎨 Embed Colors Customization
     // ---------------------------------------------------
-    logEmbedColor: { 
-        type: String, 
-        default: '#ed4245' 
-    },
-    transcriptEmbedColor: { 
-        type: String, 
-        default: '#2b2d31' 
-    },
-    basicRatingColor: { 
-        type: String, 
-        default: '#f2a658' 
-    },
-    staffRatingColor: { 
-        type: String, 
-        default: '#3ba55d' 
-    },
+    logEmbedColor: { type: String, default: '#ed4245' }, 
+    transcriptEmbedColor: { type: String, default: '#2b2d31' }, 
+    basicRatingColor: { type: String, default: '#f2a658' }, 
+    staffRatingColor: { type: String, default: '#3ba55d' }, 
+    closeEmbedColor: { type: String, default: '#2b2d31' }, 
+    answersEmbedColor: { type: String, default: '#2b2d31' }, 
+    tradeEmbedColor: { type: String, default: '#f2a658' }, 
     
-    // ---------------------------------------------------
-    // ⭐ Custom Rating Settings (تخصيص نظام التقييم اليدوي)
-    // ---------------------------------------------------
-    ratingStyle: { 
-        type: String, 
-        default: 'basic' // 'basic' OR 'custom'
-    }, 
-    customRatingTitle: {
-        type: String,
-        default: 'تقييم فريق العمل'
-    },
-    customRatingText: { 
-        type: String, 
-        default: 'مرحباً [user]، يرجى تقييم خدمة [staff]. رأيك يهمنا!' 
-    },
+    ratingStyle: { type: String, default: 'basic' }, 
+    customRatingTitle: { type: String, default: 'تقييم فريق العمل' },
+    customRatingText: { type: String, default: 'مرحباً [user]، يرجى تقييم خدمة [staff]. رأيك يهمنا!' },
 
     // ---------------------------------------------------
     // 📁 Universal Logging Channels
