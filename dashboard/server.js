@@ -3,17 +3,30 @@ const passport = require('passport');
 const { Strategy } = require('passport-discord');
 const session = require('express-session');
 const path = require('path');
+
+// استدعاء قاعدة البيانات ومكاتب ديسكورد
 const GuildConfig = require('../models/GuildConfig');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { 
+    EmbedBuilder, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle 
+} = require('discord.js');
 
 module.exports = (client) => {
     
     const app = express();
     
+    // =====================================================================
+    // إعدادات الـ Express الأساسية
+    // =====================================================================
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
     app.use(express.json({ limit: '50mb' }));
     app.use(express.static(path.join(__dirname, 'public')));
 
+    // =====================================================================
+    // إعدادات الجلسات (Sessions)
+    // =====================================================================
     app.use(session({
         secret: process.env.SESSION_SECRET || 'MNC_COMMUNITY_SUPER_SECRET_KEY_2026',
         resave: false,
@@ -23,9 +36,15 @@ module.exports = (client) => {
         }
     }));
 
+    // =====================================================================
+    // إعداد محرك القوالب (EJS)
+    // =====================================================================
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
 
+    // =====================================================================
+    // إعدادات Discord Passport لتسجيل الدخول
+    // =====================================================================
     passport.serializeUser((user, done) => { 
         done(null, user); 
     });
@@ -48,6 +67,9 @@ module.exports = (client) => {
     app.use(passport.initialize());
     app.use(passport.session());
 
+    // =====================================================================
+    // 🌐 الروابط الأساسية (Routes)
+    // =====================================================================
     app.get('/', (req, res) => { 
         res.render('index', { user: req.user }); 
     });
@@ -67,11 +89,16 @@ module.exports = (client) => {
         }); 
     });
 
+    // =====================================================================
+    // 🌐 صفحة قائمة السيرفرات
+    // =====================================================================
     app.get('/dashboard', (req, res) => {
+        
         if (!req.user) { 
             return res.redirect('/login'); 
         }
         
+        // فلترة السيرفرات لإظهار السيرفرات التي يملك فيها العضو صلاحية Administrator فقط
         const adminGuilds = req.user.guilds.filter(guild => { 
             return (guild.permissions & 0x8) === 0x8; 
         });
@@ -82,7 +109,11 @@ module.exports = (client) => {
         });
     });
 
+    // =====================================================================
+    // ⚙️ صفحة الإعدادات الشاملة للسيرفر (GET)
+    // =====================================================================
     app.get('/settings/:guildID', async (req, res) => {
+        
         if (!req.user) { 
             return res.redirect('/login'); 
         }
@@ -128,7 +159,11 @@ module.exports = (client) => {
         });
     });
 
+    // =====================================================================
+    // 💾 حفظ الإعدادات في الداتابيز (POST)
+    // =====================================================================
     app.post('/settings/:guildID', async (req, res) => {
+        
         if (!req.user) { 
             return res.redirect('/login'); 
         }
@@ -143,18 +178,18 @@ module.exports = (client) => {
             }
         };
         
-        let parsedButtons = [];
+        let parsedPanels = [];
         let parsedWarnReasons = [];
         
         try {
-            if (req.body.customButtonsData) { 
-                parsedButtons = JSON.parse(req.body.customButtonsData); 
+            if (req.body.ticketPanelsData) { 
+                parsedPanels = JSON.parse(req.body.ticketPanelsData); 
             }
             if (req.body.warnReasonsData) { 
                 parsedWarnReasons = JSON.parse(req.body.warnReasonsData); 
             }
-        } catch(error) {
-            console.log("Error parsing JSON");
+        } catch(error) { 
+            console.log("Error parsing JSON data", error); 
         }
 
         const formData = req.body;
@@ -163,23 +198,27 @@ module.exports = (client) => {
         await GuildConfig.findOneAndUpdate(
             { guildId: targetGuildID },
             { 
+                // الإعدادات العامة
                 prefix: formData.prefix, 
                 autoRoleId: formData.autoRoleId,
                 antiLinks: formData.antiLinks === 'on', 
                 antiSpam: formData.antiSpam === 'on', 
                 
+                // الألعاب والمستويات
                 gamesEnabled: formData.gamesEnabled === 'on', 
                 gamesChannelId: formData.gamesChannelId,
                 levelingEnabled: formData.levelingEnabled === 'on', 
                 levelUpChannelId: formData.levelUpChannelId, 
                 suggestionChannelId: formData.suggestionChannelId,
                 
+                // الترحيب
                 welcomeChannelId: formData.welcomeChannelId, 
                 welcomeMessage: formData.welcomeMessage, 
                 welcomeBgImage: formData.welcomeBgImage, 
                 welcomeAvatarBorderColor: formData.welcomeAvatarBorderColor,
                 welcomeEmbedColor: formData.welcomeEmbedColor,
                 
+                // التحذيرات
                 warnPanelChannelId: formData.warnPanelChannelId, 
                 warnLogChannelId: formData.warnLogChannelId, 
                 warnPanelTitle: formData.warnPanelTitle, 
@@ -189,45 +228,65 @@ module.exports = (client) => {
                 warnAction: formData.warnAction, 
                 warnReasons: parsedWarnReasons,
                 
-                panelChannelId: formData.panelChannelId, 
-                defaultCategoryId: formData.defaultCategoryId, 
-                ticketEmbedTitle: formData.ticketEmbedTitle, 
-                ticketEmbedDesc: formData.ticketEmbedDesc, 
-                ticketEmbedColor: formData.ticketEmbedColor, 
-                ticketEmbedImage: formData.ticketEmbedImage, 
-                ticketCount: parseInt(formData.ticketCount) || 0, 
+                // 🔥 النظام الجديد: البانلات المتعددة
+                ticketPanels: parsedPanels,
                 maxTicketsPerUser: parseInt(formData.maxTicketsPerUser) || 1, 
                 
-                customButtons: parsedButtons,
-                
+                // الرتب (تم تعديل الوساطة إلى MiddleMan)
                 adminRoleId: formData.adminRoleId, 
                 highAdminRoles: formatArray(formData.highAdminRoles), 
-                mediatorRoleId: formData.mediatorRoleId, 
-                highMediatorRoles: formatArray(formData.highMediatorRoles), 
+                middlemanRoleId: formData.middlemanRoleId, 
+                highMiddlemanRoles: formatArray(formData.highMiddlemanRoles), 
+                
                 hideTicketOnClaim: formData.hideTicketOnClaim === 'on', 
                 readOnlyStaffOnClaim: formData.readOnlyStaffOnClaim === 'on',
                 
-                cmdAdd: formData.cmdAdd, cmdAddRoles: formatArray(formData.cmdAddRoles), 
-                cmdDone: formData.cmdDone, cmdDoneRoles: formatArray(formData.cmdDoneRoles), 
-                cmdReqHigh: formData.cmdReqHigh, cmdReqHighRoles: formatArray(formData.cmdReqHighRoles), 
-                cmdCome: formData.cmdCome, cmdComeRoles: formatArray(formData.cmdComeRoles), 
+                // الأوامر (بما فيها أمر الاستدعاء !come)
+                cmdAdd: formData.cmdAdd, 
+                cmdAddRoles: formatArray(formData.cmdAddRoles), 
                 
-                // 🔥 تحديث أوامر التريد والموافقات والمنشن
+                cmdDone: formData.cmdDone, 
+                cmdDoneRoles: formatArray(formData.cmdDoneRoles), 
+                
+                cmdReqHigh: formData.cmdReqHigh, 
+                cmdReqHighRoles: formatArray(formData.cmdReqHighRoles), 
+                
+                cmdCome: formData.cmdCome, 
+                cmdComeRoles: formatArray(formData.cmdComeRoles), 
+                
                 cmdTrade: formData.cmdTrade, 
                 cmdTradeRoles: formatArray(formData.cmdTradeRoles), 
                 tradeApproveRoles: formatArray(formData.tradeApproveRoles),
                 tradeMentionRoles: formatArray(formData.tradeMentionRoles),
                 
-                cmdClear: formData.cmdClear, cmdClearRoles: formatArray(formData.cmdClearRoles), 
-                cmdLock: formData.cmdLock, cmdLockRoles: formatArray(formData.cmdLockRoles), 
-                cmdUnlock: formData.cmdUnlock, cmdUnlockRoles: formatArray(formData.cmdUnlockRoles), 
-                cmdVmove: formData.cmdVmove, cmdVmoveRoles: formatArray(formData.cmdVmoveRoles), 
-                cmdBan: formData.cmdBan, cmdBanRoles: formatArray(formData.cmdBanRoles), 
-                cmdTimeout: formData.cmdTimeout, cmdTimeoutRoles: formatArray(formData.cmdTimeoutRoles),
-                cmdUnban: formData.cmdUnban, cmdUnbanRoles: formatArray(formData.cmdUnbanRoles),
-                cmdUntimeout: formData.cmdUntimeout, cmdUntimeoutRoles: formatArray(formData.cmdUntimeoutRoles),
-                cmdMove: formData.cmdMove, cmdMoveRoles: formatArray(formData.cmdMoveRoles),
+                cmdClear: formData.cmdClear, 
+                cmdClearRoles: formatArray(formData.cmdClearRoles), 
+                
+                cmdLock: formData.cmdLock, 
+                cmdLockRoles: formatArray(formData.cmdLockRoles), 
+                
+                cmdUnlock: formData.cmdUnlock, 
+                cmdUnlockRoles: formatArray(formData.cmdUnlockRoles), 
+                
+                cmdVmove: formData.cmdVmove, 
+                cmdVmoveRoles: formatArray(formData.cmdVmoveRoles), 
+                
+                cmdBan: formData.cmdBan, 
+                cmdBanRoles: formatArray(formData.cmdBanRoles), 
+                
+                cmdTimeout: formData.cmdTimeout, 
+                cmdTimeoutRoles: formatArray(formData.cmdTimeoutRoles),
+                
+                cmdUnban: formData.cmdUnban, 
+                cmdUnbanRoles: formatArray(formData.cmdUnbanRoles),
+                
+                cmdUntimeout: formData.cmdUntimeout, 
+                cmdUntimeoutRoles: formatArray(formData.cmdUntimeoutRoles),
+                
+                cmdMove: formData.cmdMove, 
+                cmdMoveRoles: formatArray(formData.cmdMoveRoles),
 
+                // تحكم الألوان والإيمبدات الشامل
                 logEmbedColor: formData.logEmbedColor,
                 transcriptEmbedColor: formData.transcriptEmbedColor,
                 basicRatingColor: formData.basicRatingColor,
@@ -240,12 +299,14 @@ module.exports = (client) => {
                 timeoutEmbedColor: formData.timeoutEmbedColor,
                 untimeoutEmbedColor: formData.untimeoutEmbedColor,
                 
+                // التقييمات المخصصة
                 ratingStyle: formData.ratingStyle,
                 customRatingTitle: formData.customRatingTitle,
                 customRatingText: formData.customRatingText,
-                customMedRatingTitle: formData.customMedRatingTitle,
-                customMedRatingText: formData.customMedRatingText,
+                customMiddlemanRatingTitle: formData.customMiddlemanRatingTitle,
+                customMiddlemanRatingText: formData.customMiddlemanRatingText,
 
+                // العقوبات المخصصة
                 punishmentStyle: formData.punishmentStyle,
                 customBanTitle: formData.customBanTitle,
                 customBanDesc: formData.customBanDesc,
@@ -256,10 +317,11 @@ module.exports = (client) => {
                 customUntimeoutTitle: formData.customUntimeoutTitle,
                 customUntimeoutDesc: formData.customUntimeoutDesc,
 
+                // اللوجات الشاملة (تم التعديل إلى middlemanRatingChannelId)
                 transcriptChannelId: formData.transcriptChannelId, 
                 ticketLogChannelId: formData.ticketLogChannelId, 
                 staffRatingChannelId: formData.staffRatingChannelId, 
-                mediatorRatingChannelId: formData.mediatorRatingChannelId, 
+                middlemanRatingChannelId: formData.middlemanRatingChannelId, 
                 logRoleCreateDeleteId: formData.logRoleCreateDeleteId, 
                 logMemberRoleUpdateId: formData.logMemberRoleUpdateId, 
                 logJoinLeaveId: formData.logJoinLeaveId, 
@@ -276,87 +338,131 @@ module.exports = (client) => {
             { upsert: true }
         );
 
-        if (formData.panelChannelId) {
-            const discordGuild = client.guilds.cache.get(targetGuildID);
+        // =====================================================================
+        // 🔥 إرسال البانلات المتعددة إلى الرومات المخصصة لها
+        // =====================================================================
+        const discordGuild = client.guilds.cache.get(targetGuildID);
+        
+        if (discordGuild && parsedPanels && parsedPanels.length > 0) {
             
-            if (discordGuild) {
-                const targetPanelChannel = discordGuild.channels.cache.get(formData.panelChannelId);
+            for (let pIndex = 0; pIndex < parsedPanels.length; pIndex++) {
                 
-                if (targetPanelChannel) {
-                    try {
-                        const fetchedMessages = await targetPanelChannel.messages.fetch({ limit: 30 });
-                        const oldBotMessages = fetchedMessages.filter(msg => { 
-                            return msg.author.id === client.user.id; 
-                        });
-                        await targetPanelChannel.bulkDelete(oldBotMessages);
-                    } catch(err) {}
-
-                    const panelEmbed = new EmbedBuilder();
+                const panelData = parsedPanels[pIndex];
+                
+                if (panelData.panelChannelId) {
                     
-                    panelEmbed.setTitle(formData.ticketEmbedTitle || 'الدعم الفني');
-                    panelEmbed.setDescription(formData.ticketEmbedDesc || 'اضغط على الزر لفتح تذكرة');
-                    panelEmbed.setColor(formData.ticketEmbedColor || '#0099ff');
-                    panelEmbed.setThumbnail(discordGuild.iconURL({ dynamic: true }));
+                    const targetChannel = discordGuild.channels.cache.get(panelData.panelChannelId);
+                    
+                    if (targetChannel) {
+                        
+                        try {
+                            const fetchedMessages = await targetChannel.messages.fetch({ limit: 30 });
+                            const oldBotMessages = fetchedMessages.filter(msg => { 
+                                return msg.author.id === client.user.id; 
+                            });
+                            await targetChannel.bulkDelete(oldBotMessages);
+                        } catch(err) {
+                            console.log("لا توجد صلاحية لمسح الرسائل القديمة في روم البانل.");
+                        }
 
-                    if (formData.ticketEmbedImage) {
-                        panelEmbed.setImage(formData.ticketEmbedImage);
-                    }
+                        const panelEmbed = new EmbedBuilder();
+                        
+                        let embedTitleVal = panelData.embedTitle;
+                        if (!embedTitleVal) {
+                            embedTitleVal = 'الدعم الفني';
+                        }
+                        panelEmbed.setTitle(embedTitleVal);
+                        
+                        let embedDescVal = panelData.embedDesc;
+                        if (!embedDescVal) {
+                            embedDescVal = 'اضغط على الزر لفتح تذكرة';
+                        }
+                        panelEmbed.setDescription(embedDescVal);
+                        
+                        let embedColorVal = panelData.embedColor;
+                        if (!embedColorVal) {
+                            embedColorVal = '#0099ff';
+                        }
+                        panelEmbed.setColor(embedColorVal);
+                        
+                        panelEmbed.setThumbnail(discordGuild.iconURL({ dynamic: true }));
 
-                    const actionRowsArray = [];
-                    let currentRow = new ActionRowBuilder();
+                        if (panelData.embedImage) {
+                            panelEmbed.setImage(panelData.embedImage);
+                        }
 
-                    if (parsedButtons && parsedButtons.length > 0) {
-                        for (let i = 0; i < parsedButtons.length; i++) {
-                            const btnData = parsedButtons[i];
+                        const actionRowsArray = [];
+                        let currentRow = new ActionRowBuilder();
+
+                        if (panelData.buttons && panelData.buttons.length > 0) {
                             
-                            if (i > 0 && i % 5 === 0) {
-                                actionRowsArray.push(currentRow);
-                                currentRow = new ActionRowBuilder();
+                            for (let i = 0; i < panelData.buttons.length; i++) {
+                                
+                                const btnData = panelData.buttons[i];
+                                
+                                if (i > 0 && i % 5 === 0) {
+                                    actionRowsArray.push(currentRow);
+                                    currentRow = new ActionRowBuilder();
+                                }
+                                
+                                let buttonStyle = ButtonStyle.Primary;
+                                if (btnData.color === 'Success') { 
+                                    buttonStyle = ButtonStyle.Success; 
+                                } else if (btnData.color === 'Danger') { 
+                                    buttonStyle = ButtonStyle.Danger; 
+                                } else if (btnData.color === 'Secondary') { 
+                                    buttonStyle = ButtonStyle.Secondary; 
+                                }
+
+                                const newButton = new ButtonBuilder();
+                                
+                                // المعرف البرمجي للزر أصبح يحمل ID الزر الأساسي
+                                newButton.setCustomId(`ticket_open_${btnData.id}`);
+                                newButton.setLabel(btnData.label);
+                                newButton.setStyle(buttonStyle);
+                                
+                                currentRow.addComponents(newButton);
                             }
                             
-                            let buttonStyle = ButtonStyle.Primary;
-                            if (btnData.color === 'Success') { 
-                                buttonStyle = ButtonStyle.Success; 
-                            } else if (btnData.color === 'Danger') { 
-                                buttonStyle = ButtonStyle.Danger; 
-                            } else if (btnData.color === 'Secondary') { 
-                                buttonStyle = ButtonStyle.Secondary; 
-                            }
-
-                            const newButton = new ButtonBuilder();
-                            newButton.setCustomId(`ticket_open_${btnData.id}`);
-                            newButton.setLabel(btnData.label);
-                            newButton.setStyle(buttonStyle);
-                            
-                            currentRow.addComponents(newButton);
+                            actionRowsArray.push(currentRow);
                         }
                         
-                        actionRowsArray.push(currentRow);
+                        await targetChannel.send({ 
+                            embeds: [panelEmbed], 
+                            components: actionRowsArray 
+                        }).catch(console.error);
                     }
-                    
-                    await targetPanelChannel.send({ 
-                        embeds: [panelEmbed], 
-                        components: actionRowsArray 
-                    }).catch(console.error);
                 }
             }
         }
+        
         res.redirect(`/settings/${targetGuildID}?success=saved`);
     });
 
+    // =====================================================================
+    // 🚀 صانع الإيمبد الحر للرومات
+    // =====================================================================
     app.post('/settings/:guildID/send-embed', async (req, res) => {
+        
         if (!req.user) { 
             return res.redirect('/login'); 
         }
+        
         const targetGuildID = req.params.guildID;
         const discordGuild = client.guilds.cache.get(targetGuildID);
+        
         if (!discordGuild) { 
             return res.redirect('/dashboard'); 
         }
 
         const targetChannel = discordGuild.channels.cache.get(req.body.embedChannelId);
+        
         if (targetChannel) {
-            let colorHexCode = req.body.embedColor || '#5865F2';
+            
+            let colorHexCode = req.body.embedColor;
+            if (!colorHexCode) {
+                colorHexCode = '#5865F2';
+            }
             colorHexCode = colorHexCode.replace('#', '');
             
             const customEmbedMessage = new EmbedBuilder();
@@ -364,6 +470,7 @@ module.exports = (client) => {
             if (req.body.embedTitle) { 
                 customEmbedMessage.setTitle(req.body.embedTitle); 
             }
+            
             if (req.body.embedDesc) { 
                 customEmbedMessage.setDescription(req.body.embedDesc); 
             }
@@ -373,6 +480,7 @@ module.exports = (client) => {
             if (req.body.embedImage) { 
                 customEmbedMessage.setImage(req.body.embedImage); 
             }
+            
             if (req.body.embedFooter) { 
                 customEmbedMessage.setFooter({ text: req.body.embedFooter }); 
             }
@@ -385,6 +493,6 @@ module.exports = (client) => {
 
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => { 
-        console.log(`🌐 Dashboard Running on port ${PORT}`); 
+        console.log(`🌐 Dashboard Running smoothly on port ${PORT}`); 
     });
 };
