@@ -70,7 +70,7 @@ const ticketButtonSchema = new mongoose.Schema({
         type: Boolean, 
         default: true 
     },
-    // 🔥 تحديد رتب معينة لاستلام هذا التكت (مثلاً: تكت شكاوى للادارة العليا فقط)
+    // 🔥 تحديد رتب معينة لاستلام هذا التكت (مثلاً: للإدارة العليا فقط)
     allowedClaimRoles: {
         type: [String],
         default: []
@@ -95,6 +95,7 @@ const autoResponderSchema = new mongoose.Schema({
 // 👑 THE MAIN GUILD CONFIGURATION (إعدادات السيرفر الشاملة)
 // =====================================================================
 const guildConfigSchema = new mongoose.Schema({
+    
     // ---------------------------------------------------
     // Core Settings
     // ---------------------------------------------------
@@ -145,7 +146,7 @@ const guildConfigSchema = new mongoose.Schema({
     },
     
     // ---------------------------------------------------
-    // Welcome System (with Images)
+    // Welcome System
     // ---------------------------------------------------
     welcomeChannelId: { 
         type: String, 
@@ -153,7 +154,7 @@ const guildConfigSchema = new mongoose.Schema({
     }, 
     welcomeMessage: { 
         type: String, 
-        default: 'Welcome [user] to [server]! You are member #[memberCount].' 
+        default: 'حياك الله يا [user] في [server]! أنت العضو رقم [memberCount].' 
     },
     welcomeBgImage: { 
         type: String, 
@@ -167,32 +168,83 @@ const guildConfigSchema = new mongoose.Schema({
     // ---------------------------------------------------
     // Warn Panel System
     // ---------------------------------------------------
-    warnPanelChannelId: { type: String, default: null }, 
-    warnLogChannelId: { type: String, default: null }, 
-    warnPanelTitle: { type: String, default: 'Warn Control Panel' },
-    warnPanelDesc: { type: String, default: 'Use buttons below to manage warnings.' },
-    warnPanelColor: { type: String, default: '#ed4245' },
-    warnMax: { type: Number, default: 3 },
-    warnAction: { type: String, default: 'timeout' },
+    warnPanelChannelId: { 
+        type: String, 
+        default: null 
+    }, 
+    warnLogChannelId: { 
+        type: String, 
+        default: null 
+    }, 
+    warnPanelTitle: { 
+        type: String, 
+        default: 'لوحة تحكم التحذيرات' 
+    },
+    warnPanelDesc: { 
+        type: String, 
+        default: 'استخدم الأزرار أدناه.' 
+    },
+    warnPanelColor: { 
+        type: String, 
+        default: '#ed4245' 
+    },
+    warnMax: { 
+        type: Number, 
+        default: 3 
+    },
+    warnAction: { 
+        type: String, 
+        default: 'timeout' 
+    },
     warnReasons: { 
         type: [String], 
-        default: ['Rule Violation', 'Spam', 'Scamming', 'Disrespect'] 
+        default: ['مخالفة القوانين', 'ألفاظ خارجة', 'سرقة زبائن'] 
     }, 
     
     // ---------------------------------------------------
     // External Ticket Panel Settings
     // ---------------------------------------------------
-    panelChannelId: { type: String, default: null }, 
-    defaultCategoryId: { type: String, default: null }, 
-    ticketEmbedTitle: { type: String, default: 'SUPPORT TICKETS' },
-    ticketEmbedDesc: { type: String, default: 'Click a button below to open a ticket.' },
-    ticketEmbedColor: { type: String, default: '#0099ff' },
-    ticketEmbedImage: { type: String, default: null },
-    ticketCount: { type: Number, default: 0 },
-    maxTicketsPerUser: { type: Number, default: 1 }, 
+    panelChannelId: { 
+        type: String, 
+        default: null 
+    }, 
+    defaultCategoryId: { 
+        type: String, 
+        default: null 
+    }, 
+    ticketEmbedTitle: { 
+        type: String, 
+        default: 'MNC COMMUNITY' 
+    },
+    ticketEmbedDesc: { 
+        type: String, 
+        default: 'اضغط لفتح تذكرة.' 
+    },
+    ticketEmbedColor: { 
+        type: String, 
+        default: '#0099ff' 
+    },
+    ticketEmbedImage: { 
+        type: String, 
+        default: null 
+    },
+    ticketCount: { 
+        type: Number, 
+        default: 0 
+    },
+    maxTicketsPerUser: { 
+        type: Number, 
+        default: 1 
+    }, 
     
-    customButtons: { type: [ticketButtonSchema], default: [] }, 
-    autoResponders: { type: [autoResponderSchema], default: [] },
+    customButtons: { 
+        type: [ticketButtonSchema], 
+        default: [] 
+    }, 
+    autoResponders: { 
+        type: [autoResponderSchema], 
+        default: [] 
+    },
 
     // ---------------------------------------------------
     // Staff & Mediator Roles
@@ -206,61 +258,47 @@ const guildConfigSchema = new mongoose.Schema({
     readOnlyStaffOnClaim: { type: Boolean, default: false },
     
     // ---------------------------------------------------
-    // Commands & Permissions (Dynamic Prefix)
+    // Commands & Permissions
     // ---------------------------------------------------
-    cmdAdd: { type: String, default: '!add' }, 
-    cmdAddRoles: { type: [String], default: [] },
-    
-    cmdDone: { type: String, default: '!done' }, 
-    cmdDoneRoles: { type: [String], default: [] },
-    
-    cmdReqHigh: { type: String, default: '!req-high' }, 
-    cmdReqHighRoles: { type: [String], default: [] },
-    
-    cmdCome: { type: String, default: '!come' }, 
-    cmdComeRoles: { type: [String], default: [] },
-    
-    cmdTrade: { type: String, default: '!trade' }, 
-    cmdTradeRoles: { type: [String], default: [] },
-    
-    cmdClear: { type: String, default: '!clear' }, 
-    cmdClearRoles: { type: [String], default: [] },
-    
-    cmdLock: { type: String, default: '!lock' }, 
-    cmdLockRoles: { type: [String], default: [] },
-    
-    cmdUnlock: { type: String, default: '!unlock' }, 
-    cmdUnlockRoles: { type: [String], default: [] },
-    
-    cmdVmove: { type: String, default: '!vmove' }, 
-    cmdVmoveRoles: { type: [String], default: [] },
-    
-    cmdBan: { type: String, default: '!ban' }, 
-    cmdBanRoles: { type: [String], default: [] },
-    
-    cmdTimeout: { type: String, default: '!timeout' }, 
-    cmdTimeoutRoles: { type: [String], default: [] },
+    cmdAdd: { type: String, default: '!add' }, cmdAddRoles: { type: [String], default: [] },
+    cmdDone: { type: String, default: '!done' }, cmdDoneRoles: { type: [String], default: [] },
+    cmdReqHigh: { type: String, default: '!req-high' }, cmdReqHighRoles: { type: [String], default: [] },
+    cmdCome: { type: String, default: '!come' }, cmdComeRoles: { type: [String], default: [] },
+    cmdTrade: { type: String, default: '!trade' }, cmdTradeRoles: { type: [String], default: [] },
+    cmdClear: { type: String, default: '!clear' }, cmdClearRoles: { type: [String], default: [] },
+    cmdLock: { type: String, default: '!lock' }, cmdLockRoles: { type: [String], default: [] },
+    cmdUnlock: { type: String, default: '!unlock' }, cmdUnlockRoles: { type: [String], default: [] },
+    cmdVmove: { type: String, default: '!vmove' }, cmdVmoveRoles: { type: [String], default: [] },
+    cmdBan: { type: String, default: '!ban' }, cmdBanRoles: { type: [String], default: [] },
+    cmdTimeout: { type: String, default: '!timeout' }, cmdTimeoutRoles: { type: [String], default: [] },
     
     // 🔥 New Commands for Unban, Untimeout, and General Move
-    cmdUnban: { type: String, default: '!unban' }, 
-    cmdUnbanRoles: { type: [String], default: [] },
-    
-    cmdUntimeout: { type: String, default: '!untimeout' }, 
-    cmdUntimeoutRoles: { type: [String], default: [] },
-    
-    cmdMove: { type: String, default: '!move' }, 
-    cmdMoveRoles: { type: [String], default: [] },
+    cmdUnban: { type: String, default: '!unban' }, cmdUnbanRoles: { type: [String], default: [] },
+    cmdUntimeout: { type: String, default: '!untimeout' }, cmdUntimeoutRoles: { type: [String], default: [] },
+    cmdMove: { type: String, default: '!move' }, cmdMoveRoles: { type: [String], default: [] },
 
     // ---------------------------------------------------
     // 🎨 Embed Colors Customization (التحكم بألوان كل الإيمبدات)
     // ---------------------------------------------------
-    logEmbedColor: { type: String, default: '#ed4245' }, // لون لوجات التكت
-    transcriptEmbedColor: { type: String, default: '#2b2d31' }, // لون الترانسكريبت
-    basicRatingColor: { type: String, default: '#f2a658' }, // لون تقييم الوساطة الأساسي
-    staffRatingColor: { type: String, default: '#3ba55d' }, // لون تقييم الإدارة الأساسي
+    logEmbedColor: { 
+        type: String, 
+        default: '#ed4245' 
+    },
+    transcriptEmbedColor: { 
+        type: String, 
+        default: '#2b2d31' 
+    },
+    basicRatingColor: { 
+        type: String, 
+        default: '#f2a658' 
+    },
+    staffRatingColor: { 
+        type: String, 
+        default: '#3ba55d' 
+    },
     
     // ---------------------------------------------------
-    // ⭐ Custom Rating Settings (تخصيص رسالة التقييم في الخاص)
+    // ⭐ Custom Rating Settings (تخصيص نظام التقييم اليدوي)
     // ---------------------------------------------------
     ratingStyle: { 
         type: String, 
@@ -268,11 +306,11 @@ const guildConfigSchema = new mongoose.Schema({
     }, 
     customRatingTitle: {
         type: String,
-        default: 'Server Feedback'
+        default: 'تقييم فريق العمل'
     },
     customRatingText: { 
         type: String, 
-        default: 'Hello [user], please rate the service provided by [staff] in our server. Your feedback helps us improve!' 
+        default: 'مرحباً [user]، يرجى تقييم خدمة [staff]. رأيك يهمنا!' 
     },
 
     // ---------------------------------------------------
