@@ -9,16 +9,14 @@ const ButtonStyle = discordLibrary.ButtonStyle;
 const ModalBuilder = discordLibrary.ModalBuilder;
 const TextInputBuilder = discordLibrary.TextInputBuilder;
 const TextInputStyle = discordLibrary.TextInputStyle;
+const StringSelectMenuBuilder = discordLibrary.StringSelectMenuBuilder;
 const PermissionFlagsBits = discordLibrary.PermissionFlagsBits;
 
 // استدعاء قاعدة البيانات الشاملة
 const GuildConfig = require('./models/GuildConfig');
 
-// =====================================================================
-// 🧠 خرائط الذاكرة (Memory Maps) لتتبع السبام والتحذيرات
-// =====================================================================
+// خرائط الذاكرة للحماية من السبام
 const spamTrackingMap = new Map();
-const userWarningsMap = new Map();
 
 module.exports = (client) => {
 
@@ -47,91 +45,7 @@ module.exports = (client) => {
         const hasAdminPermission = memberPermissionsObject.has('Administrator');
         
         if (hasAdminPermission === true) {
-            // تجاهل الإداريين من الحماية، وننتقل لفحص أوامر لوحة التحذيرات
-            
-            const currentGuildIdString = messageGuildObject.id;
-            const guildConfigDocument = await GuildConfig.findOne({ guildId: currentGuildIdString });
-            
-            if (!guildConfigDocument) {
-                return;
-            }
-            
-            let prefixString = guildConfigDocument.prefix;
-            if (!prefixString) {
-                prefixString = '!';
-            }
-            
-            const messageContentString = message.content;
-            const fullWarnCommand = prefixString + 'warnsetup';
-            
-            // 🚨 أمر إرسال لوحة التحذيرات
-            if (messageContentString === fullWarnCommand) {
-                
-                const warnPanelEmbedObject = new EmbedBuilder();
-                
-                let panelTitleString = guildConfigDocument.warnPanelTitle;
-                if (!panelTitleString) {
-                    panelTitleString = 'لوحة تحكم التحذيرات';
-                }
-                warnPanelEmbedObject.setTitle(panelTitleString);
-                
-                let panelDescriptionString = guildConfigDocument.warnPanelDesc;
-                if (!panelDescriptionString) {
-                    panelDescriptionString = 'استخدم الأزرار أدناه لإعطاء تحذير للأعضاء المخالفين.';
-                }
-                warnPanelEmbedObject.setDescription(panelDescriptionString);
-                
-                let panelColorHex = guildConfigDocument.warnPanelColor;
-                if (!panelColorHex) {
-                    panelColorHex = '#ed4245';
-                }
-                warnPanelEmbedObject.setColor(panelColorHex);
-                
-                const guildIconUrl = messageGuildObject.iconURL({ dynamic: true });
-                warnPanelEmbedObject.setThumbnail(guildIconUrl);
-
-                const warnReasonsArray = guildConfigDocument.warnReasons;
-                const actionRowsArray = [];
-                let currentActionRowObject = new ActionRowBuilder();
-
-                if (warnReasonsArray && warnReasonsArray.length > 0) {
-                    
-                    for (let i = 0; i < warnReasonsArray.length; i++) {
-                        
-                        const reasonString = warnReasonsArray[i];
-                        
-                        if (i > 0 && i % 5 === 0) {
-                            actionRowsArray.push(currentActionRowObject);
-                            currentActionRowObject = new ActionRowBuilder();
-                        }
-                        
-                        const reasonButtonObject = new ButtonBuilder();
-                        
-                        const buttonCustomIdString = `warnbtn_${i}`;
-                        reasonButtonObject.setCustomId(buttonCustomIdString);
-                        
-                        reasonButtonObject.setLabel(reasonString);
-                        reasonButtonObject.setStyle(ButtonStyle.Danger);
-                        
-                        currentActionRowObject.addComponents(reasonButtonObject);
-                    }
-                    
-                    actionRowsArray.push(currentActionRowObject);
-                } else {
-                    return message.reply('**❌ لا يوجد أسباب تحذير مسجلة في الداشبورد! يرجى إضافتها أولاً.**');
-                }
-
-                try {
-                    await message.delete();
-                } catch (deleteError) {}
-
-                return message.channel.send({ 
-                    embeds: [warnPanelEmbedObject], 
-                    components: actionRowsArray 
-                });
-            }
-            
-            return; // إنهاء التنفيذ للإدارة
+            return; // الإدارة لا يطبق عليها الحماية
         }
 
         const currentGuildIdString = messageGuildObject.id;
@@ -206,17 +120,15 @@ module.exports = (client) => {
                     
                     spamTrackingMap.set(messageAuthorIdString, userSpamDataObject);
                     
-                    // إذا أرسل أكثر من 5 رسائل في 5 ثواني
                     if (userSpamDataObject.messageCount >= 5) {
                         
                         try {
                             await message.delete();
                         } catch (deleteSpamError) {}
                         
-                        // تصفير العداد لتجنب التكرار
                         spamTrackingMap.delete(messageAuthorIdString);
                         
-                        // إعطاء تايم أوت لمدة 5 دقائق (300,000 مللي ثانية)
+                        // إعطاء تايم أوت لمدة 5 دقائق
                         const timeoutDurationNumber = 5 * 60 * 1000;
                         const timeoutReasonString = 'نظام الحماية: إرسال رسائل متكررة (Spam)';
                         
@@ -230,19 +142,16 @@ module.exports = (client) => {
                     }
                     
                 } else {
-                    
-                    // مر أكثر من 5 ثواني، تصفير العداد
                     userSpamDataObject.messageCount = 1;
                     userSpamDataObject.lastMessageTime = currentTimeNumber;
                     spamTrackingMap.set(messageAuthorIdString, userSpamDataObject);
-                    
                 }
             }
         }
     });
 
     // =====================================================================
-    // ⚠️ 2. تفاعلات لوحة التحذيرات (Warn Panel Interactions)
+    // ⚠️ 2. تفاعلات لوحة التحذيرات (الـ 3 زراير: إعطاء، إزالة، عرض)
     // =====================================================================
     client.on('interactionCreate', async (interaction) => {
         
@@ -251,38 +160,50 @@ module.exports = (client) => {
         }
         
         const customIdString = interaction.customId;
-        const isWarnButtonAction = customIdString.startsWith('warnbtn_');
         
-        if (isWarnButtonAction === false) {
+        const isGiveWarnButton = (customIdString === 'sys_warn_give');
+        const isRemoveWarnButton = (customIdString === 'sys_warn_remove');
+        const isViewWarnButton = (customIdString === 'sys_warn_view');
+        
+        const isAnyWarnPanelButton = (isGiveWarnButton || isRemoveWarnButton || isViewWarnButton);
+        
+        if (isAnyWarnPanelButton === false) {
             return;
         }
         
-        // التحقق من صلاحيات من يضغط على زر التحذير
+        // التحقق من صلاحيات الإدارة
         const interactionMemberObject = interaction.member;
         const memberPermissionsObject = interactionMemberObject.permissions;
         const hasAdminPermission = memberPermissionsObject.has('Administrator');
         
         if (hasAdminPermission === false) {
-            const noPermissionMessage = '**❌ عذراً، الإدارة فقط يمكنها إعطاء تحذيرات!**';
+            const noPermissionMessage = '**❌ عذراً، الإدارة فقط يمكنها استخدام هذه اللوحة!**';
             return interaction.reply({ content: noPermissionMessage, ephemeral: true });
         }
         
-        // استخراج رقم السبب من الـ ID
-        const customIdPartsArray = customIdString.split('_');
-        const reasonIndexString = customIdPartsArray[1];
+        // بناء النافذة لطلب الـ ID الخاص بالعضو
+        const warnActionModalObject = new ModalBuilder();
         
-        // بناء نافذة لإدخال أيدي العضو المخالف
-        const warnModalObject = new ModalBuilder();
+        let modalCustomIdString = '';
+        let modalTitleString = '';
         
-        const modalCustomIdString = `modalwarn_${reasonIndexString}`;
-        warnModalObject.setCustomId(modalCustomIdString);
+        if (isGiveWarnButton === true) {
+            modalCustomIdString = 'modal_sys_warn_give';
+            modalTitleString = 'إعطاء تحذير لعضو (Give Warn)';
+        } else if (isRemoveWarnButton === true) {
+            modalCustomIdString = 'modal_sys_warn_remove';
+            modalTitleString = 'إزالة تحذيرات عضو (Remove Warns)';
+        } else if (isViewWarnButton === true) {
+            modalCustomIdString = 'modal_sys_warn_view';
+            modalTitleString = 'عرض سجل تحذيرات (View Warns)';
+        }
         
-        const modalTitleString = 'تطبيق التحذير على عضو';
-        warnModalObject.setTitle(modalTitleString);
+        warnActionModalObject.setCustomId(modalCustomIdString);
+        warnActionModalObject.setTitle(modalTitleString);
         
         const userIdInputObject = new TextInputBuilder();
-        userIdInputObject.setCustomId('warn_user_id');
-        userIdInputObject.setLabel('أيدي العضو المخالف (User ID):');
+        userIdInputObject.setCustomId('target_user_id');
+        userIdInputObject.setLabel('أيدي العضو (User ID):');
         userIdInputObject.setStyle(TextInputStyle.Short);
         userIdInputObject.setRequired(true);
         userIdInputObject.setPlaceholder('مثال: 123456789012345678');
@@ -290,13 +211,13 @@ module.exports = (client) => {
         const modalActionRowObject = new ActionRowBuilder();
         modalActionRowObject.addComponents(userIdInputObject);
         
-        warnModalObject.addComponents(modalActionRowObject);
+        warnActionModalObject.addComponents(modalActionRowObject);
         
-        await interaction.showModal(warnModalObject);
+        await interaction.showModal(warnActionModalObject);
     });
 
     // =====================================================================
-    // ⚠️ 3. استلام نافذة التحذير وتطبيق العقاب (Warn Logic)
+    // ⚠️ 3. استلام نوافذ التحذير (اختيار اللغة، إزالة التحذير، عرض السجل)
     // =====================================================================
     client.on('interactionCreate', async (interaction) => {
         
@@ -305,134 +226,351 @@ module.exports = (client) => {
         }
         
         const customIdString = interaction.customId;
-        const isWarnModalAction = customIdString.startsWith('modalwarn_');
-        
-        if (isWarnModalAction === false) {
-            return;
-        }
-        
-        await interaction.deferReply({ ephemeral: true });
+        const targetUserIdString = interaction.fields.getTextInputValue('target_user_id');
         
         const interactionGuildObject = interaction.guild;
         const currentGuildIdString = interactionGuildObject.id;
+        
         const guildConfigDocument = await GuildConfig.findOne({ guildId: currentGuildIdString });
-        
-        if (!guildConfigDocument) {
-            return interaction.editReply('**❌ لم يتم العثور على إعدادات السيرفر.**');
-        }
-        
-        const customIdPartsArray = customIdString.split('_');
-        const reasonIndexString = customIdPartsArray[1];
-        const reasonIndexNumber = parseInt(reasonIndexString);
-        
-        const warnReasonsArray = guildConfigDocument.warnReasons;
-        let selectedReasonString = 'مخالفة القوانين';
-        
-        if (warnReasonsArray && warnReasonsArray.length > reasonIndexNumber) {
-            selectedReasonString = warnReasonsArray[reasonIndexNumber];
-        }
-        
-        const targetUserIdString = interaction.fields.getTextInputValue('warn_user_id');
-        
+        if (!guildConfigDocument) return;
+
+        // التحقق من وجود العضو
         let targetMemberObject = null;
         try {
             targetMemberObject = await interactionGuildObject.members.fetch(targetUserIdString);
         } catch (fetchError) {
-            return interaction.editReply('**❌ لم أتمكن من العثور على هذا العضو في السيرفر. تأكد من الأيدي.**');
+            return interaction.reply({ content: '**❌ لم أتمكن من العثور على هذا العضو. تأكد من الأيدي.**', ephemeral: true });
         }
-        
-        // التحقق من عدم تحذير البوت أو الإدارة لنفسها
+
         if (targetMemberObject.user.bot === true) {
-            return interaction.editReply('**❌ لا يمكنك تحذير بوت!**');
+            return interaction.reply({ content: '**❌ لا يمكنك تطبيق هذا الإجراء على بوت!**', ephemeral: true });
+        }
+
+        // ==========================================
+        // إجراء إعطاء تحذير (خطوة اختيار اللغة)
+        // ==========================================
+        if (customIdString === 'modal_sys_warn_give') {
+            
+            if (targetMemberObject.id === interaction.user.id) {
+                return interaction.reply({ content: '**❌ لا يمكنك تحذير نفسك!**', ephemeral: true });
+            }
+
+            const languageSelectionEmbed = new EmbedBuilder();
+            languageSelectionEmbed.setTitle('🌐 اختيار لغة التحذير');
+            languageSelectionEmbed.setDescription('بأي لغة تريد إرسال التحذير لهذا العضو؟\n(What language do you want to use?)');
+            languageSelectionEmbed.setColor('#5865F2');
+
+            const languageActionRow = new ActionRowBuilder();
+            
+            const arabicButton = new ButtonBuilder();
+            arabicButton.setCustomId(`warnlang_ar_${targetUserIdString}`);
+            arabicButton.setLabel('العربية 🇸🇦');
+            arabicButton.setStyle(ButtonStyle.Success);
+            
+            const englishButton = new ButtonBuilder();
+            englishButton.setCustomId(`warnlang_en_${targetUserIdString}`);
+            englishButton.setLabel('English 🇺🇸');
+            englishButton.setStyle(ButtonStyle.Primary);
+            
+            languageActionRow.addComponents(arabicButton, englishButton);
+            
+            await interaction.reply({ 
+                embeds: [languageSelectionEmbed], 
+                components: [languageActionRow], 
+                ephemeral: true 
+            });
+        }
+
+        // ==========================================
+        // إجراء إزالة التحذيرات (Remove)
+        // ==========================================
+        else if (customIdString === 'modal_sys_warn_remove') {
+            
+            await interaction.deferReply({ ephemeral: true });
+            
+            let currentWarnsMap = guildConfigDocument.userWarnsRecords;
+            if (!currentWarnsMap) {
+                currentWarnsMap = new Map();
+            }
+            
+            const hasWarns = currentWarnsMap.has(targetUserIdString);
+            
+            if (hasWarns === false || currentWarnsMap.get(targetUserIdString).length === 0) {
+                return interaction.editReply('**✅ لا يوجد تحذيرات سابقة لهذا العضو لإزالتها.**');
+            }
+            
+            // مسح السجل للعضو
+            currentWarnsMap.delete(targetUserIdString);
+            guildConfigDocument.userWarnsRecords = currentWarnsMap;
+            await guildConfigDocument.save();
+            
+            interaction.editReply(`**✅ تم إزالة جميع التحذيرات للعضو <@${targetUserIdString}> بنجاح.**`);
+            
+            // إرسال اللوج الأخضر الفخم
+            const warnLogChannelIdString = guildConfigDocument.warnLogChannelId;
+            if (warnLogChannelIdString) {
+                const warnLogChannelObject = interactionGuildObject.channels.cache.get(warnLogChannelIdString);
+                if (warnLogChannelObject) {
+                    
+                    const removeLogEmbed = new EmbedBuilder();
+                    removeLogEmbed.setTitle('إزالة تحذيرات');
+                    
+                    let removeDesc = `تم إزالة جميع التحذيرات للعضو <@${targetUserIdString}>.\n\n`;
+                    removeDesc += `**بواسطة المشرف**\n<@${interaction.user.id}>`;
+                    
+                    removeLogEmbed.setDescription(removeDesc);
+                    removeLogEmbed.setColor('#3ba55d'); // خط أخضر مطابق للصورة
+                    removeLogEmbed.setTimestamp();
+                    
+                    try {
+                        await warnLogChannelObject.send({ embeds: [removeLogEmbed] });
+                    } catch(e) {}
+                }
+            }
+        }
+
+        // ==========================================
+        // إجراء عرض السجل (View) بالخط الأصفر
+        // ==========================================
+        else if (customIdString === 'modal_sys_warn_view') {
+            
+            await interaction.deferReply({ ephemeral: true });
+            
+            let currentWarnsMap = guildConfigDocument.userWarnsRecords;
+            if (!currentWarnsMap) {
+                currentWarnsMap = new Map();
+            }
+            
+            const userWarnsArray = currentWarnsMap.get(targetUserIdString);
+            
+            if (!userWarnsArray || userWarnsArray.length === 0) {
+                
+                const noWarnsEmbed = new EmbedBuilder();
+                noWarnsEmbed.setTitle(`سجل تحذيرات ${targetMemberObject.user.username}`);
+                noWarnsEmbed.setDescription('لا يوجد سجل تحذيرات سابق لهذا العضو.');
+                noWarnsEmbed.setColor('#2b2d31'); // لون داكن
+                
+                return interaction.editReply({ embeds: [noWarnsEmbed] });
+            }
+            
+            const viewWarnsEmbed = new EmbedBuilder();
+            viewWarnsEmbed.setTitle(`سجل تحذيرات ${targetMemberObject.user.username}`);
+            
+            let recordDescriptionString = '';
+            
+            for (let i = 0; i < userWarnsArray.length; i++) {
+                const recordObj = userWarnsArray[i];
+                const recordNumber = i + 1;
+                
+                const dateObject = new Date(recordObj.date);
+                const formattedDateString = dateObject.toLocaleString('en-US'); // تنسيق التاريخ والوقت
+                
+                recordDescriptionString += `**${recordNumber}. السبب:** ${recordObj.reason}\n`;
+                recordDescriptionString += `التاريخ: ${formattedDateString}\n\n`;
+            }
+            
+            viewWarnsEmbed.setDescription(recordDescriptionString);
+            viewWarnsEmbed.setColor('#f2a658'); // خط أصفر مطابق للصورة
+            
+            await interaction.editReply({ embeds: [viewWarnsEmbed] });
+        }
+    });
+
+    // =====================================================================
+    // ⚠️ 4. تفاعل اختيار اللغة وعرض قائمة الأسباب (Select Menu)
+    // =====================================================================
+    client.on('interactionCreate', async (interaction) => {
+        
+        if (interaction.isButton() === false) {
+            return;
         }
         
-        if (targetMemberObject.id === interaction.user.id) {
-            return interaction.editReply('**❌ لا يمكنك تحذير نفسك!**');
+        const customIdString = interaction.customId;
+        
+        const isArabicLanguage = customIdString.startsWith('warnlang_ar_');
+        const isEnglishLanguage = customIdString.startsWith('warnlang_en_');
+        
+        if (isArabicLanguage === false && isEnglishLanguage === false) {
+            return;
         }
         
-        // حساب عدد التحذيرات للعضو
-        const memoryKeyString = `${currentGuildIdString}_${targetUserIdString}`;
-        let currentUserWarnsNumber = userWarningsMap.get(memoryKeyString);
+        const currentGuildIdString = interaction.guild.id;
+        const guildConfigDocument = await GuildConfig.findOne({ guildId: currentGuildIdString });
+        if (!guildConfigDocument) return;
+
+        let targetUserIdString = '';
+        let reasonsListArray = [];
+        let placeholderString = '';
+        let menuCustomId = '';
         
-        if (!currentUserWarnsNumber) {
-            currentUserWarnsNumber = 0;
+        if (isArabicLanguage === true) {
+            targetUserIdString = customIdString.replace('warnlang_ar_', '');
+            reasonsListArray = guildConfigDocument.warnReasonsAR;
+            placeholderString = 'اختر سبب التحذير...';
+            menuCustomId = `selectwarn_ar_${targetUserIdString}`;
+            
+            if (!reasonsListArray || reasonsListArray.length === 0) {
+                return interaction.reply({ content: '**❌ لم يتم إضافة أسباب عربية في الداشبورد.**', ephemeral: true });
+            }
+        } else {
+            targetUserIdString = customIdString.replace('warnlang_en_', '');
+            reasonsListArray = guildConfigDocument.warnReasonsEN;
+            placeholderString = 'Select warning reason...';
+            menuCustomId = `selectwarn_en_${targetUserIdString}`;
+            
+            if (!reasonsListArray || reasonsListArray.length === 0) {
+                return interaction.reply({ content: '**❌ No English reasons added in dashboard.**', ephemeral: true });
+            }
+        }
+
+        const reasonSelectMenu = new StringSelectMenuBuilder();
+        reasonSelectMenu.setCustomId(menuCustomId);
+        reasonSelectMenu.setPlaceholder(placeholderString);
+        
+        for (let i = 0; i < reasonsListArray.length; i++) {
+            const reasonString = reasonsListArray[i];
+            reasonSelectMenu.addOptions({
+                label: reasonString,
+                value: `reason_${i}`, // نحفظ الـ Index
+            });
         }
         
-        currentUserWarnsNumber = currentUserWarnsNumber + 1;
-        userWarningsMap.set(memoryKeyString, currentUserWarnsNumber);
+        const selectMenuActionRow = new ActionRowBuilder();
+        selectMenuActionRow.addComponents(reasonSelectMenu);
         
+        await interaction.update({ 
+            content: '**رجاءً، اختر السبب من القائمة أدناه:**',
+            embeds: [], 
+            components: [selectMenuActionRow] 
+        });
+    });
+
+    // =====================================================================
+    // ⚠️ 5. تنفيذ التحذير بعد اختيار السبب من القائمة (التطبيق الفعلي)
+    // =====================================================================
+    client.on('interactionCreate', async (interaction) => {
+        
+        if (interaction.isStringSelectMenu() === false) {
+            return;
+        }
+        
+        const customIdString = interaction.customId;
+        const isArabicSelection = customIdString.startsWith('selectwarn_ar_');
+        const isEnglishSelection = customIdString.startsWith('selectwarn_en_');
+        
+        if (isArabicSelection === false && isEnglishSelection === false) {
+            return;
+        }
+        
+        await interaction.deferUpdate();
+        
+        const interactionGuildObject = interaction.guild;
+        const guildConfigDocument = await GuildConfig.findOne({ guildId: interactionGuildObject.id });
+        if (!guildConfigDocument) return;
+
+        let targetUserIdString = '';
+        let chosenReasonString = '';
+        
+        const selectedValueString = interaction.values[0]; // reason_0
+        const selectedIndexNumber = parseInt(selectedValueString.replace('reason_', ''));
+
+        if (isArabicSelection === true) {
+            targetUserIdString = customIdString.replace('selectwarn_ar_', '');
+            chosenReasonString = guildConfigDocument.warnReasonsAR[selectedIndexNumber];
+        } else {
+            targetUserIdString = customIdString.replace('selectwarn_en_', '');
+            chosenReasonString = guildConfigDocument.warnReasonsEN[selectedIndexNumber];
+        }
+
+        let targetMemberObject = null;
+        try {
+            targetMemberObject = await interactionGuildObject.members.fetch(targetUserIdString);
+        } catch (err) {
+            return interaction.editReply({ content: '**❌ لم أتمكن من العثور على العضو.**', components: [] });
+        }
+
+        // ==========================================
+        // حفظ التحذير في الداتابيز
+        // ==========================================
+        let currentWarnsMap = guildConfigDocument.userWarnsRecords;
+        if (!currentWarnsMap) {
+            currentWarnsMap = new Map();
+        }
+        
+        let userWarnsArray = currentWarnsMap.get(targetUserIdString);
+        if (!userWarnsArray) {
+            userWarnsArray = [];
+        }
+        
+        const newWarnRecordObject = {
+            reason: chosenReasonString,
+            date: new Date(),
+            moderatorId: interaction.user.id
+        };
+        
+        userWarnsArray.push(newWarnRecordObject);
+        currentWarnsMap.set(targetUserIdString, userWarnsArray);
+        
+        guildConfigDocument.userWarnsRecords = currentWarnsMap;
+        await guildConfigDocument.save();
+        
+        const totalWarnsNumber = userWarnsArray.length;
         const maxWarningsAllowedNumber = guildConfigDocument.warnMax;
         const autoPunishmentActionString = guildConfigDocument.warnAction;
         
-        let finalActionTakenString = 'تم إعطاء تحذير فقط.';
+        let finalActionTakenString = isArabicSelection ? 'تم إعطاء تحذير فقط.' : 'Warned only.';
         
-        // التحقق مما إذا وصل العضو للحد الأقصى للتحذيرات
-        if (currentUserWarnsNumber >= maxWarningsAllowedNumber) {
+        // ==========================================
+        // تطبيق العقاب التلقائي إذا لزم الأمر
+        // ==========================================
+        if (totalWarnsNumber >= maxWarningsAllowedNumber) {
             
-            // تطبيق العقاب وتصفير العداد
-            userWarningsMap.delete(memoryKeyString);
+            // تصفير العداد
+            currentWarnsMap.delete(targetUserIdString);
+            guildConfigDocument.userWarnsRecords = currentWarnsMap;
+            await guildConfigDocument.save();
             
-            const punishmentReasonString = `تجاوز الحد الأقصى للتحذيرات (${maxWarningsAllowedNumber}). السبب الأخير: ${selectedReasonString}`;
+            const punishmentReasonString = `Max warnings reached. Last reason: ${chosenReasonString}`;
             
             try {
                 if (autoPunishmentActionString === 'timeout') {
-                    
-                    const timeoutDurationMs = 24 * 60 * 60 * 1000; // يوم كامل كافتراضي
+                    const timeoutDurationMs = 24 * 60 * 60 * 1000; 
                     await targetMemberObject.timeout(timeoutDurationMs, punishmentReasonString);
-                    finalActionTakenString = 'تجاوز الحد الأقصى! تم إعطائه Timeout لمدة يوم.';
-                    
+                    finalActionTakenString = isArabicSelection ? 'تجاوز الحد! تم تطبيق Timeout ليوم.' : 'Max reached! Timeout applied.';
                 } else if (autoPunishmentActionString === 'kick') {
-                    
                     await targetMemberObject.kick(punishmentReasonString);
-                    finalActionTakenString = 'تجاوز الحد الأقصى! تم طرده من السيرفر (Kick).';
-                    
+                    finalActionTakenString = isArabicSelection ? 'تجاوز الحد! تم طرده.' : 'Max reached! Kicked.';
                 } else if (autoPunishmentActionString === 'ban') {
-                    
                     await targetMemberObject.ban({ reason: punishmentReasonString });
-                    finalActionTakenString = 'تجاوز الحد الأقصى! تم حظره من السيرفر (Ban).';
-                    
+                    finalActionTakenString = isArabicSelection ? 'تجاوز الحد! تم حظره.' : 'Max reached! Banned.';
                 }
             } catch (punishmentError) {
-                finalActionTakenString = 'تجاوز الحد الأقصى، ولكن لم أتمكن من معاقبته (يرجى التحقق من صلاحياتي).';
+                finalActionTakenString = isArabicSelection ? 'تجاوز الحد، فشل العقاب بسبب الصلاحيات.' : 'Max reached, punishment failed.';
             }
             
         } else {
-            finalActionTakenString = `تحذير رقم ${currentUserWarnsNumber} من أصل ${maxWarningsAllowedNumber}.`;
+            finalActionTakenString = isArabicSelection ? `تحذير رقم ${totalWarnsNumber} من ${maxWarningsAllowedNumber}.` : `Warn ${totalWarnsNumber}/${maxWarningsAllowedNumber}.`;
         }
         
-        // إرسال رسالة نجاح للإداري في الخاص
-        const successMessageContent = `**✅ تم تحذير العضو بنجاح.**\n**السبب:** ${selectedReasonString}\n**الحالة:** ${finalActionTakenString}`;
-        await interaction.editReply(successMessageContent);
-        
-        // إرسال اللوج إلى روم التحذيرات
+        // ==========================================
+        // إرسال اللوج الأحمر الفخم
+        // ==========================================
         const warnLogChannelIdString = guildConfigDocument.warnLogChannelId;
-        
         if (warnLogChannelIdString) {
-            
             const warnLogChannelObject = interactionGuildObject.channels.cache.get(warnLogChannelIdString);
-            
             if (warnLogChannelObject) {
                 
                 const warnLogEmbedObject = new EmbedBuilder();
-                warnLogEmbedObject.setTitle('⚠️ Member Warned (عضو تلقى تحذيراً)');
+                warnLogEmbedObject.setTitle('تحذير جديد');
                 
                 let logDescriptionString = '';
-                logDescriptionString += `**👤 العضو:** <@${targetUserIdString}>\n`;
-                logDescriptionString += `**🛡️ بواسطة الإداري:** <@${interaction.user.id}>\n\n`;
-                logDescriptionString += `**📝 السبب:**\n>>> ${selectedReasonString}\n\n`;
-                logDescriptionString += `**📊 الحالة:**\n${finalActionTakenString}`;
+                logDescriptionString += `**العضو**\n<@${targetUserIdString}>\n\n`;
+                logDescriptionString += `**السبب**\n${chosenReasonString}\n\n`;
+                logDescriptionString += `**بواسطة المشرف**\n<@${interaction.user.id}>\n\n`;
+                logDescriptionString += `**التاريخ**\n${new Date().toLocaleString('en-US')}`;
                 
                 warnLogEmbedObject.setDescription(logDescriptionString);
-                
-                let warnPanelColorHex = guildConfigDocument.warnPanelColor;
-                if (!warnPanelColorHex) {
-                    warnPanelColorHex = '#f2a658';
-                }
-                warnLogEmbedObject.setColor(warnPanelColorHex);
-                
-                const targetUserAvatarUrl = targetMemberObject.user.displayAvatarURL({ dynamic: true });
-                warnLogEmbedObject.setThumbnail(targetUserAvatarUrl);
-                warnLogEmbedObject.setTimestamp();
+                warnLogEmbedObject.setColor('#ed4245'); // خط أحمر مطابق للصورة
                 
                 try {
                     await warnLogChannelObject.send({ embeds: [warnLogEmbedObject] });
@@ -440,21 +578,33 @@ module.exports = (client) => {
             }
         }
         
-        // محاولة إرسال رسالة في الخاص للعضو لتحذيره
+        // ==========================================
+        // رسالة الخاص (بدون اسم الإداري - Privacy)
+        // ==========================================
         try {
             const userWarningDmEmbed = new EmbedBuilder();
-            userWarningDmEmbed.setTitle(`⚠️ لقد تلقيت تحذيراً في سيرفر ${interactionGuildObject.name}`);
             
-            let dmDescriptionString = `**السبب:** ${selectedReasonString}\n\n`;
-            dmDescriptionString += `**الحالة:** ${finalActionTakenString}\n`;
-            dmDescriptionString += `يرجى الالتزام بالقوانين لتجنب العقوبات.`;
+            if (isArabicSelection === true) {
+                userWarningDmEmbed.setTitle(`⚠️ لقد تلقيت تحذيراً في سيرفر ${interactionGuildObject.name}`);
+                let dmDescriptionString = `**السبب:** ${chosenReasonString}\n\n`;
+                dmDescriptionString += `**الحالة:** ${finalActionTakenString}\n`;
+                dmDescriptionString += `يرجى الالتزام بالقوانين لتجنب العقوبات.`;
+                userWarningDmEmbed.setDescription(dmDescriptionString);
+            } else {
+                userWarningDmEmbed.setTitle(`⚠️ You have been warned in ${interactionGuildObject.name}`);
+                let dmDescriptionString = `**Reason:** ${chosenReasonString}\n\n`;
+                dmDescriptionString += `**Status:** ${finalActionTakenString}\n`;
+                dmDescriptionString += `Please follow the rules to avoid punishments.`;
+                userWarningDmEmbed.setDescription(dmDescriptionString);
+            }
             
-            userWarningDmEmbed.setDescription(dmDescriptionString);
             userWarningDmEmbed.setColor('#ed4245');
-            
             await targetMemberObject.send({ embeds: [userWarningDmEmbed] });
         } catch (dmSendError) {}
         
+        // الرد على الإداري بنجاح العملية
+        const finalAdminReplyString = isArabicSelection ? `**✅ تم إرسال التحذير بنجاح إلى <@${targetUserIdString}>.**` : `**✅ Warning successfully sent to <@${targetUserIdString}>.**`;
+        await interaction.editReply({ content: finalAdminReplyString, components: [] });
     });
 
 };
