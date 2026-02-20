@@ -222,17 +222,16 @@
 
         <button class="tab-btn active" onclick="openTab(event, 'general')">⚙️ الإعدادات والترحيب</button>
         <button class="tab-btn" onclick="openTab(event, 'warns_games')">⚠️ التحذيرات والألعاب</button>
-        <button class="tab-btn" onclick="openTab(event, 'tickets_panel')">🎟️ التكتات الخارجية (البانر)</button>
-        <button class="tab-btn" onclick="openTab(event, 'tickets_builder')" style="border-right: 3px solid #f2a658;">🎛️ صانع التكتات والنوافذ</button>
+        
+        <button class="tab-btn" onclick="openTab(event, 'multi_panels')" style="border-right: 3px solid #f2a658;">🎟️ نظام البانلات المتعددة</button>
+        
         <button class="tab-btn" onclick="openTab(event, 'roles')">👨‍⚖️ الرتب واستلام التكت</button>
-        
         <button class="tab-btn" onclick="openTab(event, 'trade_approvals')" style="border-right: 3px solid #3ba55d;">⚖️ الموافقات العليا للتريد</button>
-        
         <button class="tab-btn" onclick="openTab(event, 'commands')">⌨️ الأوامر الديناميكية للفك</button>
         <button class="tab-btn" onclick="openTab(event, 'punishments')" style="border-right: 3px solid #e74c3c;">🔨 تحكم العقوبات والإيمبدات</button>
         <button class="tab-btn" onclick="openTab(event, 'logs')">📁 جميع سجلات اللوج</button>
-        <button class="tab-btn" onclick="openTab(event, 'embeds_control')" style="border-right: 3px solid #ed4245;">🎨 تحكم الإيمبدات والألوان</button>
-        <button class="tab-btn" onclick="openTab(event, 'ratings_system')" style="border-right: 3px solid #f1c40f;">⭐ نظام التقييمات الشامل</button>
+        <button class="tab-btn" onclick="openTab(event, 'embeds_control')" style="border-right: 3px solid #ed4245;">🎨 تحكم الألوان الشامل</button>
+        <button class="tab-btn" onclick="openTab(event, 'ratings_system')" style="border-right: 3px solid #f1c40f;">⭐ نظام التقييمات</button>
         <button class="tab-btn" onclick="openTab(event, 'embedBuilder')" style="border-right: 3px solid #9b59b6;">🚀 صانع الإيمبد الحر</button>
         
         <a href="/dashboard" style="color: #ff4d4d; text-align: center; margin-top: auto; padding-top:20px; text-decoration: none; font-weight: bold;">⬅️ العودة للسيرفرات</a>
@@ -248,7 +247,7 @@
         
         <form action="/settings/<%= guild.id %>" method="POST" id="mainForm">
             
-            <input type="hidden" name="customButtonsData" id="customButtonsData">
+            <input type="hidden" name="ticketPanelsData" id="ticketPanelsData">
             <input type="hidden" name="warnReasonsData" id="warnReasonsData">
 
             <div id="general" class="tab-content active">
@@ -274,8 +273,7 @@
                     </select>
                 </div>
                 
-                <h3 class="section-title">🖼️ نظام الترحيب المتطور (بالصور)</h3>
-                
+                <h3 class="section-title">🖼️ نظام الترحيب المتطور</h3>
                 <div class="form-group">
                     <label>روم الترحيب:</label>
                     <select name="welcomeChannelId">
@@ -285,72 +283,25 @@
                         <% }) %>
                     </select>
                 </div>
-                
-                <div class="form-group">
-                    <label>رسالة الترحيب النصية:</label>
-                    <textarea name="welcomeMessage" rows="3"><%= config.welcomeMessage || 'حياك الله يا [user] في [server]! أنت العضو رقم [memberCount].' %></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>رابط صورة الخلفية (رابط مباشر):</label>
-                    <input type="text" name="welcomeBgImage" value="<%= config.welcomeBgImage || '' %>">
-                </div>
-                
+                <div class="form-group"><label>رسالة الترحيب النصية:</label><textarea name="welcomeMessage" rows="3"><%= config.welcomeMessage || 'حياك الله يا [user] في [server]! أنت العضو رقم [memberCount].' %></textarea></div>
+                <div class="form-group"><label>رابط صورة الخلفية (رابط مباشر):</label><input type="text" name="welcomeBgImage" value="<%= config.welcomeBgImage || '' %>"></div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>لون إطار الصورة الشخصية:</label>
-                        <input type="color" name="welcomeAvatarBorderColor" value="<%= config.welcomeAvatarBorderColor || '#ffffff' %>" style="height: 40px; padding:0;">
-                    </div>
-                    <div class="form-group">
-                        <label>لون إيمبد الترحيب (إن وُجد):</label>
-                        <input type="color" name="welcomeEmbedColor" value="<%= config.welcomeEmbedColor || '#5865F2' %>" style="height: 40px; padding:0;">
-                    </div>
+                    <div class="form-group"><label>لون إطار الصورة الشخصية:</label><input type="color" name="welcomeAvatarBorderColor" value="<%= config.welcomeAvatarBorderColor || '#ffffff' %>" style="height: 40px; padding:0;"></div>
+                    <div class="form-group"><label>لون إيمبد الترحيب:</label><input type="color" name="welcomeEmbedColor" value="<%= config.welcomeEmbedColor || '#5865F2' %>" style="height: 40px; padding:0;"></div>
                 </div>
             </div>
 
             <div id="warns_games" class="tab-content">
                 <h3 class="section-title">⚠️ لوحة التحكم بالتحذيرات</h3>
-                <div class="form-group">
-                    <label>روم إرسال لوحة التحذيرات:</label>
-                    <select name="warnPanelChannelId">
-                        <option value="">-- معطل --</option>
-                        <% channels.filter(c=>c.type===0).forEach(c => { %>
-                            <option value="<%= c.id %>" <%= config.warnPanelChannelId === c.id ? 'selected' : '' %>><%= c.name %></option>
-                        <% }) %>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>روم سجل التحذيرات (اللوج):</label>
-                    <select name="warnLogChannelId">
-                        <option value="">-- اتبع اللوج العام --</option>
-                        <% channels.filter(c=>c.type===0).forEach(c => { %>
-                            <option value="<%= c.id %>" <%= config.warnLogChannelId === c.id ? 'selected' : '' %>><%= c.name %></option>
-                        <% }) %>
-                    </select>
-                </div>
-                
+                <div class="form-group"><label>روم إرسال لوحة التحذيرات:</label><select name="warnPanelChannelId"><option value="">-- معطل --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.warnPanelChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+                <div class="form-group"><label>روم سجل التحذيرات (اللوج):</label><select name="warnLogChannelId"><option value="">-- اتبع اللوج العام --</option><% channels.filter(c=>c.type===0).forEach(c => { %><option value="<%= c.id %>" <%= config.warnLogChannelId === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>عنوان لوحة التحذير:</label>
-                        <input type="text" name="warnPanelTitle" value="<%= config.warnPanelTitle || 'لوحة تحكم التحذيرات' %>">
-                    </div>
-                    <div class="form-group">
-                        <label>لون الإيمبد:</label>
-                        <input type="color" name="warnPanelColor" value="<%= config.warnPanelColor || '#ed4245' %>" style="height:40px; padding:0;">
-                    </div>
+                    <div class="form-group"><label>عنوان لوحة التحذير:</label><input type="text" name="warnPanelTitle" value="<%= config.warnPanelTitle || 'لوحة تحكم التحذيرات' %>"></div>
+                    <div class="form-group"><label>لون الإيمبد:</label><input type="color" name="warnPanelColor" value="<%= config.warnPanelColor || '#ed4245' %>" style="height:40px; padding:0;"></div>
                 </div>
-                
-                <div class="form-group">
-                    <label>وصف الإيمبد (التعليمات):</label>
-                    <textarea name="warnPanelDesc" rows="2"><%= config.warnPanelDesc || 'استخدم الأزرار أدناه.' %></textarea>
-                </div>
-                
+                <div class="form-group"><label>وصف الإيمبد (التعليمات):</label><textarea name="warnPanelDesc" rows="2"><%= config.warnPanelDesc || 'استخدم الأزرار أدناه.' %></textarea></div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>الحد الأقصى للتحذيرات (ويعاقب بعدها):</label>
-                        <input type="number" name="warnMax" value="<%= config.warnMax || 3 %>">
-                    </div>
+                    <div class="form-group"><label>الحد الأقصى للتحذيرات (ويعاقب بعدها):</label><input type="number" name="warnMax" value="<%= config.warnMax || 3 %>"></div>
                     <div class="form-group">
                         <label>العقاب التلقائي بعد تجاوز الحد:</label>
                         <select name="warnAction">
@@ -360,7 +311,6 @@
                         </select>
                     </div>
                 </div>
-                
                 <div class="builder-box">
                     <h4 style="margin-top:0; color:#ed4245;">📝 الأسباب الجاهزة للتحذير</h4>
                     <div id="warnReasonsContainer"></div>
@@ -369,108 +319,32 @@
 
                 <h3 class="section-title">🎮 الألعاب والمستويات</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-group" style="background:#2b2b36; padding:15px; border-radius:8px;">
-                        <label>تفعيل الألعاب:</label>
-                        <input type="checkbox" name="gamesEnabled" style="width: 20px; height: 20px;" <%= config.gamesEnabled ? 'checked' : '' %>>
-                    </div>
-                    <div class="form-group" style="background:#2b2b36; padding:15px; border-radius:8px;">
-                        <label>تفعيل نظام المستويات:</label>
-                        <input type="checkbox" name="levelingEnabled" style="width: 20px; height: 20px;" <%= config.levelingEnabled ? 'checked' : '' %>>
-                    </div>
+                    <div class="form-group" style="background:#2b2b36; padding:15px; border-radius:8px;"><label>تفعيل الألعاب:</label><input type="checkbox" name="gamesEnabled" style="width: 20px; height: 20px;" <%= config.gamesEnabled ? 'checked' : '' %>></div>
+                    <div class="form-group" style="background:#2b2b36; padding:15px; border-radius:8px;"><label>تفعيل نظام المستويات:</label><input type="checkbox" name="levelingEnabled" style="width: 20px; height: 20px;" <%= config.levelingEnabled ? 'checked' : '' %>></div>
                 </div>
             </div>
 
-            <div id="tickets_panel" class="tab-content">
-                <h3 class="section-title">🎟️ إعدادات البانر الخارجي</h3>
-                <div class="form-group">
-                    <label>روم البانر:</label>
-                    <select name="panelChannelId">
-                        <option value="">-- اختر الروم --</option>
-                        <% channels.filter(c=>c.type===0).forEach(c => { %>
-                            <option value="<%= c.id %>" <%= config.panelChannelId === c.id ? 'selected' : '' %>><%= c.name %></option>
-                        <% }) %>
-                    </select>
+            <div id="multi_panels" class="tab-content">
+                <h3 class="section-title">🎟️ إعدادات البانلات (التكتات المتعددة)</h3>
+                <p style="color: #a3a6aa;">يمكنك إنشاء عدد لا نهائي من بانلات التكتات، كل بانل في روم منفصلة وله زرايره وأقسامه الخاصة، مع الحفاظ على الترقيم الموحد لجميع التكتات في السيرفر.</p>
+                
+                <div class="form-group" style="background: #2b2b36; padding: 15px; border-radius: 8px;">
+                    <label style="color:#f2a658;">الحد الأقصى للتكتات المفتوحة للعضو الواحد (على مستوى السيرفر كله):</label>
+                    <input type="number" name="maxTicketsPerUser" value="<%= config.maxTicketsPerUser || 1 %>">
                 </div>
                 
-                <div class="form-group">
-                    <label>القسم الاحتياطي لفتح التكتات (Category):</label>
-                    <select name="defaultCategoryId">
-                        <option value="">-- اختر قسم --</option>
-                        <% channels.filter(c=>c.type===4).forEach(c => { %>
-                            <option value="<%= c.id %>" <%= config.defaultCategoryId === c.id ? 'selected' : '' %>><%= c.name %></option>
-                        <% }) %>
-                    </select>
-                </div>
+                <div id="panelsContainer"></div>
                 
-                <div class="form-group">
-                    <label>عنوان إيمبد القوانين الخارجي:</label>
-                    <input type="text" name="ticketEmbedTitle" value="<%= config.ticketEmbedTitle || 'الدعم الفني' %>">
-                </div>
-                
-                <div class="form-group">
-                    <label>وصف الإيمبد الخارجي:</label>
-                    <textarea name="ticketEmbedDesc" rows="4"><%= config.ticketEmbedDesc || 'اضغط لفتح تذكرة' %></textarea>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>لون الإيمبد:</label>
-                        <input type="color" name="ticketEmbedColor" value="<%= config.ticketEmbedColor || '#0099ff' %>" style="height:40px; padding:0;">
-                    </div>
-                    <div class="form-group">
-                        <label>رقم التكت القادم:</label>
-                        <input type="number" name="ticketCount" value="<%= config.ticketCount || 0 %>">
-                    </div>
-                    <div class="form-group">
-                        <label>الحد الأقصى للتكتات المفتوحة للعضو:</label>
-                        <input type="number" name="maxTicketsPerUser" value="<%= config.maxTicketsPerUser || 1 %>">
-                    </div>
-                </div>
-            </div>
-
-            <div id="tickets_builder" class="tab-content">
-                <h3 class="section-title">🎛️ صانع التكتات التفصيلي</h3>
-                <div id="buttonsContainer"></div>
-                <button type="button" onclick="addNewButton()" style="background:#f2a658; color:white; border:none; padding:15px; width:100%; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:20px;">➕ إضافة زر تكت جديد بالكامل</button>
+                <button type="button" onclick="addNewPanel()" style="background:#5865F2; color:white; border:none; padding:15px; width:100%; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:20px; box-shadow: 0 4px 10px rgba(88, 101, 242, 0.4);">➕ إضافة بانل جديد (Panel)</button>
             </div>
 
             <div id="roles" class="tab-content">
                 <h3 class="section-title">👨‍⚖️ نظام الرتب الموحد</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div class="form-group">
-                        <label>👮 رتبة الإدارة الصغرى:</label>
-                        <select name="adminRoleId">
-                            <option value="">-- غير محدد --</option>
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.adminRoleId === r.id ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>👑 رتب الإدارة العليا (متعدد):</label>
-                        <select name="highAdminRoles" multiple style="height:100px;">
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.highAdminRoles && config.highAdminRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>🤝 رتبة الوساطة الصغرى:</label>
-                        <select name="mediatorRoleId">
-                            <option value="">-- غير محدد --</option>
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.mediatorRoleId === r.id ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>🌟 رتب الوساطة العليا (متعدد):</label>
-                        <select name="highMediatorRoles" multiple style="height:100px;">
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.highMediatorRoles && config.highMediatorRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>👮 رتبة الإدارة الصغرى:</label><select name="adminRoleId"><option value="">-- غير محدد --</option><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.adminRoleId === r.id ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
+                    <div class="form-group"><label>👑 رتب الإدارة العليا (متعدد):</label><select name="highAdminRoles" multiple style="height:100px;"><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.highAdminRoles && config.highAdminRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
+                    <div class="form-group"><label>🤝 رتبة الوساطة الصغرى:</label><select name="mediatorRoleId"><option value="">-- غير محدد --</option><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.mediatorRoleId === r.id ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
+                    <div class="form-group"><label>🌟 رتب الوساطة العليا (متعدد):</label><select name="highMediatorRoles" multiple style="height:100px;"><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.highMediatorRoles && config.highMediatorRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
                 </div>
                 <hr>
                 <h3 class="section-title">🕵️‍♂️ تحكم استلام التكت (Claim)</h3>
@@ -486,48 +360,21 @@
                 <div class="builder-box" style="border-color:#3ba55d;">
                     <h4 style="color:#3ba55d; margin-top:0;">1. أمر كتابة التريد (!trade)</h4>
                     <p style="color:#a3a6aa; font-size: 14px;">هذا الأمر يظهر زرار يفتح نافذة لكتابة تفاصيل الحساب والسعر، ثم ينزل طلب للموافقة.</p>
-                    <div class="form-group">
-                        <label>الأمر:</label>
-                        <input type="text" name="cmdTrade" value="<%= config.cmdTrade || '!trade' %>">
-                    </div>
-                    <div class="form-group">
-                        <label>الرتب المسموح لها بكتابة الأمر (من يظهر له الزر):</label>
-                        <select name="cmdTradeRoles" multiple style="height:100px;">
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.cmdTradeRoles && config.cmdTradeRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>الأمر:</label><input type="text" name="cmdTrade" value="<%= config.cmdTrade || '!trade' %>"></div>
+                    <div class="form-group"><label>الرتب المسموح لها بكتابة الأمر (من يظهر له الزر):</label><select name="cmdTradeRoles" multiple style="height:100px;"><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.cmdTradeRoles && config.cmdTradeRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
                 </div>
 
                 <div class="builder-box" style="border-color:#f2a658;">
                     <h4 style="color:#f2a658; margin-top:0;">2. صلاحيات الموافقة العليا (Approve / Reject)</h4>
                     <p style="color:#a3a6aa; font-size: 14px;">حدد من يمكنه الضغط على زراير (موافقة✅ / رفض❌) بعد كتابة التريد.</p>
-                    <div class="form-group">
-                        <label>رتب الموافقة العليا:</label>
-                        <select name="tradeApproveRoles" multiple style="height:100px;">
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.tradeApproveRoles && config.tradeApproveRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>رتب الموافقة العليا:</label><select name="tradeApproveRoles" multiple style="height:100px;"><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.tradeApproveRoles && config.tradeApproveRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
                 </div>
 
                 <div class="builder-box" style="border-color:#ed4245;">
                     <h4 style="color:#ed4245; margin-top:0;">3. نظام المنشن والنداء (!req-high)</h4>
                     <p style="color:#a3a6aa; font-size: 14px;">عند نزول طلب التريد، أو عند كتابة أمر النداء، سيقوم البوت بعمل منشن لهذه الرتب ليأتوا فوراً.</p>
-                    <div class="form-group">
-                        <label>أمر النداء المباشر:</label>
-                        <input type="text" name="cmdReqHigh" value="<%= config.cmdReqHigh || '!req-high' %>">
-                    </div>
-                    <div class="form-group">
-                        <label>رتب المنشن (التي سيتم منشنتها):</label>
-                        <select name="tradeMentionRoles" multiple style="height:100px;">
-                            <% roles.forEach(r => { %>
-                                <option value="<%= r.id %>" <%= config.tradeMentionRoles && config.tradeMentionRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
-                            <% }) %>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>أمر النداء المباشر:</label><input type="text" name="cmdReqHigh" value="<%= config.cmdReqHigh || '!req-high' %>"></div>
+                    <div class="form-group"><label>رتب المنشن (التي سيتم منشنتها):</label><select name="tradeMentionRoles" multiple style="height:100px;"><% roles.forEach(r => { %><option value="<%= r.id %>" <%= config.tradeMentionRoles && config.tradeMentionRoles.includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select></div>
                 </div>
             </div>
 
@@ -579,7 +426,6 @@
                     </p>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        
                         <div class="cmd-box">
                             <label style="color:#ed4245;">أمر الباند (!ban):</label>
                             <input type="text" name="cmdBan" value="<%= config.cmdBan || '!ban' %>" style="margin-bottom:10px;">
@@ -616,22 +462,21 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <% 
                     const logList = [
-                        {id: 'transcriptChannelId', label: 'روم الترانسكريبت (الملفات والأزرار)'}, 
-                        {id: 'ticketLogChannelId', label: 'لوج حركات التكت (فتح/قفل/حذف)'}, 
-                        {id: 'staffRatingChannelId', label: 'لوج تقييمات الإدارة (تلقائي)'}, 
-                        {id: 'mediatorRatingChannelId', label: 'لوج تقييمات الوسطاء (!done)'},
+                        {id: 'transcriptChannelId', label: 'روم الترانسكريبت (الملفات)'}, 
+                        {id: 'ticketLogChannelId', label: 'لوج حركات التكت'}, 
+                        {id: 'staffRatingChannelId', label: 'لوج تقييمات الإدارة'}, 
+                        {id: 'mediatorRatingChannelId', label: 'لوج تقييمات الوسطاء'},
                         {id: 'logBanId', label: 'لوج الباند وفك الباند'}, 
                         {id: 'logTimeoutId', label: 'لوج التايم أوت وفكه'},
                         {id: 'logMsgDeleteId', label: 'لوج حذف الرسائل'}, 
                         {id: 'logMsgUpdateId', label: 'لوج تعديل الرسائل'}, 
-                        {id: 'logVoiceId', label: 'لوج حركات الفويس والنقل'}, 
+                        {id: 'logVoiceId', label: 'لوج الفويس'}, 
                         {id: 'logJoinLeaveId', label: 'لوج الدخول والخروج'},
-                        {id: 'logRoleCreateDeleteId', label: 'لوج إنشاء وحذف الرتب'}, 
-                        {id: 'logMemberRoleUpdateId', label: 'لوج تحديث رتب الأعضاء'}, 
+                        {id: 'logRoleCreateDeleteId', label: 'لوج الرتب'}, 
+                        {id: 'logMemberRoleUpdateId', label: 'لوج تحديثات الأعضاء'}, 
                         {id: 'logInviteId', label: 'لوج الدعوات'}, 
                         {id: 'logChannelThreadId', label: 'لوج الرومات والثريد'}
                     ]; 
-                    
                     logList.forEach(logObj => { 
                     %>
                         <div class="form-group" style="background:#23232a; padding:15px; border-radius:8px; margin-bottom:0;">
@@ -655,7 +500,6 @@
                     <div class="form-group cmd-box"><label style="color:white;">إيمبد طلب التريد (!trade):</label><input type="color" name="tradeEmbedColor" value="<%= config.tradeEmbedColor || '#f2a658' %>" style="height:50px; padding:0; cursor:pointer;"></div>
                     <div class="form-group cmd-box"><label style="color:white;">لوج التكتات الأساسي (Ticket Logs):</label><input type="color" name="logEmbedColor" value="<%= config.logEmbedColor || '#ed4245' %>" style="height:50px; padding:0; cursor:pointer;"></div>
                     <div class="form-group cmd-box"><label style="color:white;">إيمبد الترانسكريبت (Transcript):</label><input type="color" name="transcriptEmbedColor" value="<%= config.transcriptEmbedColor || '#2b2d31' %>" style="height:50px; padding:0; cursor:pointer;"></div>
-                    
                     <div class="form-group cmd-box"><label style="color:#ed4245;">إيمبد إعطاء الباند (!ban):</label><input type="color" name="banEmbedColor" value="<%= config.banEmbedColor || '#ed4245' %>" style="height:50px; padding:0; cursor:pointer;"></div>
                     <div class="form-group cmd-box"><label style="color:#3ba55d;">إيمبد فك الباند (!unban):</label><input type="color" name="unbanEmbedColor" value="<%= config.unbanEmbedColor || '#3ba55d' %>" style="height:50px; padding:0; cursor:pointer;"></div>
                     <div class="form-group cmd-box"><label style="color:#f2a658;">إيمبد التايم أوت (!timeout):</label><input type="color" name="timeoutEmbedColor" value="<%= config.timeoutEmbedColor || '#f2a658' %>" style="height:50px; padding:0; cursor:pointer;"></div>
@@ -664,7 +508,7 @@
             </div>
 
             <div id="ratings_system" class="tab-content">
-                <h3 class="section-title">⭐ التحكم في رسالة التقييم بالخاص واللوج</h3>
+                <h3 class="section-title">⭐ التحكم في رسائل التقييم</h3>
                 <div class="form-group" style="background:#2b2b36; padding:15px; border-radius:8px;">
                     <label style="color:#5865F2; font-size:18px;">نوع التقييم المُرسل:</label>
                     <select name="ratingStyle" onchange="toggleCustomRating(this.value)">
@@ -675,16 +519,13 @@
 
                 <div id="customRatingBox" style="display: <%= config.ratingStyle === 'custom' ? 'block' : 'none' %>; background:#1e1e24; padding:20px; border-radius:8px; border:1px solid #f2a658;">
                     <p style="color:#a3a6aa;">المتغيرات المتاحة: <code>[user]</code> للعميل، <code>[staff]</code> للإداري/الوسيط، <code>[server]</code> لاسم السيرفر.</p>
-                    
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        
                         <div class="cmd-box">
                             <h4 style="color:#3ba55d; margin-top:0;">تقييم الدعم الفني والإدارة</h4>
                             <div class="form-group"><label>العنوان:</label><input type="text" name="customRatingTitle" value="<%= config.customRatingTitle || 'تقييم فريق العمل' %>"></div>
                             <div class="form-group"><label>الوصف:</label><textarea name="customRatingText" rows="4"><%= config.customRatingText || 'مرحباً [user]، يرجى تقييم خدمة الإداري [staff].' %></textarea></div>
                             <div class="form-group"><label>لون الإيمبد:</label><input type="color" name="staffRatingColor" value="<%= config.staffRatingColor || '#3ba55d' %>" style="height:40px; padding:0;"></div>
                         </div>
-
                         <div class="cmd-box">
                             <h4 style="color:#f2a658; margin-top:0;">تقييم الوسطاء (!done)</h4>
                             <div class="form-group"><label>العنوان:</label><input type="text" name="customMedRatingTitle" value="<%= config.customMedRatingTitle || 'تقييم الوساطة' %>"></div>
@@ -729,206 +570,177 @@
 
     <script>
         function openTab(eventObj, tabName) {
-            
             const allContents = document.querySelectorAll(".tab-content");
-            for (let i = 0; i < allContents.length; i++) {
-                allContents[i].style.display = "none";
-            }
-            
+            for (let i = 0; i < allContents.length; i++) allContents[i].style.display = "none";
             const allButtons = document.querySelectorAll(".tab-btn");
-            for (let i = 0; i < allButtons.length; i++) {
-                allButtons[i].classList.remove("active");
-            }
-            
+            for (let i = 0; i < allButtons.length; i++) allButtons[i].classList.remove("active");
             document.getElementById(tabName).style.display = "block"; 
             eventObj.currentTarget.classList.add("active");
-            
-            if (tabName === 'embedBuilder') {
-                document.getElementById("mainSaveBtn").style.display = "none";
-            } else {
-                document.getElementById("mainSaveBtn").style.display = "block";
-            }
-            
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.remove('open');
-            }
+            if (tabName === 'embedBuilder') document.getElementById("mainSaveBtn").style.display = "none";
+            else document.getElementById("mainSaveBtn").style.display = "block";
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
         }
         
         function toggleCustomRating(val) { 
-            const box = document.getElementById('customRatingBox');
-            const basicColors = document.getElementById('basicRatingColors');
-            if (val === 'custom') { 
-                box.style.display = 'block'; 
-                basicColors.style.display = 'none';
-            } else { 
-                box.style.display = 'none'; 
-                basicColors.style.display = 'block';
-            }
+            document.getElementById('customRatingBox').style.display = (val === 'custom') ? 'block' : 'none';
+            document.getElementById('basicRatingColors').style.display = (val === 'custom') ? 'none' : 'block';
         }
         
         function toggleCustomPunishment(val) { 
-            const box = document.getElementById('customPunishmentBox');
-            if (val === 'custom') { 
-                box.style.display = 'block'; 
-            } else { 
-                box.style.display = 'none'; 
-            }
+            document.getElementById('customPunishmentBox').style.display = (val === 'custom') ? 'block' : 'none'; 
         }
 
-        const hideToggleCheckbox = document.getElementById('hideToggle'); 
-        const readOnlyToggleCheckbox = document.getElementById('readOnlyToggle');
+        // ==========================================
+        // 🔥 محرك بناء البانلات المتعددة (Multi-Panels Engine)
+        // ==========================================
         
-        function checkClaimToggles() { 
-            if(hideToggleCheckbox.checked) {
-                readOnlyToggleCheckbox.disabled = true;
-                readOnlyToggleCheckbox.checked = false;
-            } else {
-                readOnlyToggleCheckbox.disabled = false;
-            } 
-        }
-        checkClaimToggles(); 
-        hideToggleCheckbox.addEventListener('change', checkClaimToggles);
+        // جلب البيانات من الداتابيز أو إنشاء مصفوفة فارغة
+        let panelsDataArray = <%- JSON.stringify(config.ticketPanels && config.ticketPanels.length > 0 ? config.ticketPanels : [{
+            id: 'panel_' + Date.now(),
+            name: 'البانل الأساسي',
+            panelChannelId: '<%- config.panelChannelId || "" %>',
+            ticketCategoryId: '<%- config.defaultCategoryId || "" %>',
+            embedTitle: '<%- config.ticketEmbedTitle || "الدعم الفني" %>',
+            embedDesc: '<%- config.ticketEmbedDesc || "اضغط على الزر لفتح تذكرة." %>',
+            embedColor: '<%- config.ticketEmbedColor || "#0099ff" %>',
+            embedImage: '<%- config.ticketEmbedImage || "" %>',
+            buttons: <%- JSON.stringify(config.customButtons || []) %>
+        }]) %>;
 
-        let warnReasonsArray = <%- JSON.stringify(config.warnReasons || []) %>;
-        function renderWarnReasons() {
-            const containerDiv = document.getElementById('warnReasonsContainer'); 
-            containerDiv.innerHTML = '';
-            
-            for (let i = 0; i < warnReasonsArray.length; i++) {
-                const reasonText = warnReasonsArray[i];
-                const wrapperDiv = document.createElement('div');
-                wrapperDiv.style.display = 'flex';
-                wrapperDiv.style.gap = '10px';
-                wrapperDiv.style.marginBottom = '10px';
-                
-                const inputEl = document.createElement('input');
-                inputEl.type = 'text';
-                inputEl.value = reasonText;
-                inputEl.placeholder = 'سبب التحذير...';
-                inputEl.onchange = function() { warnReasonsArray[i] = this.value; };
-                
-                const delBtn = document.createElement('button');
-                delBtn.type = 'button';
-                delBtn.innerText = '✖';
-                delBtn.style.background = 'red';
-                delBtn.style.border = 'none';
-                delBtn.style.color = 'white';
-                delBtn.style.padding = '10px 15px';
-                delBtn.style.borderRadius = '5px';
-                delBtn.style.cursor = 'pointer';
-                delBtn.onclick = function() { warnReasonsArray.splice(i, 1); renderWarnReasons(); };
-                
-                wrapperDiv.appendChild(inputEl);
-                wrapperDiv.appendChild(delBtn);
-                containerDiv.appendChild(wrapperDiv);
-            }
-        } 
-        renderWarnReasons();
-
-        let buttonsDataArray = <%- JSON.stringify(config.customButtons || []) %>;
         const serverRolesArray = <%- JSON.stringify(roles || []) %>;
-        const catOptionsHTML = `<option value="">-- اتبع القسم الاحتياطي --</option><%- channels.filter(c=>c.type===4).map(c=>`<option value="${c.id}">${c.name}</option>`).join('') %>`;
+        const textChannelsHTML = `<option value="">-- اختر الروم --</option><%- channels.filter(c=>c.type===0).map(c=>`<option value="${c.id}">${c.name}</option>`).join('') %>`;
+        const catChannelsHTML = `<option value="">-- اختر قسم التكتات --</option><%- channels.filter(c=>c.type===4).map(c=>`<option value="${c.id}">${c.name}</option>`).join('') %>`;
         
-        function renderButtons() {
-            const containerDiv = document.getElementById('buttonsContainer'); 
+        function renderPanels() {
+            const containerDiv = document.getElementById('panelsContainer'); 
             containerDiv.innerHTML = '';
             
-            for (let bIndex = 0; bIndex < buttonsDataArray.length; bIndex++) {
-                const btnObj = buttonsDataArray[bIndex];
+            for (let pIndex = 0; pIndex < panelsDataArray.length; pIndex++) {
+                const panelObj = panelsDataArray[pIndex];
                 
-                let fieldsHTML = ''; 
-                if (btnObj.modalFields) {
-                    for (let fIndex = 0; fIndex < btnObj.modalFields.length; fIndex++) {
-                        const fieldObj = btnObj.modalFields[fIndex];
-                        fieldsHTML += `
-                        <div style="background:#23232a; padding:10px; margin-top:10px; border-right:3px solid #f2a658;">
-                            <label>سؤال (Label) ${fIndex + 1}:</label>
-                            <input type="text" value="${fieldObj.label}" onchange="buttonsDataArray[${bIndex}].modalFields[${fIndex}].label=this.value">
-                            <button type="button" onclick="buttonsDataArray[${bIndex}].modalFields.splice(${fIndex},1);renderButtons();" style="background:red; color:white; border:none; padding:5px 10px; margin-top:5px; border-radius:3px; cursor:pointer;">حذف السؤال</button>
+                // بناء زراير البانل الحالي
+                let buttonsHTML = '';
+                if (panelObj.buttons && panelObj.buttons.length > 0) {
+                    for (let bIndex = 0; bIndex < panelObj.buttons.length; bIndex++) {
+                        const btnObj = panelObj.buttons[bIndex];
+                        
+                        // بناء أسئلة النافذة للزر الحالي
+                        let fieldsHTML = ''; 
+                        if (btnObj.modalFields) {
+                            for (let fIndex = 0; fIndex < btnObj.modalFields.length; fIndex++) {
+                                const fieldObj = btnObj.modalFields[fIndex];
+                                fieldsHTML += `
+                                <div style="background:#23232a; padding:10px; margin-top:10px; border-right:3px solid #f2a658;">
+                                    <label>سؤال (Label) ${fIndex + 1}:</label>
+                                    <input type="text" value="${fieldObj.label}" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].modalFields[${fIndex}].label=this.value">
+                                    <button type="button" onclick="panelsDataArray[${pIndex}].buttons[${bIndex}].modalFields.splice(${fIndex},1);renderPanels();" style="background:red; color:white; border:none; padding:5px 10px; margin-top:5px; border-radius:3px; cursor:pointer;">حذف السؤال</button>
+                                </div>`;
+                            }
+                        }
+
+                        // بناء رتب الاستلام
+                        let rolesOptionsHTML = '';
+                        for (let rIndex = 0; rIndex < serverRolesArray.length; rIndex++) {
+                            const roleObj = serverRolesArray[rIndex];
+                            let isRoleSelected = (btnObj.allowedClaimRoles && btnObj.allowedClaimRoles.includes(roleObj.id)) ? 'selected' : '';
+                            rolesOptionsHTML += `<option value="${roleObj.id}" ${isRoleSelected}>${roleObj.name}</option>`;
+                        }
+
+                        buttonsHTML += `
+                        <div class="builder-box" style="border-color:#f2a658; margin-top:20px; margin-left: 20px;">
+                            <h4 style="color:#f2a658; margin-top:0;">🔘 زر: ${btnObj.label}</h4>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                                <div><label>الـ ID البرمجي للزر:</label><input type="text" value="${btnObj.id}" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].id=this.value"></div>
+                                <div><label>اسم الزرار:</label><input type="text" value="${btnObj.label}" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].label=this.value"></div>
+                                <div><label>لون الزرار:</label><select onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].color=this.value"><option value="Primary" ${btnObj.color=='Primary'?'selected':''}>أزرق</option><option value="Success" ${btnObj.color=='Success'?'selected':''}>أخضر</option><option value="Danger" ${btnObj.color=='Danger'?'selected':''}>أحمر</option><option value="Secondary" ${btnObj.color=='Secondary'?'selected':''}>رمادي</option></select></div>
+                            </div>
+
+                            <h5 style="color:#3ba55d; margin-top:15px;">🎨 الإيمبد الداخلي للتكت (الترحيب)</h5>
+                            <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+                                <div><label>العنوان:</label><input type="text" value="${btnObj.insideEmbedTitle}" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].insideEmbedTitle=this.value"></div>
+                                <div><label>الوصف:</label><textarea rows="2" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].insideEmbedDesc=this.value">${btnObj.insideEmbedDesc}</textarea></div>
+                                <div><label>اللون:</label><input type="color" value="${btnObj.insideEmbedColor}" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].insideEmbedColor=this.value" style="height:40px; padding:0; width:100px;"></div>
+                            </div>
+
+                            <h5 style="color:#f2a658; margin-top:15px;">🕵️‍♂️ رتب الاستلام المخصصة لهذا الزر (Claim)</h5>
+                            <select multiple style="height:80px; width:100%;" onchange="const selectedOpts = Array.from(this.selectedOptions).map(opt=>opt.value); panelsDataArray[${pIndex}].buttons[${bIndex}].allowedClaimRoles = selectedOpts;">${rolesOptionsHTML}</select>
+
+                            <h5 style="color:#9b59b6; margin-top:15px;">🪟 النافذة والتقييم</h5>
+                            <div style="margin-bottom:15px; background: #18181b; padding: 15px; border-radius: 8px;">
+                                <input type="checkbox" ${btnObj.requireModal?'checked':''} onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].requireModal=this.checked;renderPanels();" style="width:18px;height:18px;"> <label style="display:inline;">تفعيل نافذة الأسئلة</label>
+                                <span style="margin:0 10px;">|</span>
+                                <input type="checkbox" ${btnObj.isMediator?'checked':''} onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].isMediator=this.checked;" style="width:18px;height:18px;"> <label style="display:inline;">تكت وساطة (تقييم !done)</label>
+                                <span style="margin:0 10px;">|</span>
+                                <input type="checkbox" ${btnObj.enableRating!==false?'checked':''} onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].enableRating=this.checked;" style="width:18px;height:18px;"> <label style="display:inline;">إرسال تقييم تلقائي للإدارة</label>
+                            </div>
+
+                            <div style="display:${btnObj.requireModal?'block':'none'}; background:#2f3136; padding:15px; border-radius:5px;">
+                                <label>عنوان النافذة (Modal Title):</label>
+                                <input type="text" value="${btnObj.modalTitle}" onchange="panelsDataArray[${pIndex}].buttons[${bIndex}].modalTitle=this.value">
+                                ${fieldsHTML}
+                                <button type="button" onclick="if(!panelsDataArray[${pIndex}].buttons[${bIndex}].modalFields) panelsDataArray[${pIndex}].buttons[${bIndex}].modalFields=[]; panelsDataArray[${pIndex}].buttons[${bIndex}].modalFields.push({label:'سؤال جديد',required:true});renderPanels();" style="background:#3ba55d; color:white; border:none; padding:10px; margin-top:10px; border-radius:5px; cursor:pointer;">➕ إضافة سؤال للنافذة</button>
+                            </div>
+                            <button type="button" onclick="panelsDataArray[${pIndex}].buttons.splice(${bIndex},1);renderPanels();" style="background:#ed4245; color:white; border:none; padding:10px; width:100%; margin-top:15px; font-weight:bold; border-radius:5px; cursor:pointer;">🗑️ حذف هذا الزر من البانل</button>
                         </div>`;
                     }
                 }
 
-                let rolesOptionsHTML = '';
-                for (let rIndex = 0; rIndex < serverRolesArray.length; rIndex++) {
-                    const roleObj = serverRolesArray[rIndex];
-                    let isRoleSelected = '';
-                    if (btnObj.allowedClaimRoles && btnObj.allowedClaimRoles.includes(roleObj.id)) {
-                        isRoleSelected = 'selected';
-                    }
-                    rolesOptionsHTML += `<option value="${roleObj.id}" ${isRoleSelected}>${roleObj.name}</option>`;
-                }
-
-                if (btnObj.enableRating === undefined) {
-                    btnObj.enableRating = true;
-                }
-                
-                let btnHtmlString = `
-                    <div class="builder-box">
-                        <h3 style="color:#5865F2; margin-top:0;">🔘 ${btnObj.label}</h3>
+                // بناء البانل الأساسي
+                let panelHtmlString = `
+                    <div class="builder-box" style="border: 2px solid #5865F2; padding: 25px; margin-top: 30px; background: #1e1e24;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="color:#ffffff; margin:0; font-size: 22px;">🗂️ بانل: <input type="text" value="${panelObj.name}" onchange="panelsDataArray[${pIndex}].name=this.value" style="width: 200px; display:inline-block; font-size:18px; padding:5px; background:transparent; border-bottom:1px solid #5865F2; border-top:none; border-left:none; border-right:none;"></h3>
+                            <button type="button" onclick="panelsDataArray.splice(${pIndex},1);renderPanels();" style="background:#ed4245; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">🗑️ حذف البانل بالكامل</button>
+                        </div>
+                        <hr>
+                        
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                            <div><label>الـ ID البرمجي:</label><input type="text" value="${btnObj.id}" onchange="buttonsDataArray[${bIndex}].id=this.value"></div>
-                            <div><label>اسم الزرار:</label><input type="text" value="${btnObj.label}" onchange="buttonsDataArray[${bIndex}].label=this.value"></div>
-                            <div><label>لون الزرار:</label><select onchange="buttonsDataArray[${bIndex}].color=this.value"><option value="Primary" ${btnObj.color=='Primary'?'selected':''}>أزرق</option><option value="Success" ${btnObj.color=='Success'?'selected':''}>أخضر</option><option value="Danger" ${btnObj.color=='Danger'?'selected':''}>أحمر</option><option value="Secondary" ${btnObj.color=='Secondary'?'selected':''}>رمادي</option></select></div>
-                            <div><label>القسم المخصص:</label><select onchange="buttonsDataArray[${bIndex}].categoryId=this.value">${catOptionsHTML.replace(`value="${btnObj.categoryId}"`, `value="${btnObj.categoryId}" selected`)}</select></div>
+                            <div><label>الروم التي سيرسل فيها البانل:</label><select onchange="panelsDataArray[${pIndex}].panelChannelId=this.value">${textChannelsHTML.replace(`value="${panelObj.panelChannelId}"`, `value="${panelObj.panelChannelId}" selected`)}</select></div>
+                            <div><label>القسم الذي ستفتح فيه تكتات هذا البانل:</label><select onchange="panelsDataArray[${pIndex}].ticketCategoryId=this.value">${catChannelsHTML.replace(`value="${panelObj.ticketCategoryId}"`, `value="${panelObj.ticketCategoryId}" selected`)}</select></div>
                         </div>
 
-                        <h4 style="color:#3ba55d; margin-top:20px;">🎨 الإيمبد الداخلي</h4>
-                        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-                            <div><label>عنوان الإيمبد:</label><input type="text" value="${btnObj.insideEmbedTitle}" onchange="buttonsDataArray[${bIndex}].insideEmbedTitle=this.value"></div>
-                            <div><label>وصف الإيمبد:</label><textarea rows="3" onchange="buttonsDataArray[${bIndex}].insideEmbedDesc=this.value">${btnObj.insideEmbedDesc}</textarea></div>
-                            <div><label>لون الإيمبد:</label><input type="color" value="${btnObj.insideEmbedColor}" onchange="buttonsDataArray[${bIndex}].insideEmbedColor=this.value" style="height:40px; padding:0; width:100px;"></div>
+                        <h4 style="color:#0099ff; margin-top:20px;">🖼️ تصميم إيمبد البانل الخارجي</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                            <div><label>العنوان:</label><input type="text" value="${panelObj.embedTitle}" onchange="panelsDataArray[${pIndex}].embedTitle=this.value"></div>
+                            <div><label>اللون:</label><input type="color" value="${panelObj.embedColor}" onchange="panelsDataArray[${pIndex}].embedColor=this.value" style="height:40px; padding:0;"></div>
+                            <div style="grid-column: span 2;"><label>الوصف:</label><textarea rows="3" onchange="panelsDataArray[${pIndex}].embedDesc=this.value">${panelObj.embedDesc}</textarea></div>
+                            <div style="grid-column: span 2;"><label>رابط صورة كبيرة (اختياري):</label><input type="text" value="${panelObj.embedImage}" onchange="panelsDataArray[${pIndex}].embedImage=this.value"></div>
                         </div>
 
-                        <h4 style="color:#f2a658; margin-top:20px;">🕵️‍♂️ رتب الاستلام المخصصة</h4>
-                        <select multiple style="height:100px; width:100%;" onchange="const selectedOpts = Array.from(this.selectedOptions).map(opt=>opt.value); buttonsDataArray[${bIndex}].allowedClaimRoles = selectedOpts;">${rolesOptionsHTML}</select>
-
-                        <h4 style="color:#9b59b6; margin-top:20px;">🪟 النافذة والتقييم</h4>
-                        <div style="margin-bottom:15px; background: #18181b; padding: 15px; border-radius: 8px;">
-                            <input type="checkbox" ${btnObj.requireModal?'checked':''} onchange="buttonsDataArray[${bIndex}].requireModal=this.checked;renderButtons();" style="width:18px;height:18px;"> <label style="display:inline;">تفعيل النافذة</label>
-                            <span style="margin:0 15px;">|</span>
-                            <input type="checkbox" ${btnObj.isMediator?'checked':''} onchange="buttonsDataArray[${bIndex}].isMediator=this.checked;" style="width:18px;height:18px;"> <label style="display:inline;">تكت وساطة</label>
-                            <span style="margin:0 15px;">|</span>
-                            <input type="checkbox" ${btnObj.enableRating!==false?'checked':''} onchange="buttonsDataArray[${bIndex}].enableRating=this.checked;" style="width:18px;height:18px;"> <label style="display:inline;">إرسال تقييم للإدارة</label>
-                        </div>
-
-                        <div style="display:${btnObj.requireModal?'block':'none'}; background:#2f3136; padding:15px; border-radius:5px;">
-                            <label>عنوان النافذة (Modal Title):</label>
-                            <input type="text" value="${btnObj.modalTitle}" onchange="buttonsDataArray[${bIndex}].modalTitle=this.value">
-                            ${fieldsHTML}
-                            <button type="button" onclick="if(!buttonsDataArray[${bIndex}].modalFields) buttonsDataArray[${bIndex}].modalFields=[]; buttonsDataArray[${bIndex}].modalFields.push({label:'سؤال جديد',required:true});renderButtons();" style="background:#3ba55d; color:white; border:none; padding:10px; margin-top:10px; border-radius:5px; cursor:pointer;">➕ إضافة سؤال</button>
-                        </div>
-                        <button type="button" onclick="buttonsDataArray.splice(${bIndex},1);renderButtons();" style="background:#ed4245; color:white; border:none; padding:15px; width:100%; margin-top:20px; font-weight:bold; border-radius:5px; cursor:pointer;">🗑️ حذف الزر</button>
+                        <h4 style="color:#f2a658; margin-top:25px; border-bottom: 1px solid #333; padding-bottom:10px;">🔘 زراير التكتات الخاصة بهذا البانل</h4>
+                        ${buttonsHTML}
+                        <button type="button" onclick="if(!panelsDataArray[${pIndex}].buttons) panelsDataArray[${pIndex}].buttons=[]; panelsDataArray[${pIndex}].buttons.push({id: 'btn_'+Date.now(), label:'زر جديد', color:'Primary', insideEmbedTitle:'تذكرة جديدة', insideEmbedDesc:'يرجى كتابة طلبك...', insideEmbedColor:'#2b2d31', requireModal:false, modalTitle:'بيانات مطلوبة', modalFields:[], isMediator:false, enableRating:true, allowedClaimRoles:[]}); renderPanels();" style="background:#2b2b36; border: 1px dashed #f2a658; color:#f2a658; padding:15px; width:100%; margin-top:15px; font-weight:bold; border-radius:5px; cursor:pointer;">➕ إضافة زر جديد لهذا البانل</button>
                     </div>`;
                 
-                containerDiv.innerHTML += btnHtmlString;
+                containerDiv.innerHTML += panelHtmlString;
             }
         } 
-        renderButtons();
+        
+        // تشغيل البناء عند فتح الصفحة
+        renderPanels();
 
-        function addNewButton() { 
-            const newBtnObj = {
-                id: 'btn_' + Date.now(), 
-                label: 'زر جديد', 
-                color: 'Primary', 
-                categoryId: '', 
-                insideEmbedTitle: 'تذكرة جديدة', 
-                insideEmbedDesc: 'اكتب طلبك...', 
-                insideEmbedColor: '#2b2d31', 
-                requireModal: false, 
-                modalTitle: 'بيانات مطلوبة', 
-                modalFields: [], 
-                isMediator: false, 
-                enableRating: true, 
-                allowedClaimRoles: []
+        function addNewPanel() { 
+            const newPanelObj = {
+                id: 'panel_' + Date.now(),
+                name: 'بانل جديد',
+                panelChannelId: '',
+                ticketCategoryId: '',
+                embedTitle: 'الدعم الفني',
+                embedDesc: 'اضغط على الزر لفتح تذكرة.',
+                embedColor: '#0099ff',
+                embedImage: '',
+                buttons: []
             };
-            buttonsDataArray.push(newBtnObj); 
-            renderButtons(); 
+            panelsDataArray.push(newPanelObj); 
+            renderPanels(); 
         }
 
+        // ==========================================
+        // تجهيز الداتا للإرسال
+        // ==========================================
         function prepareData() { 
-            const stringifiedButtons = JSON.stringify(buttonsDataArray);
-            document.getElementById('customButtonsData').value = stringifiedButtons; 
+            const stringifiedPanels = JSON.stringify(panelsDataArray);
+            document.getElementById('ticketPanelsData').value = stringifiedPanels; 
             
             const stringifiedWarns = JSON.stringify(warnReasonsArray);
             document.getElementById('warnReasonsData').value = stringifiedWarns; 
