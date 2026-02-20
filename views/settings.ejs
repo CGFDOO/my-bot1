@@ -222,9 +222,7 @@
 
         <button class="tab-btn active" onclick="openTab(event, 'general')">⚙️ الإعدادات والترحيب</button>
         <button class="tab-btn" onclick="openTab(event, 'warns_games')">⚠️ التحذيرات والألعاب</button>
-        
         <button class="tab-btn" onclick="openTab(event, 'multi_panels')" style="border-right: 3px solid #f2a658;">🎟️ نظام البانلات المتعددة</button>
-        
         <button class="tab-btn" onclick="openTab(event, 'roles')">👨‍⚖️ الرتب واستلام التكت</button>
         <button class="tab-btn" onclick="openTab(event, 'trade_approvals')" style="border-right: 3px solid #3ba55d;">⚖️ الموافقات العليا للتريد</button>
         <button class="tab-btn" onclick="openTab(event, 'commands')">⌨️ الأوامر الديناميكية للفك</button>
@@ -248,7 +246,8 @@
         <form action="/settings/<%= guild.id %>" method="POST" id="mainForm">
             
             <input type="hidden" name="ticketPanelsData" id="ticketPanelsData">
-            <input type="hidden" name="warnReasonsData" id="warnReasonsData">
+            <input type="hidden" name="warnReasonsARData" id="warnReasonsARData">
+            <input type="hidden" name="warnReasonsENData" id="warnReasonsENData">
 
             <div id="general" class="tab-content active">
                 <h3 class="section-title">⚙️ الإعدادات العامة والحماية</h3>
@@ -304,7 +303,7 @@
             </div>
 
             <div id="warns_games" class="tab-content">
-                <h3 class="section-title">⚠️ لوحة التحكم بالتحذيرات</h3>
+                <h3 class="section-title">⚠️ لوحة التحكم بالتحذيرات المزدوجة</h3>
                 <div class="form-group">
                     <label>روم إرسال لوحة التحذيرات:</label>
                     <select name="warnPanelChannelId">
@@ -326,7 +325,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label>عنوان لوحة التحذير:</label>
-                        <input type="text" name="warnPanelTitle" value="<%= config.warnPanelTitle || 'لوحة تحكم التحذيرات' %>">
+                        <input type="text" name="warnPanelTitle" value="<%= config.warnPanelTitle || 'لوحة تحكم التحذير' %>">
                     </div>
                     <div class="form-group">
                         <label>لون الإيمبد:</label>
@@ -335,7 +334,7 @@
                 </div>
                 <div class="form-group">
                     <label>وصف الإيمبد (التعليمات):</label>
-                    <textarea name="warnPanelDesc" rows="2"><%= config.warnPanelDesc || 'استخدم الأزرار أدناه.' %></textarea>
+                    <textarea name="warnPanelDesc" rows="2"><%= config.warnPanelDesc || 'استخدم الأزرار أدناه لإدارة تحذيرات الأعضاء.' %></textarea>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
@@ -351,10 +350,17 @@
                         </select>
                     </div>
                 </div>
-                <div class="builder-box">
-                    <h4 style="margin-top:0; color:#ed4245;">📝 الأسباب الجاهزة للتحذير</h4>
-                    <div id="warnReasonsContainer"></div>
-                    <button type="button" onclick="warnReasons.push('سبب جديد');renderWarnReasons();" style="background:#ed4245; border:none; color:white; padding:10px 20px; border-radius:5px; margin-top:10px; cursor:pointer; font-weight:bold;">➕ إضافة سبب للتحذير</button>
+                
+                <div class="builder-box" style="border-color: #3ba55d;">
+                    <h4 style="margin-top:0; color:#3ba55d;">🇸🇦 الأسباب الجاهزة للتحذير (باللغة العربية)</h4>
+                    <div id="warnReasonsARContainer"></div>
+                    <button type="button" onclick="warnReasonsARArrayData.push('سبب جديد');renderWarnReasonsAR();" style="background:#3ba55d; border:none; color:white; padding:10px 20px; border-radius:5px; margin-top:10px; cursor:pointer; font-weight:bold;">➕ إضافة سبب عربي</button>
+                </div>
+
+                <div class="builder-box" style="border-color: #5865F2;">
+                    <h4 style="margin-top:0; color:#5865F2;">🇺🇸 الأسباب الجاهزة للتحذير (باللغة الإنجليزية)</h4>
+                    <div id="warnReasonsENContainer"></div>
+                    <button type="button" onclick="warnReasonsENArrayData.push('New Reason');renderWarnReasonsEN();" style="background:#5865F2; border:none; color:white; padding:10px 20px; border-radius:5px; margin-top:10px; cursor:pointer; font-weight:bold;">➕ Add English Reason</button>
                 </div>
 
                 <h3 class="section-title">🎮 الألعاب والمستويات</h3>
@@ -438,7 +444,7 @@
                         <label style="display:inline-block; font-size: 16px; margin-right: 10px; color: #3ba55d;">جعل التكت "قراءة فقط" لباقي الإدارة (يرون المحادثة ولا يمكنهم الكتابة).</label>
                     </div>
                     
-                    <p style="color: #f2a658; font-size: 13px; margin-bottom: 0;">* ملاحظة: إذا قمت بتفعيل "الإخفاء"، سيتم تعطيل "القراءة فقط" تلقائياً. إذا لم تفعل أياً منهما، سيظل التكت متاحاً للجميع للكتابة.</p>
+                    <p style="color: #f2a658; font-size: 13px; margin-bottom: 0;">* ملاحظة: إذا قمت بتفعيل "الإخفاء"، سيتم تعطيل "القراءة فقط" تلقائياً.</p>
                 </div>
             </div>
 
@@ -447,7 +453,7 @@
                 
                 <div class="builder-box" style="border-color:#3ba55d;">
                     <h4 style="color:#3ba55d; margin-top:0;">1. أمر كتابة التريد (!trade)</h4>
-                    <p style="color:#a3a6aa; font-size: 14px;">هذا الأمر يظهر زرار يفتح نافذة لكتابة تفاصيل الحساب والسعر، ثم ينزل طلب للموافقة.</p>
+                    <p style="color:#a3a6aa; font-size: 14px;">يُظهر زرار لكتابة تفاصيل الحساب والسعر، ثم ينزل طلب للموافقة.</p>
                     <div class="form-group">
                         <label>الأمر:</label>
                         <input type="text" name="cmdTrade" value="<%= config.cmdTrade || '!trade' %>">
@@ -477,7 +483,7 @@
 
                 <div class="builder-box" style="border-color:#ed4245;">
                     <h4 style="color:#ed4245; margin-top:0;">3. نظام المنشن والنداء (!req-high)</h4>
-                    <p style="color:#a3a6aa; font-size: 14px;">عند نزول طلب التريد، أو عند كتابة أمر النداء المباشر، سيقوم البوت بعمل منشن لهذه الرتب ليأتوا فوراً.</p>
+                    <p style="color:#a3a6aa; font-size: 14px;">عند نزول طلب التريد، أو كتابة أمر النداء، سيقوم البوت بعمل منشن لهذه الرتب.</p>
                     <div class="form-group">
                         <label>أمر النداء المباشر:</label>
                         <input type="text" name="cmdReqHigh" value="<%= config.cmdReqHigh || '!req-high' %>">
@@ -737,52 +743,94 @@
         }
 
         // ==========================================
-        // 🔥 محرك بناء التحذيرات
+        // 🔥 محرك بناء التحذيرات (عربي وإنجليزي)
         // ==========================================
-        let warnReasonsArrayData = <%- JSON.stringify(config.warnReasons || []) %>;
-        function renderWarnReasons() {
-            const containerDiv = document.getElementById('warnReasonsContainer'); 
-            containerDiv.innerHTML = '';
+        let warnReasonsARArrayData = <%- JSON.stringify(config.warnReasonsAR || []) %>;
+        function renderWarnReasonsAR() {
+            const containerDivElement = document.getElementById('warnReasonsARContainer'); 
+            containerDivElement.innerHTML = '';
             
-            for (let i = 0; i < warnReasonsArrayData.length; i++) {
-                const reasonText = warnReasonsArrayData[i];
+            for (let i = 0; i < warnReasonsARArrayData.length; i++) {
+                const reasonTextString = warnReasonsARArrayData[i];
                 
-                const wrapperDiv = document.createElement('div');
-                wrapperDiv.style.display = 'flex';
-                wrapperDiv.style.gap = '10px';
-                wrapperDiv.style.marginBottom = '10px';
+                const wrapperDivObject = document.createElement('div');
+                wrapperDivObject.style.display = 'flex';
+                wrapperDivObject.style.gap = '10px';
+                wrapperDivObject.style.marginBottom = '10px';
                 
-                const inputElement = document.createElement('input');
-                inputElement.type = 'text';
-                inputElement.value = reasonText;
-                inputElement.placeholder = 'سبب التحذير...';
-                inputElement.onchange = function() { 
-                    warnReasonsArrayData[i] = this.value; 
+                const inputElementObject = document.createElement('input');
+                inputElementObject.type = 'text';
+                inputElementObject.value = reasonTextString;
+                inputElementObject.placeholder = 'سبب التحذير...';
+                inputElementObject.onchange = function() { 
+                    warnReasonsARArrayData[i] = this.value; 
                 };
                 
-                const deleteButton = document.createElement('button');
-                deleteButton.type = 'button';
-                deleteButton.innerText = '✖';
-                deleteButton.style.background = 'red';
-                deleteButton.style.border = 'none';
-                deleteButton.style.color = 'white';
-                deleteButton.style.padding = '10px 15px';
-                deleteButton.style.borderRadius = '5px';
-                deleteButton.style.cursor = 'pointer';
-                deleteButton.onclick = function() { 
-                    warnReasonsArrayData.splice(i, 1); 
-                    renderWarnReasons(); 
+                const deleteButtonObject = document.createElement('button');
+                deleteButtonObject.type = 'button';
+                deleteButtonObject.innerText = '✖';
+                deleteButtonObject.style.background = 'red';
+                deleteButtonObject.style.border = 'none';
+                deleteButtonObject.style.color = 'white';
+                deleteButtonObject.style.padding = '10px 15px';
+                deleteButtonObject.style.borderRadius = '5px';
+                deleteButtonObject.style.cursor = 'pointer';
+                deleteButtonObject.onclick = function() { 
+                    warnReasonsARArrayData.splice(i, 1); 
+                    renderWarnReasonsAR(); 
                 };
                 
-                wrapperDiv.appendChild(inputElement);
-                wrapperDiv.appendChild(deleteButton);
-                containerDiv.appendChild(wrapperDiv);
+                wrapperDivObject.appendChild(inputElementObject);
+                wrapperDivObject.appendChild(deleteButtonObject);
+                containerDivElement.appendChild(wrapperDivObject);
             }
         } 
-        renderWarnReasons();
+        renderWarnReasonsAR();
+
+        let warnReasonsENArrayData = <%- JSON.stringify(config.warnReasonsEN || []) %>;
+        function renderWarnReasonsEN() {
+            const containerDivElement = document.getElementById('warnReasonsENContainer'); 
+            containerDivElement.innerHTML = '';
+            
+            for (let i = 0; i < warnReasonsENArrayData.length; i++) {
+                const reasonTextString = warnReasonsENArrayData[i];
+                
+                const wrapperDivObject = document.createElement('div');
+                wrapperDivObject.style.display = 'flex';
+                wrapperDivObject.style.gap = '10px';
+                wrapperDivObject.style.marginBottom = '10px';
+                
+                const inputElementObject = document.createElement('input');
+                inputElementObject.type = 'text';
+                inputElementObject.value = reasonTextString;
+                inputElementObject.placeholder = 'Warn Reason...';
+                inputElementObject.onchange = function() { 
+                    warnReasonsENArrayData[i] = this.value; 
+                };
+                
+                const deleteButtonObject = document.createElement('button');
+                deleteButtonObject.type = 'button';
+                deleteButtonObject.innerText = '✖';
+                deleteButtonObject.style.background = 'red';
+                deleteButtonObject.style.border = 'none';
+                deleteButtonObject.style.color = 'white';
+                deleteButtonObject.style.padding = '10px 15px';
+                deleteButtonObject.style.borderRadius = '5px';
+                deleteButtonObject.style.cursor = 'pointer';
+                deleteButtonObject.onclick = function() { 
+                    warnReasonsENArrayData.splice(i, 1); 
+                    renderWarnReasonsEN(); 
+                };
+                
+                wrapperDivObject.appendChild(inputElementObject);
+                wrapperDivObject.appendChild(deleteButtonObject);
+                containerDivElement.appendChild(wrapperDivObject);
+            }
+        } 
+        renderWarnReasonsEN();
 
         // ==========================================
-        // 🔥 محرك بناء البانلات المتعددة (Multi-Panels Engine) مفرود
+        // 🔥 محرك بناء البانلات المتعددة (Multi-Panels Engine)
         // ==========================================
         
         let panelsDataArrayList = <%- JSON.stringify(config.ticketPanels && config.ticketPanels.length > 0 ? config.ticketPanels : []) %>;
@@ -849,7 +897,6 @@
                             rolesOptionsHTMLString += `<option value="${roleObjectData.id}" ${isRoleSelectedString}>${roleObjectData.name}</option>`;
                         }
 
-                        // تحويل القيم المنطقية لنصوص ليتم قرائتها صح في الـ HTML
                         const requireModalChecked = buttonObjectData.requireModal ? 'checked' : '';
                         const isMiddleManChecked = buttonObjectData.isMiddleMan ? 'checked' : '';
                         const enableRatingChecked = (buttonObjectData.enableRating !== false) ? 'checked' : '';
@@ -927,7 +974,6 @@
                     }
                 }
 
-                // تعويض الرومات والأقسام في السيلكت
                 const replacedTextChannels = textChannelsHTMLString.replace(`value="${panelObjectData.panelChannelId}"`, `value="${panelObjectData.panelChannelId}" selected`);
                 const replacedCatChannels = categoryChannelsHTMLString.replace(`value="${panelObjectData.ticketCategoryId}"`, `value="${panelObjectData.ticketCategoryId}" selected`);
 
@@ -1006,8 +1052,11 @@
             const stringifiedPanelsData = JSON.stringify(panelsDataArrayList);
             document.getElementById('ticketPanelsData').value = stringifiedPanelsData; 
             
-            const stringifiedWarnsData = JSON.stringify(warnReasonsArrayData);
-            document.getElementById('warnReasonsData').value = stringifiedWarnsData; 
+            const stringifiedWarnsARData = JSON.stringify(warnReasonsARArrayData);
+            document.getElementById('warnReasonsARData').value = stringifiedWarnsARData; 
+            
+            const stringifiedWarnsENData = JSON.stringify(warnReasonsENArrayData);
+            document.getElementById('warnReasonsENData').value = stringifiedWarnsENData; 
         }
     </script>
 </body>
