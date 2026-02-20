@@ -1,5 +1,5 @@
 // =====================================================================
-// استدعاء المكاتب الأساسية (مفرودة بالكامل)
+// استدعاء المكاتب الأساسية (مفرودة بالكامل بدون أي اختصار)
 // =====================================================================
 const { 
     EmbedBuilder, 
@@ -15,16 +15,16 @@ const GuildConfig = require('./models/GuildConfig');
 module.exports = (client) => {
     
     // =====================================================================
-    // الحدث الرئيسي لقراءة الرسائل والأوامر
+    // الحدث الرئيسي لقراءة الرسائل والأوامر في السيرفر
     // =====================================================================
     client.on('messageCreate', async message => {
         
-        // 1. تجاهل رسائل البوتات لتخفيف الضغط
+        // 1. تجاهل رسائل البوتات لتخفيف الضغط على السيرفر
         if (message.author.bot) {
             return;
         }
 
-        // 2. تجاهل رسائل الخاص (يجب أن يكون في سيرفر)
+        // 2. تجاهل رسائل الخاص (الأوامر تعمل فقط داخل السيرفرات)
         if (!message.guild) {
             return;
         }
@@ -39,34 +39,39 @@ module.exports = (client) => {
         // 4. نظام الردود التلقائية (Auto Responders)
         if (config.autoResponders && config.autoResponders.length > 0) {
             for (let i = 0; i < config.autoResponders.length; i++) {
+                
                 const responderObj = config.autoResponders[i];
+                
                 if (message.content.includes(responderObj.word)) {
                     message.reply({ content: `**${responderObj.reply}**` }).catch(() => {});
                 }
             }
         }
 
-        // 5. إعداد البريفكس والتحقق من بدايته
+        // 5. إعداد البريفكس (Prefix)
         let prefix = config.prefix;
         if (!prefix) {
             prefix = '!';
         }
         
+        // إذا الرسالة لا تبدأ بالبريفكس، نتجاهلها
         if (!message.content.startsWith(prefix)) {
             return;
         }
 
-        // 6. فصل الأمر عن باقي الكلام (الـ Arguments)
+        // 6. فصل اسم الأمر عن محتوى الرسالة
         const argsArray = message.content.slice(prefix.length).trim().split(/ +/);
         const commandNameStr = argsArray.shift().toLowerCase();
+        
+        // تجميع الأمر كاملاً (مثال: !ban)
         const fullCommand = prefix + commandNameStr; 
 
         // =====================================================================
-        // 🛠️ دالة التحقق من الصلاحيات
+        // 🛠️ دالة التحقق من الصلاحيات (لفحص رتبة المستخدم)
         // =====================================================================
         const checkUserRole = (allowedRolesArray) => {
             
-            // إذا لم يتم تحديد رتب، نسمح للأدمن فقط
+            // إذا لم يتم تحديد رتب من الداشبورد، نسمح للأدمن فقط
             if (!allowedRolesArray || allowedRolesArray.length === 0) {
                 if (message.member.permissions.has('Administrator')) {
                     return true;
@@ -75,12 +80,12 @@ module.exports = (client) => {
                 }
             }
             
-            // الأدمن دائماً مسموح له
+            // الأدمن دائماً مسموح له باستخدام أي أمر
             if (message.member.permissions.has('Administrator')) {
                 return true;
             }
             
-            // فحص باقي الرتب المحددة
+            // فحص باقي الرتب المحددة في الداشبورد
             for (let i = 0; i < allowedRolesArray.length; i++) {
                 if (message.member.roles.cache.has(allowedRolesArray[i])) {
                     return true;
@@ -119,16 +124,63 @@ module.exports = (client) => {
         };
 
         // =====================================================================
-        // 🤝 أمر تقييم الوسيط (!done) وسحب تفاصيل التريد
+        // 📢 أمر النداء واستدعاء عضو (!come) - [تمت الإضافة]
+        // =====================================================================
+        if (fullCommand === config.cmdCome) {
+            
+            let hasPerm = checkUserRole(config.cmdComeRoles);
+            
+            if (!hasPerm) {
+                return message.reply('**❌ You do not have permission to use this command.**');
+            }
+            
+            let targetUser = message.mentions.members.first();
+            
+            if (!targetUser) {
+                targetUser = message.guild.members.cache.get(argsArray[0]);
+            }
+            
+            if (!targetUser) {
+                return message.reply('**⚠️ Please mention a user or provide their ID to summon them.**');
+            }
+
+            const comeEmbed = new EmbedBuilder();
+            comeEmbed.setTitle('📢 استدعاء إداري (Summon)');
+            
+            let comeDescription = `**مرحباً <@${targetUser.id}>،**\n\n`;
+            comeDescription += `يرجى التوجه فوراً إلى هذه الروم: <#${message.channel.id}>\n`;
+            comeDescription += `تم استدعائك بواسطة الإداري: <@${message.author.id}>`;
+            
+            comeEmbed.setDescription(comeDescription);
+            
+            // استخدام اللون الأساسي أو لون مخصص
+            comeEmbed.setColor('#5865F2'); 
+            comeEmbed.setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }));
+            comeEmbed.setTimestamp();
+
+            // مسح رسالة الأمر نفسه
+            await message.delete().catch(()=>{});
+
+            // إرسال الإيمبد مع منشن العضو خارج الإيمبد لكي يصله الإشعار
+            return message.channel.send({ 
+                content: `<@${targetUser.id}>`, 
+                embeds: [comeEmbed] 
+            });
+        }
+
+        // =====================================================================
+        // 🤝 أمر تقييم الوسيط (!done) وسحب تفاصيل التريد واللون
         // =====================================================================
         if (fullCommand === config.cmdDone) {
             
             let hasPerm = checkUserRole(config.cmdDoneRoles);
+            
             if (!hasPerm) {
                 return message.reply('**❌ You do not have permission to use this command.**');
             }
             
             let currentTopic = message.channel.topic;
+            
             if (!currentTopic) {
                 return message.reply('**❌ This command can only be used inside a ticket.**');
             }
@@ -141,7 +193,7 @@ module.exports = (client) => {
             }
             
             try {
-                // 🔥 سحب تفاصيل التريد من الشات
+                // سحب تفاصيل التريد من الشات لدمجها في التقييم
                 let extractedTradeText = 'لا يوجد تفاصيل مسجلة (تم التقييم بدون نافذة تريد).';
                 
                 const pastMessages = await message.channel.messages.fetch({ limit: 100 });
@@ -173,6 +225,7 @@ module.exports = (client) => {
                 let finalEmbedTitle = '';
                 let finalEmbedDesc = '';
                 
+                // اختيار تصميم التقييم (يدوي أو بيسك)
                 if (config.ratingStyle === 'custom' && config.customMedRatingText) {
                     finalEmbedTitle = config.customMedRatingTitle;
                     if (!finalEmbedTitle) {
@@ -189,7 +242,7 @@ module.exports = (client) => {
                     finalEmbedDesc += `يرجى تقييم خدمة الوسيط <@${message.author.id}> بالضغط على النجوم في الأسفل.\n`;
                 }
                 
-                // دمج تفاصيل التريد في إيمبد التقييم الخاص بالعميل
+                // دمج تفاصيل التريد
                 finalEmbedDesc += `\n-------------------------\n`;
                 finalEmbedDesc += `> **📦 تفاصيل المعاملة:**\n`;
                 finalEmbedDesc += `> ${extractedTradeText}\n`;
@@ -197,6 +250,7 @@ module.exports = (client) => {
                 finalRatingEmbed.setTitle(finalEmbedTitle);
                 finalRatingEmbed.setDescription(finalEmbedDesc);
                 
+                // 🔥 تطبيق لون إيمبد التقييم المسحوب من الداشبورد
                 let mediatorColor = config.basicRatingColor;
                 if (!mediatorColor) {
                     mediatorColor = '#f2a658';
@@ -250,11 +304,12 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚖️ أمر التريد (!trade) مع المنشن الفوري للرتب العليا
+        // ⚖️ أمر التريد والموافقة (!trade) والمنشن التلقائي
         // =====================================================================
         if (fullCommand === config.cmdTrade) {
             
             let hasPerm = checkUserRole(config.cmdTradeRoles);
+            
             if (!hasPerm) {
                 return message.reply('**❌ You do not have permission.**');
             }
@@ -263,6 +318,7 @@ module.exports = (client) => {
             tradeInitEmbed.setTitle('📝 تفاصيل التريد');
             tradeInitEmbed.setDescription('يرجى الضغط على الزر أدناه لكتابة تفاصيل التريد.');
             
+            // سحب لون التريد من الداشبورد
             let tradeCol = config.tradeEmbedColor;
             if (!tradeCol) {
                 tradeCol = '#f2a658';
@@ -278,7 +334,7 @@ module.exports = (client) => {
             
             tradeRow.addComponents(openTradeModalBtn);
 
-            // 🔥 عمل منشن للرتب العليا المحددة في الداشبورد
+            // عمل منشن للرتب العليا المحددة
             let mentionString = '';
             if (config.tradeMentionRoles && config.tradeMentionRoles.length > 0) {
                 for (let i = 0; i < config.tradeMentionRoles.length; i++) {
@@ -286,10 +342,8 @@ module.exports = (client) => {
                 }
             }
 
-            // مسح رسالة الأمر للتنظيف
             await message.delete().catch(()=>{});
             
-            // إرسال الإيمبد ومعه المنشن
             let msgContentToDrop = '';
             if (mentionString !== '') {
                 msgContentToDrop = `**🔔 نداء للموافقات العليا:** ${mentionString}`;
@@ -323,13 +377,13 @@ module.exports = (client) => {
             
             let timeStringInput = argsArray[1];
             if (!timeStringInput) {
-                timeStringInput = '5m'; // الافتراضي 5 دقائق
+                timeStringInput = '5m'; 
             }
             
             let calculatedDurationMs = 0;
             let displayTimeString = '';
 
-            // 🔥 مُحلل الوقت (Time Parser)
+            // مُحلل الوقت 
             if (timeStringInput.endsWith('d')) {
                 let numberValue = parseInt(timeStringInput.replace('d', ''));
                 calculatedDurationMs = numberValue * 24 * 60 * 60 * 1000;
@@ -370,6 +424,7 @@ module.exports = (client) => {
                 
                 const muteReplyEmbed = new EmbedBuilder();
                 
+                // سحب لون التايم أوت
                 let tOutColor = config.timeoutEmbedColor;
                 if (!tOutColor) {
                     tOutColor = '#f2a658';
@@ -443,6 +498,7 @@ module.exports = (client) => {
                 
                 const unmuteReplyEmbed = new EmbedBuilder();
                 
+                // سحب لون فك التايم
                 let unMuteColor = config.untimeoutEmbedColor;
                 if (!unMuteColor) {
                     unMuteColor = '#3ba55d';
@@ -480,7 +536,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // 🔨 أمر الباند وفكه (!ban / !unban) مع الإيمبدات الفخمة
+        // 🔨 أمر الباند وفكه (!ban / !unban) مع الإيمبدات والألوان
         // =====================================================================
         if (fullCommand === config.cmdBan) {
             
@@ -508,6 +564,7 @@ module.exports = (client) => {
                 
                 const banReplyEmbed = new EmbedBuilder();
                 
+                // سحب لون الباند
                 let banColorHex = config.banEmbedColor;
                 if (!banColorHex) {
                     banColorHex = '#ed4245';
@@ -575,6 +632,7 @@ module.exports = (client) => {
                 
                 const unbanReplyEmbed = new EmbedBuilder();
                 
+                // سحب لون فك الباند
                 let unbanColorHex = config.unbanEmbedColor;
                 if (!unbanColorHex) {
                     unbanColorHex = '#3ba55d';
@@ -675,7 +733,7 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // 🧹 أوامر المسح والقفل والنداء
+        // 🧹 أوامر المسح والقفل
         // =====================================================================
         if (fullCommand === config.cmdClear) {
             
