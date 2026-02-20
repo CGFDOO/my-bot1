@@ -173,6 +173,7 @@ module.exports = (client) => {
                         let logEmbedColor = '';
                         let ratedPersonLabel = '';
 
+                        // 🔥 الألوان هنا بتتسحب من الداتابيز سواء كان التقييم بيسك أو مخصص
                         if (ratingType === 'staff') {
                             logAuthorTitle = `${discordGuild.name} STAFF REVIEW`;
                             
@@ -304,6 +305,26 @@ module.exports = (client) => {
                 
                 const tradeDetailsText = interaction.fields.getTextInputValue('trade_details_input');
                 
+                // 🔥 تعطيل زر التريد الأصلي حتى لا يضغط عليه العضو مرة أخرى
+                if (interaction.message) {
+                    const originalActionRow = interaction.message.components[0];
+                    if (originalActionRow) {
+                        const originalButton = originalActionRow.components[0];
+                        const disabledButton = ButtonBuilder.from(originalButton);
+                        
+                        // جعله شفاف وغير قابل للضغط
+                        disabledButton.setDisabled(true);
+                        disabledButton.setStyle(ButtonStyle.Secondary);
+                        
+                        const newDisabledRow = new ActionRowBuilder();
+                        newDisabledRow.addComponents(disabledButton);
+                        
+                        // تعديل الرسالة القديمة
+                        await interaction.message.edit({ components: [newDisabledRow] }).catch(()=>{});
+                    }
+                }
+
+                // بناء إيمبد الموافقة الجديد
                 const tradeRequestEmbed = new EmbedBuilder();
                 tradeRequestEmbed.setTitle('⚖️ Trade Approval Request');
                 
@@ -336,12 +357,12 @@ module.exports = (client) => {
                 
                 approvalRow.addComponents(approveBtn, rejectBtn);
 
+                // إرسال طلب الموافقة كرد جديد في الشات
                 await interaction.reply({ 
                     embeds: [tradeRequestEmbed], 
                     components: [approvalRow] 
                 });
                 
-                await interaction.message.delete().catch(()=>{});
                 return;
             }
         }
@@ -552,6 +573,7 @@ module.exports = (client) => {
             
             if (interaction.customId.startsWith('modalticket_')) {
                 
+                // 🔥 الرد الصاروخي لمنع الإيرور (Something went wrong)
                 await interaction.deferReply({ ephemeral: true }).catch(()=>{});
 
                 const buttonRealId = interaction.customId.replace('modalticket_', '');
@@ -584,183 +606,12 @@ module.exports = (client) => {
         }
 
         // =====================================================================
-        // ⚙️ 7. أزرار التحكم داخل التكت (السرعة الصاروخية الحقيقية)
+        // ⚙️ 7. أزرار التحكم داخل التكت (Claim, Close, Add User, Delete)
         // =====================================================================
         if (interaction.isButton()) {
             
             // -------------------------------------------------------------
-            // 🛡️ زر الاستلام (Claim) - حل مشكلة التعليق والبطء
-            // -------------------------------------------------------------
-            if (interaction.customId === 'ticket_claim') {
-                
-                let currentTopic = interaction.channel.topic;
-                if (!currentTopic) {
-                    currentTopic = '';
-                }
-                
-                const topicParts = currentTopic.split('_');
-                const usedBtnId = topicParts[1];
-                
-                let specificBtnData = null;
-                for (let i = 0; i < guildConfig.customButtons.length; i++) {
-                    if (guildConfig.customButtons[i].id === usedBtnId) {
-                        specificBtnData = guildConfig.customButtons[i];
-                        break;
-                    }
-                }
-
-                let allowedToClaimRoles = [];
-                let hasCustomClaimRoles = false;
-                
-                if (specificBtnData && specificBtnData.allowedClaimRoles && specificBtnData.allowedClaimRoles.length > 0) {
-                    hasCustomClaimRoles = true;
-                }
-                
-                if (hasCustomClaimRoles) {
-                    allowedToClaimRoles = specificBtnData.allowedClaimRoles;
-                } else {
-                    const allStaffArr = [
-                        guildConfig.adminRoleId, 
-                        guildConfig.mediatorRoleId, 
-                        ...guildConfig.highAdminRoles, 
-                        ...guildConfig.highMediatorRoles
-                    ];
-                    
-                    for (let i = 0; i < allStaffArr.length; i++) {
-                        if (allStaffArr[i]) {
-                            allowedToClaimRoles.push(allStaffArr[i]);
-                        }
-                    }
-                }
-
-                let canClaim = false;
-                if (interaction.member.permissions.has('Administrator')) {
-                    canClaim = true;
-                } else {
-                    for (let i = 0; i < allowedToClaimRoles.length; i++) {
-                        if (interaction.member.roles.cache.has(allowedToClaimRoles[i])) {
-                            canClaim = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!canClaim) {
-                    return interaction.reply({ 
-                        content: '**❌ You do not have permission to claim this ticket.**', 
-                        ephemeral: true 
-                    });
-                }
-
-                // 🔥 الحل الجذري للتعليق: استخدام interaction.update لتحديث الزرار فوراً في جزء من الثانية
-                const oldComponents = interaction.message.components;
-                const newComponentsArr = [];
-                
-                for (let i = 0; i < oldComponents.length; i++) {
-                    const oldRow = oldComponents[i];
-                    const newRow = new ActionRowBuilder();
-                    
-                    for (let j = 0; j < oldRow.components.length; j++) {
-                        const oldBtn = oldRow.components[j];
-                        const clonedBtn = ButtonBuilder.from(oldBtn);
-                        
-                        if (oldBtn.customId === 'ticket_claim') {
-                            clonedBtn.setDisabled(true);
-                            clonedBtn.setStyle(ButtonStyle.Success);
-                        }
-                        
-                        newRow.addComponents(clonedBtn);
-                    }
-                    newComponentsArr.push(newRow);
-                }
-                
-                // التحديث الفوري المرئي للزرار
-                await interaction.update({ components: newComponentsArr }).catch(()=>{});
-                
-                // إرسال رسالة التأكيد
-                const claimMsg = `**✅ Ticket has been claimed by <@${interaction.user.id}>**`;
-                await interaction.channel.send(claimMsg).catch(()=>{});
-
-                // ==========================================
-                // العمل في الخلفية لتعديل الصلاحيات 
-                // (لن يؤثر على سرعة الزرار إطلاقاً)
-                // ==========================================
-                const currentOverwrites = interaction.channel.permissionOverwrites.cache;
-                const newOverwritesArray = [];
-                
-                currentOverwrites.forEach((overwrite) => {
-                    newOverwritesArray.push({
-                        id: overwrite.id,
-                        allow: overwrite.allow.toArray(),
-                        deny: overwrite.deny.toArray()
-                    });
-                });
-
-                for (let i = 0; i < allowedToClaimRoles.length; i++) {
-                    const staffRoleId = allowedToClaimRoles[i];
-                    let roleOverwrite = null;
-                    
-                    for (let k = 0; k < newOverwritesArray.length; k++) {
-                        if (newOverwritesArray[k].id === staffRoleId) {
-                            roleOverwrite = newOverwritesArray[k];
-                            break;
-                        }
-                    }
-                    
-                    if (!roleOverwrite) {
-                        roleOverwrite = { id: staffRoleId, allow: [], deny: [] };
-                        newOverwritesArray.push(roleOverwrite);
-                    }
-                    
-                    if (guildConfig.hideTicketOnClaim) {
-                        if (!roleOverwrite.deny.includes('ViewChannel')) {
-                            roleOverwrite.deny.push('ViewChannel');
-                        }
-                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'ViewChannel');
-                    } else if (guildConfig.readOnlyStaffOnClaim) {
-                        if (!roleOverwrite.deny.includes('SendMessages')) {
-                            roleOverwrite.deny.push('SendMessages');
-                        }
-                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'SendMessages');
-                    }
-                }
-                
-                let claimerOverwrite = null;
-                for (let k = 0; k < newOverwritesArray.length; k++) {
-                    if (newOverwritesArray[k].id === interaction.user.id) {
-                        claimerOverwrite = newOverwritesArray[k];
-                        break;
-                    }
-                }
-                
-                if (!claimerOverwrite) {
-                    newOverwritesArray.push({ 
-                        id: interaction.user.id, 
-                        allow: ['ViewChannel', 'SendMessages'], 
-                        deny: [] 
-                    });
-                } else {
-                    if (!claimerOverwrite.allow.includes('ViewChannel')) {
-                        claimerOverwrite.allow.push('ViewChannel');
-                    }
-                    if (!claimerOverwrite.allow.includes('SendMessages')) {
-                        claimerOverwrite.allow.push('SendMessages');
-                    }
-                }
-
-                await interaction.channel.permissionOverwrites.set(newOverwritesArray).catch(()=>{});
-                
-                while(topicParts.length < 6) {
-                    topicParts.push('none');
-                }
-                topicParts[2] = interaction.user.id;
-                
-                let newTopicStr = topicParts.join('_');
-                await interaction.channel.setTopic(newTopicStr).catch(()=>{});
-            }
-
-            // -------------------------------------------------------------
-            // 🔒 زر الإغلاق 1: رسالة التأكيد
+            // 🔒 زر الإغلاق 1: رسالة التأكيد (2-Step Close)
             // -------------------------------------------------------------
             if (interaction.customId === 'ticket_close') {
                 
@@ -806,7 +657,6 @@ module.exports = (client) => {
                 
                 const topicParts = currentTopic.split('_');
                 
-                // Topic Format: OwnerID_BtnID_ClaimerID_AddedUsers_CloserID_IsMediator
                 const ticketOwnerId = topicParts[0];
                 const usedBtnId = topicParts[1];
                 
@@ -820,7 +670,7 @@ module.exports = (client) => {
                     isMediatorTicket = true;
                 }
 
-                // تغيير اسم الروم ليتمكن العضو من فتح غيرها
+                // تغيير اسم الروم
                 let oldChannelName = interaction.channel.name;
                 let nameParts = oldChannelName.split('-');
                 let oldNameNumber = nameParts[1];
@@ -833,10 +683,8 @@ module.exports = (client) => {
                 const closingMessage = `**🔒 The ticket has been closed by <@${interaction.user.id}>**`;
                 await interaction.channel.send(closingMessage);
 
-                // فحص نظام التقييم التلقائي للإدارة
                 let shouldSendStaffRating = true;
                 
-                // منع إرسال تقييم الإدارة إذا كان تكت وساطة
                 if (isMediatorTicket) {
                     shouldSendStaffRating = false; 
                 } else {
@@ -964,6 +812,174 @@ module.exports = (client) => {
                 await interaction.channel.send({ embeds: [controlEmbed], components: [cRow1, cRow2] });
                 
                 await interaction.message.delete().catch(()=>{});
+            }
+
+            // -------------------------------------------------------------
+            // 🛡️ زر الاستلام (Claim) السرعة الجبارة بالـ Update الفوري
+            // -------------------------------------------------------------
+            if (interaction.customId === 'ticket_claim') {
+                
+                let currentTopic = interaction.channel.topic;
+                if (!currentTopic) {
+                    currentTopic = '';
+                }
+                
+                const topicParts = currentTopic.split('_');
+                const usedBtnId = topicParts[1];
+                
+                let specificBtnData = null;
+                for (let i = 0; i < guildConfig.customButtons.length; i++) {
+                    if (guildConfig.customButtons[i].id === usedBtnId) {
+                        specificBtnData = guildConfig.customButtons[i];
+                        break;
+                    }
+                }
+
+                let allowedToClaimRoles = [];
+                let hasCustomClaimRoles = false;
+                
+                if (specificBtnData && specificBtnData.allowedClaimRoles && specificBtnData.allowedClaimRoles.length > 0) {
+                    hasCustomClaimRoles = true;
+                }
+                
+                if (hasCustomClaimRoles) {
+                    allowedToClaimRoles = specificBtnData.allowedClaimRoles;
+                } else {
+                    const allStaffArr = [
+                        guildConfig.adminRoleId, 
+                        guildConfig.mediatorRoleId, 
+                        ...guildConfig.highAdminRoles, 
+                        ...guildConfig.highMediatorRoles
+                    ];
+                    
+                    for (let i = 0; i < allStaffArr.length; i++) {
+                        if (allStaffArr[i]) {
+                            allowedToClaimRoles.push(allStaffArr[i]);
+                        }
+                    }
+                }
+
+                let canClaim = false;
+                if (interaction.member.permissions.has('Administrator')) {
+                    canClaim = true;
+                } else {
+                    for (let i = 0; i < allowedToClaimRoles.length; i++) {
+                        if (interaction.member.roles.cache.has(allowedToClaimRoles[i])) {
+                            canClaim = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!canClaim) {
+                    return interaction.reply({ 
+                        content: '**❌ You do not have permission to claim this ticket.**', 
+                        ephemeral: true 
+                    });
+                }
+
+                // 🔥 الحل السحري: استخدام interaction.update يغير لون الزرار في نفس اللحظة!
+                const oldComponents = interaction.message.components;
+                const newComponentsArr = [];
+                
+                for (let i = 0; i < oldComponents.length; i++) {
+                    const oldRow = oldComponents[i];
+                    const newRow = new ActionRowBuilder();
+                    
+                    for (let j = 0; j < oldRow.components.length; j++) {
+                        const oldBtn = oldRow.components[j];
+                        const clonedBtn = ButtonBuilder.from(oldBtn);
+                        
+                        if (oldBtn.customId === 'ticket_claim') {
+                            clonedBtn.setDisabled(true);
+                            clonedBtn.setStyle(ButtonStyle.Success);
+                        }
+                        
+                        newRow.addComponents(clonedBtn);
+                    }
+                    newComponentsArr.push(newRow);
+                }
+                
+                await interaction.update({ components: newComponentsArr }).catch(()=>{});
+                
+                const claimMsg = `**✅ Ticket has been claimed by <@${interaction.user.id}>**`;
+                await interaction.channel.send(claimMsg).catch(()=>{});
+
+                // ==========================================
+                // تعديل الصلاحيات في الخلفية (طلقة)
+                // ==========================================
+                const currentOverwrites = interaction.channel.permissionOverwrites.cache;
+                const newOverwritesArray = [];
+                
+                currentOverwrites.forEach((overwrite) => {
+                    newOverwritesArray.push({
+                        id: overwrite.id,
+                        allow: overwrite.allow.toArray(),
+                        deny: overwrite.deny.toArray()
+                    });
+                });
+
+                for (let i = 0; i < allowedToClaimRoles.length; i++) {
+                    const staffRoleId = allowedToClaimRoles[i];
+                    let roleOverwrite = null;
+                    
+                    for (let k = 0; k < newOverwritesArray.length; k++) {
+                        if (newOverwritesArray[k].id === staffRoleId) {
+                            roleOverwrite = newOverwritesArray[k];
+                            break;
+                        }
+                    }
+                    
+                    if (!roleOverwrite) {
+                        roleOverwrite = { id: staffRoleId, allow: [], deny: [] };
+                        newOverwritesArray.push(roleOverwrite);
+                    }
+                    
+                    if (guildConfig.hideTicketOnClaim) {
+                        if (!roleOverwrite.deny.includes('ViewChannel')) {
+                            roleOverwrite.deny.push('ViewChannel');
+                        }
+                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'ViewChannel');
+                    } else if (guildConfig.readOnlyStaffOnClaim) {
+                        if (!roleOverwrite.deny.includes('SendMessages')) {
+                            roleOverwrite.deny.push('SendMessages');
+                        }
+                        roleOverwrite.allow = roleOverwrite.allow.filter(p => p !== 'SendMessages');
+                    }
+                }
+                
+                let claimerOverwrite = null;
+                for (let k = 0; k < newOverwritesArray.length; k++) {
+                    if (newOverwritesArray[k].id === interaction.user.id) {
+                        claimerOverwrite = newOverwritesArray[k];
+                        break;
+                    }
+                }
+                
+                if (!claimerOverwrite) {
+                    newOverwritesArray.push({ 
+                        id: interaction.user.id, 
+                        allow: ['ViewChannel', 'SendMessages'], 
+                        deny: [] 
+                    });
+                } else {
+                    if (!claimerOverwrite.allow.includes('ViewChannel')) {
+                        claimerOverwrite.allow.push('ViewChannel');
+                    }
+                    if (!claimerOverwrite.allow.includes('SendMessages')) {
+                        claimerOverwrite.allow.push('SendMessages');
+                    }
+                }
+
+                await interaction.channel.permissionOverwrites.set(newOverwritesArray).catch(()=>{});
+                
+                while(topicParts.length < 6) {
+                    topicParts.push('none');
+                }
+                topicParts[2] = interaction.user.id;
+                
+                let newTopicStr = topicParts.join('_');
+                await interaction.channel.setTopic(newTopicStr).catch(()=>{});
             }
 
             // -------------------------------------------------------------
@@ -1158,7 +1174,7 @@ module.exports = (client) => {
             }
         }
 
-        // حفظ نوع التكت في الـ Topic (مهم جداً لمنع التقييم المزدوج)
+        // حفظ نوع التكت في الخانة السادسة
         let isMedStr = 'false';
         if (buttonData.isMediator === true) {
             isMedStr = 'true';
@@ -1265,7 +1281,6 @@ module.exports = (client) => {
         
         const successReply = `**✅ Ticket opened successfully: <#${createdChannel.id}>**`;
         
-        // التحقق إن لم يكن قد تم الرد مسبقاً (في حالة وجود نافذة)
         try {
             await interaction.editReply(successReply);
         } catch (e) {
