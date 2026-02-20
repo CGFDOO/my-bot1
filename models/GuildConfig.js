@@ -291,7 +291,6 @@ const guildConfigSchema = new mongoose.Schema({
     
     cmdTrade: { type: String, default: '!trade' }, 
     cmdTradeRoles: { type: [String], default: [] },
-    
     tradeApproveRoles: { type: [String], default: [] },
     
     cmdClear: { type: String, default: '!clear' }, 
@@ -332,9 +331,32 @@ const guildConfigSchema = new mongoose.Schema({
     answersEmbedColor: { type: String, default: '#2b2d31' }, 
     tradeEmbedColor: { type: String, default: '#f2a658' }, 
     
+    // ---------------------------------------------------
+    // ⭐ Ratings Customization
+    // ---------------------------------------------------
     ratingStyle: { type: String, default: 'basic' }, 
     customRatingTitle: { type: String, default: 'تقييم فريق العمل' },
     customRatingText: { type: String, default: 'مرحباً [user]، يرجى تقييم خدمة [staff]. رأيك يهمنا!' },
+
+    // ---------------------------------------------------
+    // 🔨 Punishment Customization (NEW)
+    // ---------------------------------------------------
+    punishmentStyle: { 
+        type: String, 
+        default: 'basic' // 'basic' OR 'custom'
+    },
+    
+    customBanTitle: { type: String, default: '🔨 تم حظر عضو' },
+    customBanDesc: { type: String, default: 'تم حظر [user] بواسطة [moderator].\nالسبب: [reason]' },
+    
+    customUnbanTitle: { type: String, default: '🕊️ تم فك الحظر' },
+    customUnbanDesc: { type: String, default: 'تم فك الحظر عن [user] بواسطة [moderator].' },
+    
+    customTimeoutTitle: { type: String, default: '⏳ تم إعطاء تايم أوت' },
+    customTimeoutDesc: { type: String, default: 'تم معاقبة [user] بواسطة [moderator] لمدة [duration] دقيقة.\nالسبب: [reason]' },
+    
+    customUntimeoutTitle: { type: String, default: '🔊 تم فك التايم أوت' },
+    customUntimeoutDesc: { type: String, default: 'تم فك التايم أوت عن [user] بواسطة [moderator].' },
 
     // ---------------------------------------------------
     // 📁 Universal Logging Channels
@@ -343,7 +365,6 @@ const guildConfigSchema = new mongoose.Schema({
     ticketLogChannelId: { type: String, default: null }, 
     staffRatingChannelId: { type: String, default: null }, 
     mediatorRatingChannelId: { type: String, default: null }, 
-    
     logRoleCreateDeleteId: { type: String, default: null }, 
     logMemberRoleUpdateId: { type: String, default: null }, 
     logJoinLeaveId: { type: String, default: null }, 
