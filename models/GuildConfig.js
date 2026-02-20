@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // =====================================================================
-// 📝 1. Schema for Modal Fields (أسئلة النوافذ)
+// 📝 1. Schema for Modal Fields (أسئلة النوافذ داخل التكت)
 // =====================================================================
 const modalFieldSchema = new mongoose.Schema({
     label: { 
@@ -10,10 +10,12 @@ const modalFieldSchema = new mongoose.Schema({
     }, 
     placeholder: { 
         type: String, 
+        required: false,
         default: '' 
     },
     required: { 
         type: Boolean, 
+        required: false,
         default: true 
     }
 });
@@ -32,48 +34,58 @@ const ticketButtonSchema = new mongoose.Schema({
     },
     color: { 
         type: String, 
+        required: false,
         default: 'Primary' 
     },
     insideEmbedTitle: { 
         type: String, 
+        required: false,
         default: 'Ticket Info' 
     },
     insideEmbedDesc: { 
         type: String, 
+        required: false,
         default: 'Please write your request clearly.' 
     },
     insideEmbedColor: { 
         type: String, 
+        required: false,
         default: '#2b2d31' 
     },
     requireModal: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
     modalTitle: { 
         type: String, 
+        required: false,
         default: 'Ticket Details' 
     },
     modalFields: { 
         type: [modalFieldSchema], 
+        required: false,
         default: [] 
     }, 
     isMiddleMan: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
     enableRating: { 
         type: Boolean, 
+        required: false,
         default: true 
     },
     allowedClaimRoles: { 
         type: [String], 
+        required: false,
         default: [] 
     }
 });
 
 // =====================================================================
-// 🎟️ 3. Schema for Multiple Ticket Panels (نظام البانلات المتعددة)
+// 🎟️ 3. Schema for Multiple Ticket Panels (نظام البانلات المتعددة اللانهائي)
 // =====================================================================
 const ticketPanelSchema = new mongoose.Schema({
     id: { 
@@ -82,40 +94,48 @@ const ticketPanelSchema = new mongoose.Schema({
     },
     name: { 
         type: String, 
+        required: false,
         default: 'بانل جديد' 
     }, 
     panelChannelId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     ticketCategoryId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     embedTitle: { 
         type: String, 
+        required: false,
         default: 'الدعم الفني' 
     },
     embedDesc: { 
         type: String, 
+        required: false,
         default: 'اضغط على الزر لفتح تذكرة.' 
     },
     embedColor: { 
         type: String, 
+        required: false,
         default: '#0099ff' 
     },
     embedImage: { 
         type: String, 
+        required: false,
         default: null 
     },
     buttons: { 
         type: [ticketButtonSchema], 
+        required: false,
         default: [] 
     } 
 });
 
 // =====================================================================
-// 💬 4. Schema for Auto Responders (الردود التلقائية)
+// 💬 4. Schema for Auto Responders (نظام الردود التلقائية)
 // =====================================================================
 const autoResponderSchema = new mongoose.Schema({
     word: { 
@@ -129,12 +149,30 @@ const autoResponderSchema = new mongoose.Schema({
 });
 
 // =====================================================================
-// 👑 5. THE MAIN GUILD CONFIGURATION (الإعدادات الشاملة)
+// ⚠️ 5. Schema for User Warn Records (سجل تحذيرات الأعضاء)
+// =====================================================================
+const warnRecordSchema = new mongoose.Schema({
+    reason: { 
+        type: String, 
+        required: true 
+    },
+    date: { 
+        type: Date, 
+        default: Date.now 
+    },
+    moderatorId: { 
+        type: String, 
+        required: true 
+    }
+});
+
+// =====================================================================
+// 👑 6. THE MAIN GUILD CONFIGURATION (الإعدادات الشاملة للسيرفر)
 // =====================================================================
 const guildConfigSchema = new mongoose.Schema({
     
     // ---------------------------------------------------
-    // ⚙️ Core Settings
+    // ⚙️ Core Settings (الإعدادات الأساسية)
     // ---------------------------------------------------
     guildId: { 
         type: String, 
@@ -143,162 +181,195 @@ const guildConfigSchema = new mongoose.Schema({
     },
     prefix: { 
         type: String, 
+        required: false,
         default: '!' 
     },
     antiLinks: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
     antiSpam: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
     autoRoleId: { 
         type: String, 
+        required: false,
         default: null 
     },
     
     // ---------------------------------------------------
-    // 🎮 Games & Leveling System
+    // 🎮 Games & Leveling System (نظام الألعاب والمستويات)
     // ---------------------------------------------------
     gamesEnabled: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
     gamesChannelId: { 
         type: String, 
+        required: false,
         default: null 
     },
     levelingEnabled: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
     levelUpChannelId: { 
         type: String, 
+        required: false,
         default: null 
     },
     suggestionChannelId: { 
         type: String, 
+        required: false,
         default: null 
     },
     
     // ---------------------------------------------------
-    // 🖼️ Welcome System
+    // 🖼️ Welcome System (نظام الترحيب)
     // ---------------------------------------------------
     welcomeChannelId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     welcomeMessage: { 
         type: String, 
+        required: false,
         default: 'حياك الله يا [user] في [server]! أنت العضو رقم [memberCount].' 
     },
     welcomeBgImage: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     welcomeAvatarBorderColor: { 
         type: String, 
+        required: false,
         default: '#ffffff' 
     },
     welcomeEmbedColor: { 
         type: String, 
+        required: false,
         default: '#5865F2' 
     }, 
     
     // ---------------------------------------------------
-    // ⚠️ Warn Panel System
+    // ⚠️ Warn Panel System (نظام التحذيرات المزدوج عربي/إنجليزي)
     // ---------------------------------------------------
     warnPanelChannelId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     warnLogChannelId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     warnPanelTitle: { 
         type: String, 
-        default: 'لوحة تحكم التحذيرات' 
+        required: false,
+        default: 'لوحة تحكم التحذير' 
     },
     warnPanelDesc: { 
         type: String, 
-        default: 'استخدم الأزرار أدناه.' 
+        required: false,
+        default: 'استخدم الزر أدناه لإدارة تحذيرات الأعضاء.' 
     },
     warnPanelColor: { 
         type: String, 
+        required: false,
         default: '#ed4245' 
     },
     warnMax: { 
         type: Number, 
+        required: false,
         default: 3 
     },
     warnAction: { 
         type: String, 
+        required: false,
         default: 'timeout' 
     },
-    warnReasons: { 
+    
+    // القوائم المزدوجة للغات التحذير (كما طلبت بالنص)
+    warnReasonsAR: { 
         type: [String], 
-        default: ['مخالفة القوانين', 'ألفاظ خارجة', 'سرقة زبائن'] 
+        required: false,
+        default: ['مخالفة القوانين', 'ألفاظ خارجة', 'تخريب التريدات', 'إزعاج الإدارة', 'نشر روابط'] 
+    }, 
+    warnReasonsEN: { 
+        type: [String], 
+        required: false,
+        default: ['Rule Violation', 'Bad Words', 'Trading Disruption', 'Staff Disrespect', 'Sending Links'] 
     }, 
     
     // ---------------------------------------------------
-    // 🎟️ MULTI-PANELS SYSTEM (البانلات المتعددة)
+    // 🎟️ MULTI-PANELS SYSTEM (نظام التكتات والبانلات المتعددة)
     // ---------------------------------------------------
     ticketPanels: { 
         type: [ticketPanelSchema], 
+        required: false,
         default: [] 
     },
-    
-    // ---------------------------------------------------
-    // 🎫 Ticket Core Settings
-    // ---------------------------------------------------
     ticketCount: { 
         type: Number, 
+        required: false,
         default: 0 
     },
     maxTicketsPerUser: { 
         type: Number, 
+        required: false,
         default: 1 
     }, 
-    
-    // 🔥 خيارات إخفاء التكت عن الإدارة
     hideTicketOnClaim: { 
         type: Boolean, 
+        required: false,
         default: true 
     },
     readOnlyStaffOnClaim: { 
         type: Boolean, 
+        required: false,
         default: false 
     },
 
     autoResponders: { 
         type: [autoResponderSchema], 
+        required: false,
         default: [] 
     },
 
     // ---------------------------------------------------
-    // 👨‍⚖️ Staff & MiddleMan Roles
+    // 👨‍⚖️ Staff & MiddleMan Roles (صلاحيات الرتب والوساطة)
     // ---------------------------------------------------
     adminRoleId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     highAdminRoles: { 
         type: [String], 
+        required: false,
         default: [] 
     }, 
     middlemanRoleId: { 
         type: String, 
+        required: false,
         default: null 
     }, 
     highMiddlemanRoles: { 
         type: [String], 
+        required: false,
         default: [] 
     }, 
     
     // ---------------------------------------------------
-    // ⌨️ Commands & Permissions
+    // ⌨️ Commands & Permissions (الأوامر الديناميكية للرومات)
     // ---------------------------------------------------
     cmdAdd: { type: String, default: '!add' }, 
     cmdAddRoles: { type: [String], default: [] },
@@ -312,12 +383,13 @@ const guildConfigSchema = new mongoose.Schema({
     cmdCome: { type: String, default: '!come' }, 
     cmdComeRoles: { type: [String], default: [] },
     
+    // أوامر وصلاحيات التريد (MiddleMan)
     cmdTrade: { type: String, default: '!trade' }, 
     cmdTradeRoles: { type: [String], default: [] },
-    
     tradeApproveRoles: { type: [String], default: [] }, 
     tradeMentionRoles: { type: [String], default: [] }, 
     
+    // أوامر التحكم في الرومات
     cmdClear: { type: String, default: '!clear' }, 
     cmdClearRoles: { type: [String], default: [] },
     
@@ -330,6 +402,7 @@ const guildConfigSchema = new mongoose.Schema({
     cmdVmove: { type: String, default: '!vmove' }, 
     cmdVmoveRoles: { type: [String], default: [] },
     
+    // أوامر العقوبات
     cmdBan: { type: String, default: '!ban' }, 
     cmdBanRoles: { type: [String], default: [] },
     
@@ -346,7 +419,7 @@ const guildConfigSchema = new mongoose.Schema({
     cmdMoveRoles: { type: [String], default: [] },
 
     // ---------------------------------------------------
-    // 🎨 Embed Colors Customization
+    // 🎨 Embed Colors Customization (تحكم الألوان الشامل)
     // ---------------------------------------------------
     logEmbedColor: { type: String, default: '#ed4245' }, 
     transcriptEmbedColor: { type: String, default: '#2b2d31' }, 
@@ -361,7 +434,7 @@ const guildConfigSchema = new mongoose.Schema({
     untimeoutEmbedColor: { type: String, default: '#3ba55d' },
     
     // ---------------------------------------------------
-    // ⭐ Ratings Customization
+    // ⭐ Ratings Customization (رسائل التقييم)
     // ---------------------------------------------------
     ratingStyle: { 
         type: String, 
@@ -385,7 +458,7 @@ const guildConfigSchema = new mongoose.Schema({
     }, 
 
     // ---------------------------------------------------
-    // 🔨 Punishments Customization
+    // 🔨 Punishments Customization (رسائل العقوبات)
     // ---------------------------------------------------
     punishmentStyle: { 
         type: String, 
@@ -425,7 +498,7 @@ const guildConfigSchema = new mongoose.Schema({
     },
 
     // ---------------------------------------------------
-    // 📁 Universal Logging Channels
+    // 📁 Universal Logging Channels (جميع سجلات اللوج)
     // ---------------------------------------------------
     transcriptChannelId: { type: String, default: null }, 
     ticketLogChannelId: { type: String, default: null }, 
@@ -445,7 +518,7 @@ const guildConfigSchema = new mongoose.Schema({
     logUnwarnId: { type: String, default: null },
     
     // ---------------------------------------------------
-    // 📊 Global Rating Counters
+    // 📊 Global Counters & Warn Records (العدادات وقاعدة البيانات للسجلات)
     // ---------------------------------------------------
     staffRatingsCount: { 
         type: Map, 
@@ -456,10 +529,17 @@ const guildConfigSchema = new mongoose.Schema({
         type: Map, 
         of: Number, 
         default: {} 
-    }, 
+    },
     totalServerRatings: { 
         type: Number, 
         default: 0 
+    },
+    
+    // الخريطة التي ستحفظ سجل تحذيرات كل عضو (مربوطة بـ ID العضو)
+    userWarnsRecords: { 
+        type: Map, 
+        of: [warnRecordSchema], 
+        default: {} 
     }
 });
 
