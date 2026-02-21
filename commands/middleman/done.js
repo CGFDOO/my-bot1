@@ -1,254 +1,134 @@
 // =========================================================================================================
-// 🛡️ أمر إنهاء الوساطة وتقييم الوسيط (MIDDLEMAN DONE COMMAND - ENTERPRISE EDITION)
+// 🛡️ أمر تقييم الوسيط (MIDDLEMAN DONE COMMAND - NO TICKET CLOSING)
 // ---------------------------------------------------------------------------------------------------------
 // المسار: commands/middleman/done.js
-// الوظيفة: 
-// 1. التحقق من أن التذكرة هي "تذكرة وساطة" (Middleman Ticket) وليست تذكرة دعم فني.
-// 2. التحقق من صلاحيات العضو (هل يمتلك رتبة وساطة أو إدارة عليا).
-// 3. إرسال طلب تقييم الوسيط في رسالة خاصة (DM) للعميل.
-// 4. سحب الصلاحيات من العميل وتغيير اسم الروم إلى (closed-XXXX).
-// 5. إرسال لوحة التحكم (Control Panel) في التذكرة للإدارة (إعادة فتح، حذف).
+// الوظيفة: التحقق من الرتب (من الداشبورد)، إرسال التقييم في الخاص، وترك التذكرة مفتوحة بالكامل.
 // =========================================================================================================
 
 const discordLibrary = require('discord.js');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = discordLibrary;
 
 module.exports = {
-    name: 'done', // اسم الأمر
-    aliases: ['إنهاء', 'تقييم'], // اختصارات للأمر إن وجدت
+    name: 'done', 
+    aliases: ['إنهاء', 'تقييم'], 
     
-    // الدالة الرئيسية لتنفيذ الأمر
     async execute(incomingMessageObject, commandArgumentsArray, discordClientObject, activeGuildConfigurationDocument) {
         
         // =========================================================================================================
-        // 🛡️ 1. فحوصات الأمان وصلاحيات الاستخدام (Security & Permissions Validations)
+        // 🛡️ 1. فحوصات نوع التذكرة والأمان
         // =========================================================================================================
-        
         const currentExecutedChannelObject = incomingMessageObject.channel;
         const currentExecutedChannelNameString = currentExecutedChannelObject.name;
 
-        // التحقق من أن الأمر يُنفذ داخل تذكرة (يبدأ بـ ticket- أو claim-)
+        // التحقق من أن الأمر يُنفذ داخل تذكرة
         const isChannelATicketBoolean = currentExecutedChannelNameString.startsWith('ticket-') || currentExecutedChannelNameString.startsWith('claim-');
         
         if (isChannelATicketBoolean === false) {
-            const notInTicketMessageContentString = '**❌ عذراً، هذا الأمر مخصص للاستخدام داخل تذاكر الوساطة فقط.**';
             try { 
-                return await incomingMessageObject.reply({ content: notInTicketMessageContentString }); 
+                return await incomingMessageObject.reply({ content: '**❌ عذراً، هذا الأمر مخصص للاستخدام داخل تذاكر الوساطة فقط.**' }); 
             } catch (replyException) { return; }
         }
 
-        // التحقق من صلاحيات العضو (هل هو وسيط؟)
-        const allowedMiddlemanRolesArray = [
-            activeGuildConfigurationDocument.roles.middlemanRoleId,
-            ...(activeGuildConfigurationDocument.roles.highMiddlemanRoles || [])
-        ];
+        // =========================================================================================================
+        // 👮 2. فحص الرتب المسموح لها باستخدام الأمر (من المصفوفات في الداشبورد)
+        // =========================================================================================================
+        const dashboardConfiguredDoneRolesArray = activeGuildConfigurationDocument.commands.doneAllowedRoles || [];
+        let doesMemberHavePermissionToUseDoneBoolean = false;
         
-        let doesMemberHaveMiddlemanPermissionBoolean = false;
         const executingMemberPermissionsObject = incomingMessageObject.member.permissions;
-        
-        // الإدارة العليا تتخطى الفحص
+        const executingMemberRolesCacheObject = incomingMessageObject.member.roles.cache;
+
         if (executingMemberPermissionsObject.has(PermissionFlagsBits.Administrator) === true) {
-            doesMemberHaveMiddlemanPermissionBoolean = true;
+            doesMemberHavePermissionToUseDoneBoolean = true;
         } else {
-            const executingMemberAssignedRolesCache = incomingMessageObject.member.roles.cache;
-            for (let roleIndexNumber = 0; roleIndexNumber < allowedMiddlemanRolesArray.length; roleIndexNumber++) {
-                const requiredMiddlemanRoleIdString = allowedMiddlemanRolesArray[roleIndexNumber];
-                if (requiredMiddlemanRoleIdString && executingMemberAssignedRolesCache.has(requiredMiddlemanRoleIdString) === true) {
-                    doesMemberHaveMiddlemanPermissionBoolean = true;
+            for (let roleIndex = 0; roleIndex < dashboardConfiguredDoneRolesArray.length; roleIndex++) {
+                const currentRoleIdToCheckString = dashboardConfiguredDoneRolesArray[roleIndex];
+                if (currentRoleIdToCheckString && executingMemberRolesCacheObject.has(currentRoleIdToCheckString)) {
+                    doesMemberHavePermissionToUseDoneBoolean = true; 
                     break;
                 }
             }
+            
+            // دعم احتياطي (Fallback) في حال كانت المصفوفة فارغة في الداشبورد
+            const fallbackMiddlemanRoleIdString = activeGuildConfigurationDocument.roles.middlemanRoleId;
+            if (doesMemberHavePermissionToUseDoneBoolean === false && fallbackMiddlemanRoleIdString && executingMemberRolesCacheObject.has(fallbackMiddlemanRoleIdString)) {
+                doesMemberHavePermissionToUseDoneBoolean = true;
+            }
         }
         
-        if (doesMemberHaveMiddlemanPermissionBoolean === false) {
-            const accessDeniedMessageContentString = '**❌ عذراً، لا تمتلك صلاحية (الوساطة) لاستخدام هذا الأمر.**';
+        if (doesMemberHavePermissionToUseDoneBoolean === false) {
             try { 
-                return await incomingMessageObject.reply({ content: accessDeniedMessageContentString }); 
+                return await incomingMessageObject.reply({ content: '**❌ عذراً، لا تمتلك صلاحية لاستخدام هذا الأمر. تأكد من إعدادات الرتب.**' }); 
             } catch (replyException) { return; }
         }
 
         // =========================================================================================================
-        // 🎟️ 2. فحص نوع التذكرة واستخراج بيانات العميل (Ticket Type & Owner Extraction)
+        // 🎟️ 3. فحص نوع التذكرة واستخراج المالك
         // =========================================================================================================
-        
         const currentTicketChannelTopicString = currentExecutedChannelObject.topic;
         let targetTicketOwnerDiscordIdString = null;
         let currentTicketTypeString = null;
         
-        // التوبيك محفوظ بهذا الشكل: UserID_TicketType_SequenceNumber_Status_CloserID
         if (currentTicketChannelTopicString) {
             const topicExtractedDataPartsArray = currentTicketChannelTopicString.split('_');
             targetTicketOwnerDiscordIdString = topicExtractedDataPartsArray[0];
             currentTicketTypeString = topicExtractedDataPartsArray[1];
         }
         
-        // التحقق من أن التذكرة هي تذكرة "وساطة" وليست "دعم عادي"
         if (currentTicketTypeString !== 'middleman') {
-            const notMiddlemanTicketMessageString = '**❌ هذا الأمر مخصص لتذاكر "الوساطة" فقط. تذاكر الدعم يتم إغلاقها من زر (Close).**';
             try { 
-                return await incomingMessageObject.reply({ content: notMiddlemanTicketMessageString }); 
+                return await incomingMessageObject.reply({ content: '**❌ هذا الأمر لتذاكر "الوساطة" فقط. تذاكر الدعم يتم إغلاقها من زر (Close).**' }); 
             } catch (replyException) { return; }
         }
 
         if (!targetTicketOwnerDiscordIdString || targetTicketOwnerDiscordIdString === 'none') {
-            const cannotFindOwnerMessageString = '**❌ لم أتمكن من العثور على مالك هذه التذكرة في السجلات لإرسال التقييم.**';
             try { 
-                return await incomingMessageObject.reply({ content: cannotFindOwnerMessageString }); 
+                return await incomingMessageObject.reply({ content: '**❌ لم أتمكن من العثور على مالك التذكرة في السجلات لإرسال التقييم.**' }); 
             } catch (replyException) { return; }
         }
 
         // =========================================================================================================
-        // 🔒 3. إرسال التقييم في الخاص (Sending Middleman Rating via DM)
+        // ⭐ 4. إرسال التقييم للعميل (بدون سحب الصلاحيات أو إغلاق التكت)
         // =========================================================================================================
-        
-        const closingTicketInitMessageString = '**🔒 جاري إنهاء الوساطة، سحب الصلاحيات، وإرسال التقييم للعميل...**';
         try { 
-            await incomingMessageObject.reply({ content: closingTicketInitMessageString }); 
+            await incomingMessageObject.reply({ content: '**⏳ جاري إرسال طلب التقييم للعميل (التذكرة ستظل مفتوحة ولن يتم إغلاقها)...**' }); 
         } catch (replyException) {}
 
         const operatingDiscordGuildObject = incomingMessageObject.guild;
-        const dynamicallyFetchedGuildNameString = operatingDiscordGuildObject.name;
-        const interactingMiddlemanUserDiscordIdString = incomingMessageObject.author.id;
-
+        const interactingMiddlemanUserIdString = incomingMessageObject.author.id;
         const doesGuildHaveMiddlemanRatingChannelBoolean = (activeGuildConfigurationDocument.ratings.middlemanLogChannelId !== null);
-        
-        // إذا كان نظام التقييم مفعلاً في الداشبورد
+
         if (doesGuildHaveMiddlemanRatingChannelBoolean === true) {
             try {
-                // جلب كائن العميل من السيرفر
                 const targetClientDiscordMemberObject = await operatingDiscordGuildObject.members.fetch(targetTicketOwnerDiscordIdString);
                 
-                // بناء إيمبد التقييم الفخم للوساطة
                 const middlemanRatingRequestEmbedObject = new EmbedBuilder();
+                middlemanRatingRequestEmbedObject.setTitle('تقييم الوسيط (MiddleMan Review)');
                 
-                const ratingEmbedTitleTextString = 'تقييم الوسيط (MiddleMan Review)';
-                middlemanRatingRequestEmbedObject.setTitle(ratingEmbedTitleTextString);
+                let ratingDescriptionString = `شكراً لتعاملك معنا في سيرفر **${operatingDiscordGuildObject.name}**\n\n`;
+                ratingDescriptionString += `يرجى تقييم مستوى الأمان والسرعة في المعاملة التي تمت مع الوسيط <@${interactingMiddlemanUserIdString}>.`;
+                middlemanRatingRequestEmbedObject.setDescription(ratingDescriptionString);
                 
-                let customRatingEmbedDescriptionTextBuilderString = `شكراً لتعاملك معنا في سيرفر **${dynamicallyFetchedGuildNameString}**\n\n`;
-                customRatingEmbedDescriptionTextBuilderString += `يرجى تقييم مستوى الأمان والسرعة في المعاملة التي تمت مع الوسيط <@${interactingMiddlemanUserDiscordIdString}>.`;
-                middlemanRatingRequestEmbedObject.setDescription(customRatingEmbedDescriptionTextBuilderString);
-                
-                let dashboardConfiguredMiddlemanColorHexCode = activeGuildConfigurationDocument.ratings.middlemanEmbedColor;
-                if (!dashboardConfiguredMiddlemanColorHexCode) {
-                    dashboardConfiguredMiddlemanColorHexCode = '#f2a658'; // البرتقالي الافتراضي للوساطة
-                }
-                middlemanRatingRequestEmbedObject.setColor(dashboardConfiguredMiddlemanColorHexCode);
-                
-                const dynamicGuildIconUrlForRatingEmbedString = operatingDiscordGuildObject.iconURL({ dynamic: true });
-                middlemanRatingRequestEmbedObject.setFooter({ 
-                    text: dynamicallyFetchedGuildNameString, 
-                    iconURL: dynamicGuildIconUrlForRatingEmbedString 
-                });
+                middlemanRatingRequestEmbedObject.setColor(activeGuildConfigurationDocument.ratings.middlemanEmbedColor || '#f2a658');
+                middlemanRatingRequestEmbedObject.setFooter({ text: operatingDiscordGuildObject.name, iconURL: operatingDiscordGuildObject.iconURL({ dynamic: true }) });
                 middlemanRatingRequestEmbedObject.setTimestamp();
                 
-                // بناء أزرار النجوم للتقييم
-                const ratingStarsActionRowButtonsContainerObject = new ActionRowBuilder();
-                const currentGuildIdStringForRatingAction = operatingDiscordGuildObject.id;
+                const ratingButtonsActionRowObject = new ActionRowBuilder();
+                const star1Button = new ButtonBuilder().setCustomId(`rate_mediator_1_${interactingMiddlemanUserIdString}_${operatingDiscordGuildObject.id}`).setLabel('⭐').setStyle(ButtonStyle.Secondary);
+                const star2Button = new ButtonBuilder().setCustomId(`rate_mediator_2_${interactingMiddlemanUserIdString}_${operatingDiscordGuildObject.id}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary);
+                const star3Button = new ButtonBuilder().setCustomId(`rate_mediator_3_${interactingMiddlemanUserIdString}_${operatingDiscordGuildObject.id}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                const star4Button = new ButtonBuilder().setCustomId(`rate_mediator_4_${interactingMiddlemanUserIdString}_${operatingDiscordGuildObject.id}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                const star5Button = new ButtonBuilder().setCustomId(`rate_mediator_5_${interactingMiddlemanUserIdString}_${operatingDiscordGuildObject.id}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
                 
-                const star1ActionButtonObject = new ButtonBuilder().setCustomId(`rate_mediator_1_${interactingMiddlemanUserDiscordIdString}_${currentGuildIdStringForRatingAction}`).setLabel('⭐').setStyle(ButtonStyle.Secondary);
-                const star2ActionButtonObject = new ButtonBuilder().setCustomId(`rate_mediator_2_${interactingMiddlemanUserDiscordIdString}_${currentGuildIdStringForRatingAction}`).setLabel('⭐⭐').setStyle(ButtonStyle.Secondary);
-                const star3ActionButtonObject = new ButtonBuilder().setCustomId(`rate_mediator_3_${interactingMiddlemanUserDiscordIdString}_${currentGuildIdStringForRatingAction}`).setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary);
-                const star4ActionButtonObject = new ButtonBuilder().setCustomId(`rate_mediator_4_${interactingMiddlemanUserDiscordIdString}_${currentGuildIdStringForRatingAction}`).setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
-                const star5ActionButtonObject = new ButtonBuilder().setCustomId(`rate_mediator_5_${interactingMiddlemanUserDiscordIdString}_${currentGuildIdStringForRatingAction}`).setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary);
+                ratingButtonsActionRowObject.addComponents(star1Button, star2Button, star3Button, star4Button, star5Button);
                 
-                ratingStarsActionRowButtonsContainerObject.addComponents(star1ActionButtonObject, star2ActionButtonObject, star3ActionButtonObject, star4ActionButtonObject, star5ActionButtonObject);
+                await targetClientDiscordMemberObject.send({ embeds: [middlemanRatingRequestEmbedObject], components: [ratingButtonsActionRowObject] });
                 
-                // إرسال التقييم للعميل في الخاص
-                await targetClientDiscordMemberObject.send({ 
-                    embeds: [middlemanRatingRequestEmbedObject], 
-                    components: [ratingStarsActionRowButtonsContainerObject] 
-                });
+                await incomingMessageObject.channel.send('**✅ تم إرسال رسالة التقييم للعميل في الخاص بنجاح.**');
                 
             } catch (clientDirectMessageClosedException) {
-                console.log("[COMMAND EXECUTION WARNING] Could not send Middleman Rating. Client DM is closed.");
+                await incomingMessageObject.channel.send('**⚠️ العميل يغلق الرسائل الخاصة، لم أتمكن من إرسال التقييم.**');
             }
         }
-
-        // =========================================================================================================
-        // 🔒 4. عملية الإغلاق وإرسال لوحة التحكم (Closing Process & Control Panel)
-        // =========================================================================================================
-        
-        // استخراج رقم التذكرة لتغيير الاسم
-        const channelNameSplitIntoPartsArray = currentExecutedChannelNameString.split('-');
-        let ticketSequenceIdentifierFoundString = channelNameSplitIntoPartsArray[1];
-        if (!ticketSequenceIdentifierFoundString) {
-            ticketSequenceIdentifierFoundString = '0000';
-        }
-        
-        const officiallyClosedChannelRenamedString = `closed-${ticketSequenceIdentifierFoundString}`;
-        
-        try { 
-            // تغيير اسم الروم إلى closed
-            await currentExecutedChannelObject.setName(officiallyClosedChannelRenamedString); 
-        } catch (channelRenameException) {}
-        
-        try {
-            // سحب صلاحية الرؤية والكتابة من العميل
-            await currentExecutedChannelObject.permissionOverwrites.edit(targetTicketOwnerDiscordIdString, { 
-                SendMessages: false, 
-                ViewChannel: false 
-            });
-        } catch (permissionsUpdateException) {}
-        
-        // تحديث التوبيك لتسجيل من قام بالإغلاق
-        if (currentTicketChannelTopicString) {
-            const topicDataSeparatedPartsArray = currentTicketChannelTopicString.split('_');
-            while(topicDataSeparatedPartsArray.length < 5) {
-                topicDataSeparatedPartsArray.push('none');
-            }
-            topicDataSeparatedPartsArray[3] = 'closed'; // الحالة
-            topicDataSeparatedPartsArray[4] = interactingMiddlemanUserDiscordIdString; // الأيدي الخاص بالوسيط المغلق
-            
-            const fullyUpdatedTopicRejoinedString = topicDataSeparatedPartsArray.join('_');
-            try { 
-                await currentExecutedChannelObject.setTopic(fullyUpdatedTopicRejoinedString); 
-            } catch (topicUpdateException) {}
-        }
-        
-        // ---------------------------------------------------------
-        // 🎛️ بناء لوحة تحكم التذكرة المغلقة (Control Panel)
-        // ---------------------------------------------------------
-        const officiallyClosedTicketControlPanelEmbedObject = new EmbedBuilder();
-        
-        const controlPanelFinalTitleString = 'Ticket control';
-        officiallyClosedTicketControlPanelEmbedObject.setTitle(controlPanelFinalTitleString);
-        
-        const controlPanelFinalDescriptionString = `Closed By: <@${interactingMiddlemanUserDiscordIdString}>\n(${interactingMiddlemanUserDiscordIdString})`;
-        officiallyClosedTicketControlPanelEmbedObject.setDescription(controlPanelFinalDescriptionString);
-        
-        let dashboardConfiguredCloseEmbedThemeColorHexCode = activeGuildConfigurationDocument.ticketControls.controlPanelColor;
-        if (!dashboardConfiguredCloseEmbedThemeColorHexCode) {
-            dashboardConfiguredCloseEmbedThemeColorHexCode = '#2b2d31';
-        }
-        officiallyClosedTicketControlPanelEmbedObject.setColor(dashboardConfiguredCloseEmbedThemeColorHexCode);
-        
-        const controlPanelTopActionRowContainerObject = new ActionRowBuilder();
-        
-        // الأزرار كما في الصور (الإنجليزية)
-        const reopenClosedTicketActionButtonObject = new ButtonBuilder().setCustomId('ticket_reopen').setLabel('Reopen ticket').setStyle(ButtonStyle.Secondary);
-        const directDeleteClosedTicketActionButtonObject = new ButtonBuilder().setCustomId('ticket_delete').setLabel('Delete ticket').setStyle(ButtonStyle.Danger);
-        
-        controlPanelTopActionRowContainerObject.addComponents(reopenClosedTicketActionButtonObject, directDeleteClosedTicketActionButtonObject);
-        
-        const controlPanelBottomActionRowContainerObject = new ActionRowBuilder();
-        const deleteClosedTicketWithReasonActionButtonObject = new ButtonBuilder().setCustomId('ticket_delete_reason').setLabel('Delete With Reason').setStyle(ButtonStyle.Danger);
-        
-        controlPanelBottomActionRowContainerObject.addComponents(deleteClosedTicketWithReasonActionButtonObject);
-        
-        try {
-            await currentExecutedChannelObject.send({ 
-                embeds: [officiallyClosedTicketControlPanelEmbedObject], 
-                components: [controlPanelTopActionRowContainerObject, controlPanelBottomActionRowContainerObject] 
-            });
-        } catch (sendControlPanelException) {
-            console.error('[COMMAND EXECUTION ERROR] Failed to send Control Panel:', sendControlPanelException);
-        }
-        
-        // حذف رسالة الأمر نفسه لتنظيف الشات
-        try {
-            await incomingMessageObject.delete();
-        } catch (deleteCommandMessageException) {}
-
-        return; // نهاية التنفيذ الناجح
     }
 };
