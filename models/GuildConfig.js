@@ -1,14 +1,19 @@
 // =========================================================================================================
-// 🗄️ قاعدة البيانات الشاملة للمشروع (ENTERPRISE GUILD CONFIGURATION SCHEMA)
+// 🗄️ قاعدة البيانات الشاملة والمفصلة للمشروع (ULTIMATE ENTERPRISE GUILD CONFIGURATION SCHEMA)
 // ---------------------------------------------------------------------------------------------------------
-// تم إضافة مصفوفات الرتب (Arrays) للتحكم الكامل من الداشبورد في كل أمر وكل زرار.
+// هذا الملف يحتوي على جميع الإعدادات بدون أي اختصار.
+// تم تعريف كل حقل بشكل صريح مع نوعه وقيمته الافتراضية لمنع أي أخطاء (Undefined Errors).
 // =========================================================================================================
 
 const mongoose = require('mongoose');
 
+// -----------------------------------------------------------------------------------------
+// تعريف هيكل البيانات (Schema)
+// -----------------------------------------------------------------------------------------
 const guildConfigSchema = new mongoose.Schema({
+    
     // ==========================================
-    // 🌐 1. الإعدادات الأساسية (Core Settings)
+    // 🌐 1. الإعدادات الأساسية للسيرفر (Core Guild Settings)
     // ==========================================
     guildId: { 
         type: String, 
@@ -17,11 +22,12 @@ const guildConfigSchema = new mongoose.Schema({
     },
     prefix: { 
         type: String, 
-        default: '!' 
+        default: '!',
+        required: false
     },
 
     // ==========================================
-    // 🛡️ 2. نظام الوساطة الأساسي (Core Middleman System)
+    // 🛡️ 2. نظام الوساطة الأساسي والمعزول (Isolated Middleman System)
     // ==========================================
     middlemanSystem: {
         enabled: { 
@@ -56,6 +62,7 @@ const guildConfigSchema = new mongoose.Schema({
             type: String, 
             default: 'بيانات الوساطة (Trade Info)' 
         },
+        // تفصيل حقول النافذة المنبثقة للوساطة
         modalFields: [{
             label: { 
                 type: String, 
@@ -63,7 +70,7 @@ const guildConfigSchema = new mongoose.Schema({
             },
             placeholder: { 
                 type: String, 
-                default: '' 
+                default: 'اكتب تفاصيلك هنا...' 
             },
             style: { 
                 type: String, 
@@ -89,7 +96,7 @@ const guildConfigSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // 🎟️ 3. نظام التذاكر المتعددة (Custom Ticket Panels)
+    // 🎟️ 3. نظام التذاكر المتعددة والدعم الفني (Multi-Panel Ticket System)
     // ==========================================
     ticketPanels: [{
         panelId: { 
@@ -116,6 +123,7 @@ const guildConfigSchema = new mongoose.Schema({
             type: String, 
             default: '#2b2d31' 
         },
+        // الأزرار المخصصة داخل كل بانل
         buttons: [{
             id: { 
                 type: String, 
@@ -179,7 +187,7 @@ const guildConfigSchema = new mongoose.Schema({
     }],
 
     // ==========================================
-    // ⭐ 4. نظام التقييمات الشامل (Ratings & Feedback)
+    // ⭐ 4. نظام التقييمات والسجلات (Ratings & Feedback Logs)
     // ==========================================
     ratings: {
         middlemanLogChannelId: { 
@@ -215,7 +223,7 @@ const guildConfigSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // ⚙️ 5. إعدادات التحكم للتذاكر (Ticket Controls)
+    // ⚙️ 5. إعدادات التحكم المتقدم للتذاكر (Advanced Ticket Controls)
     // ==========================================
     ticketControls: {
         maxOpenTicketsPerUser: { 
@@ -249,7 +257,7 @@ const guildConfigSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // 👮 6. نظام الرتب والصلاحيات (التحكم الكامل)
+    // 👮 6. نظام الرتب والصلاحيات المفصل (Hierarchy & Roles Configuration)
     // ==========================================
     roles: {
         adminRoleId: { 
@@ -268,8 +276,6 @@ const guildConfigSchema = new mongoose.Schema({
             type: [String], 
             default: [] 
         },
-        
-        // --- رتب التريد والموافقة (التعديل الجديد) ---
         tradePingRoleIds: { 
             type: [String], 
             default: [] 
@@ -281,22 +287,52 @@ const guildConfigSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // 🛠️ 7. الأوامر المخصصة (رتب مخصصة لكل أمر)
+    // 🛠️ 7. الأوامر الديناميكية والمخصصة (Dynamic & Custom Commands Router)
     // ==========================================
     commands: {
+        
+        // أوامر الإدارة الأساسية
+        clearCmd: { 
+            type: String, 
+            default: 'clear' 
+        },
+        clearAllowedRoles: { 
+            type: [String], 
+            default: [] 
+        },
+
+        banCmd: { 
+            type: String, 
+            default: 'ban' 
+        },
+        banAllowedRoles: { 
+            type: [String], 
+            default: [] 
+        },
+
+        timeoutCmd: { 
+            type: String, 
+            default: 'timeout' 
+        },
+        timeoutAllowedRoles: { 
+            type: [String], 
+            default: [] 
+        },
+
         comeCmd: { 
             type: String, 
-            default: '!come' 
+            default: 'come' 
         },
         comeAllowedRoles: { 
             type: [String], 
             default: [] 
         },
         
+        // أوامر الوساطة
         doneCmd: { 
             type: String, 
             default: '!done' 
-        },
+        }, 
         doneAllowedRoles: { 
             type: [String], 
             default: [] 
@@ -316,10 +352,28 @@ const guildConfigSchema = new mongoose.Schema({
         }
     },
 
+    // ==========================================
+    // 💬 8. الردود التلقائية (Auto Responders)
+    // ==========================================
+    autoResponders: [{
+        triggerWord: { 
+            type: String, 
+            required: true 
+        },
+        replyMessage: { 
+            type: String, 
+            required: true 
+        }
+    }],
+
+    // ==========================================
+    // 📈 9. الإحصائيات العامة (Global Counters)
+    // ==========================================
     ticketCount: { 
         type: Number, 
         default: 0 
     }
 });
 
+// تصدير الموديل للاستخدام في جميع أنحاء البوت
 module.exports = mongoose.model('GuildConfig', guildConfigSchema);
