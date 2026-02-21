@@ -1,99 +1,82 @@
 // =========================================================================================================
-// 💬 مراقب الرسائل الشامل (MESSAGE CREATE EVENT - ENTERPRISE EDITION)
+// 💬 مراقب الرسائل الشامل (MESSAGE CREATE EVENT - ULTIMATE UNABBREVIATED ROUTER)
 // ---------------------------------------------------------------------------------------------------------
-// هذا الحدث يستمع لجميع الرسائل في جميع السيرفرات المتواجد بها البوت.
-// وظيفته:
-// 1. فلترة الرسائل (تجاهل البوتات ورسائل الخاص).
-// 2. جلب إعدادات السيرفر (GuildConfig) بشكل معزول ومستقل.
-// 3. التحقق من الردود التلقائية (Auto Responders) وتنفيذها.
-// 4. استخراج الأوامر بناءً على البريفكس الديناميكي وتنفيذها من الذاكرة (RAM).
+// هذا الملف يستمع لكل رسالة. تمت كتابته بطريقة (Hyper-Verbose) وبدون أي اختصارات برمجية.
+// كل خطوة مفصولة، ولها متغيرات طويلة وواضحة، مع معالجة الأخطاء لكل سطر.
 // =========================================================================================================
 
-// استدعاء الموديل الخاص بقاعدة البيانات لجلب إعدادات السيرفر
 const GuildConfigurationDatabaseModel = require('../models/GuildConfig');
 
 module.exports = {
-    // اسم الحدث كما هو معروف في مكتبة ديسكورد
     name: 'messageCreate',
-    
-    // هل يعمل هذا الحدث مرة واحدة فقط؟ (لا، نريده أن يعمل مع كل رسالة)
     once: false,
 
-    // الدالة الرئيسية التي يتم تنفيذها عند استلام أي رسالة
     async execute(incomingMessageObject, discordClientObject) {
         
         // =========================================================================================================
-        // 🛡️ 1. فحوصات الأمان الأساسية (Primary Security & Validation Checks)
+        // 🛡️ 1. فحوصات الأمان الأساسية والبديهية (Basic Security Validations)
         // =========================================================================================================
         
-        // التحقق مما إذا كان مرسل الرسالة هو بوت (لمنع الـ Infinite Loops ورد البوتات على بعضها)
+        // منع البوتات من استخدام الأوامر أو الرد على بعضها
         const isMessageAuthorABotBoolean = incomingMessageObject.author.bot;
         if (isMessageAuthorABotBoolean === true) {
-            return; // إنهاء التنفيذ فوراً
+            return; 
         }
-
-        // التحقق مما إذا كانت الرسالة قد أُرسلت في رسائل خاصة (DMs) وليس داخل سيرفر
-        const targetDiscordGuildObject = incomingMessageObject.guild;
-        if (!targetDiscordGuildObject) {
-            return; // إنهاء التنفيذ لأن نظامنا يعتمد على إعدادات السيرفرات
-        }
-
-        // =========================================================================================================
-        // 🗄️ 2. الاتصال بقاعدة البيانات وجلب الإعدادات (Database Fetching & Isolation)
-        // =========================================================================================================
         
-        const currentGuildDiscordIdString = targetDiscordGuildObject.id;
-        let activeGuildConfigurationDocument = null;
-
-        try {
-            // البحث عن إعدادات السيرفر الحالي فقط (عزل تام للبيانات)
-            activeGuildConfigurationDocument = await GuildConfigurationDatabaseModel.findOne({ 
-                guildId: currentGuildDiscordIdString 
-            });
-        } catch (databaseFetchException) {
-            console.log(`[MESSAGE CREATE ERROR] ❌ Exception while fetching config for guild ID: ${currentGuildDiscordIdString}`);
-            console.error(databaseFetchException);
-            return; // إيقاف التنفيذ بأمان في حال فشل الاتصال بقاعدة البيانات
-        }
-
-        // إذا لم يكن السيرفر مسجلاً في قاعدة البيانات (لم يقم بتفعيل البوت من الداشبورد)، نتجاهل الرسالة
-        const isGuildConfigMissingBoolean = (!activeGuildConfigurationDocument);
-        if (isGuildConfigMissingBoolean === true) {
+        // التأكد من أن الرسالة أُرسلت داخل سيرفر وليس في الخاص
+        const targetDiscordGuildObject = incomingMessageObject.guild;
+        if (targetDiscordGuildObject === null || targetDiscordGuildObject === undefined) {
             return; 
         }
 
         // =========================================================================================================
-        // 🤖 3. نظام الردود التلقائية الديناميكي (Dynamic Auto Responders System)
+        // 🗄️ 2. جلب إعدادات السيرفر من قاعدة البيانات (Database Configuration Fetching)
         // =========================================================================================================
         
-        const serverAutoRespondersArray = activeGuildConfigurationDocument.autoResponders;
-        const doesServerHaveAutoRespondersBoolean = (serverAutoRespondersArray && serverAutoRespondersArray.length > 0);
+        const currentGuildDiscordIdentifierString = targetDiscordGuildObject.id;
+        let activeGuildConfigurationDocumentObject = null;
 
+        try {
+            activeGuildConfigurationDocumentObject = await GuildConfigurationDatabaseModel.findOne({ 
+                guildId: currentGuildDiscordIdentifierString 
+            });
+        } catch (databaseFetchExceptionError) {
+            console.error('[MESSAGE CREATE EVENT ERROR] Failed to fetch database configuration for guild.', databaseFetchExceptionError);
+            return; 
+        }
+
+        // إذا لم يكن السيرفر مسجلاً في قاعدة البيانات
+        const isGuildConfigurationMissingBoolean = (activeGuildConfigurationDocumentObject === null);
+        if (isGuildConfigurationMissingBoolean === true) {
+            return; 
+        }
+
+        // =========================================================================================================
+        // 🤖 3. معالجة الردود التلقائية (Auto Responders Engine)
+        // =========================================================================================================
+        
+        const configuredServerAutoRespondersArray = activeGuildConfigurationDocumentObject.autoResponders;
+        const doesServerHaveAutoRespondersBoolean = (configuredServerAutoRespondersArray && configuredServerAutoRespondersArray.length > 0);
+        
         if (doesServerHaveAutoRespondersBoolean === true) {
             
-            const rawMessageContentForAutoResponderString = incomingMessageObject.content;
+            const rawMessageContentForAutoResponderProcessingString = incomingMessageObject.content;
 
-            // المرور على جميع الردود التلقائية المبرمجة لهذا السيرفر
-            for (let responderIndexNumber = 0; responderIndexNumber < serverAutoRespondersArray.length; responderIndexNumber++) {
+            for (let responderIndexNumber = 0; responderIndexNumber < configuredServerAutoRespondersArray.length; responderIndexNumber++) {
                 
-                const currentAutoResponderObject = serverAutoRespondersArray[responderIndexNumber];
-                const targetTriggerWordString = currentAutoResponderObject.triggerWord;
+                const currentAutoResponderItemObject = configuredServerAutoRespondersArray[responderIndexNumber];
+                const targetTriggerWordToSearchForString = currentAutoResponderItemObject.triggerWord;
                 
-                // إذا كانت رسالة العضو تحتوي على الكلمة المفتاحية (Trigger Word)
-                const isTriggerWordIncludedInMessageBoolean = rawMessageContentForAutoResponderString.includes(targetTriggerWordString);
+                const isTriggerWordIncludedInUserMessageBoolean = rawMessageContentForAutoResponderProcessingString.includes(targetTriggerWordToSearchForString);
                 
-                if (isTriggerWordIncludedInMessageBoolean === true) {
+                if (isTriggerWordIncludedInUserMessageBoolean === true) {
                     
-                    const configuredReplyContentTextString = currentAutoResponderObject.replyMessage;
+                    const configuredReplyContentTextString = currentAutoResponderItemObject.replyMessage;
+                    const elegantlyFormattedReplyToUserString = `**${configuredReplyContentTextString}**`;
                     
-                    // تنسيق الرد التلقائي ليكون بالخط العريض (Bold)
-                    const elegantlyFormattedReplyString = `**${configuredReplyContentTextString}**`;
-
                     try {
-                        // إرسال الرد في نفس الروم
-                        await incomingMessageObject.reply({ content: elegantlyFormattedReplyString });
-                    } catch (autoResponderReplyException) {
-                        // التجاهل بصمت (مثلاً إذا تم حذف الرسالة الأصلية بسرعة أو البوت لا يمتلك صلاحية الكتابة)
+                        await incomingMessageObject.reply({ content: elegantlyFormattedReplyToUserString });
+                    } catch (autoResponderReplyExceptionError) {
                         console.log(`[AUTO RESPONDER WARNING] Could not reply to message in guild: ${targetDiscordGuildObject.name}`);
                     }
                 }
@@ -101,39 +84,29 @@ module.exports = {
         }
 
         // =========================================================================================================
-        // ⚙️ 4. معالجة الأوامر والبريفكس (Prefix Parsing & Command Extraction)
+        // ⚙️ 4. معالجة البريفكس واستخراج اسم الأمر (Prefix Processing & Command Extraction)
         // =========================================================================================================
         
-        let dynamicallyConfiguredPrefixString = activeGuildConfigurationDocument.prefix;
+        let dynamicallyConfiguredGuildPrefixString = activeGuildConfigurationDocumentObject.prefix;
         
-        // حماية إضافية: تعيين بريفكس افتراضي في حال كان الحقل في قاعدة البيانات فارغاً بطريق الخطأ
-        const isPrefixNullOrEmptyBoolean = (!dynamicallyConfiguredPrefixString || dynamicallyConfiguredPrefixString.trim() === '');
+        const isPrefixNullOrEmptyBoolean = (!dynamicallyConfiguredGuildPrefixString || dynamicallyConfiguredGuildPrefixString.trim() === '');
         if (isPrefixNullOrEmptyBoolean === true) {
-            dynamicallyConfiguredPrefixString = '!'; 
+            dynamicallyConfiguredGuildPrefixString = '!'; 
         }
 
-        const rawMessageContentForCommandCheckString = incomingMessageObject.content;
+        const rawMessageContentForCommandValidationString = incomingMessageObject.content;
         
-        // التحقق مما إذا كانت الرسالة تبدأ بالبريفكس المخصص لهذا السيرفر
-        const doesMessageStartWithPrefixBoolean = rawMessageContentForCommandCheckString.startsWith(dynamicallyConfiguredPrefixString);
-
-        if (doesMessageStartWithPrefixBoolean === false) {
-            return; // الرسالة ليست أمراً، نُنهي التنفيذ هنا للحفاظ على موارد المعالج
+        const doesMessageStartWithValidPrefixBoolean = rawMessageContentForCommandValidationString.startsWith(dynamicallyConfiguredGuildPrefixString);
+        if (doesMessageStartWithValidPrefixBoolean === false) {
+            return; 
         }
 
-        // -----------------------------------------------------------------------------------------
-        // استخراج اسم الأمر والمتغيرات (Arguments) من الرسالة
-        // -----------------------------------------------------------------------------------------
+        const prefixLengthNumber = dynamicallyConfiguredGuildPrefixString.length;
+        const messageContentWithoutPrefixString = rawMessageContentForCommandValidationString.slice(prefixLengthNumber);
         
-        const prefixLengthNumber = dynamicallyConfiguredPrefixString.length;
-        // إزالة البريفكس من النص
-        const messageContentWithoutPrefixString = rawMessageContentForCommandCheckString.slice(prefixLengthNumber);
-        
-        // إزالة المسافات الزائدة من البداية والنهاية، ثم تقسيم النص بناءً على المسافات لتكوين مصفوفة
         const trimmedMessageContentWithoutPrefixString = messageContentWithoutPrefixString.trim();
         const extractedCommandArgumentsArray = trimmedMessageContentWithoutPrefixString.split(/ +/);
         
-        // استخراج أول عنصر ليكون هو اسم الأمر (مثال: come، ban، clear)
         const rawExtractedCommandNameString = extractedCommandArgumentsArray.shift();
         
         const isCommandNameEmptyBoolean = (!rawExtractedCommandNameString || rawExtractedCommandNameString === '');
@@ -141,46 +114,92 @@ module.exports = {
             return; 
         }
 
-        // تحويل اسم الأمر إلى أحرف صغيرة لضمان المطابقة حتى لو كتبه المستخدم بأحرف كبيرة (مثال: !CoMe -> come)
-        const targetCommandNameLowerCaseString = rawExtractedCommandNameString.toLowerCase();
+        const typedCommandNameLowerCaseString = rawExtractedCommandNameString.toLowerCase();
 
         // =========================================================================================================
-        // 🚀 5. البحث عن الأمر في الذاكرة وتنفيذه (Command Lookup & Execution Engine)
+        // 🔄 5. الموجه الديناميكي للأوامر (Dynamic Command Router Engine)
         // =========================================================================================================
         
-        // البحث عن الأمر في الذاكرة (Collection) التي تم بناؤها بواسطة commandsHandler.js
-        const requestedCommandModuleObject = discordClientObject.commands.get(targetCommandNameLowerCaseString) 
-            || discordClientObject.commands.find(cmd => cmd.aliases && cmd.aliases.includes(targetCommandNameLowerCaseString));
+        const databaseCommandsConfigurationObject = activeGuildConfigurationDocumentObject.commands;
+        
+        // دالة تنظيف صارمة لاستخراج اسم الأمر من الداشبورد بدون مسافات أو بريفكس خاطئ
+        const cleanDatabaseCommandNameFunction = function(providedCommandString) {
+            if (providedCommandString === null || providedCommandString === undefined || providedCommandString === '') {
+                return null;
+            }
+            let cleanedCommandString = providedCommandString.toLowerCase().trim();
+            if (cleanedCommandString.startsWith(dynamicallyConfiguredGuildPrefixString) === true) {
+                cleanedCommandString = cleanedCommandString.slice(dynamicallyConfiguredGuildPrefixString.length);
+            }
+            return cleanedCommandString;
+        };
 
-        // إذا لم يكن الأمر موجوداً في قائمة الأوامر المبرمجة
-        const doesCommandExistInRamBoolean = (requestedCommandModuleObject !== undefined && requestedCommandModuleObject !== null);
-        if (doesCommandExistInRamBoolean === false) {
-            return; // نتجاهل الرسالة (قد يكون أمر لبوت آخر)
+        // بناء خريطة الربط الديناميكية (Dynamic Map) لتوجيه الاسم المخصص للملف الصحيح
+        const dynamicCommandMappingDictionaryObject = {};
+        
+        // ربط أمر مسح الرسائل
+        dynamicCommandMappingDictionaryObject[cleanDatabaseCommandNameFunction(databaseCommandsConfigurationObject.clearCmd) || 'clear'] = 'clear';
+        // ربط أمر الحظر
+        dynamicCommandMappingDictionaryObject[cleanDatabaseCommandNameFunction(databaseCommandsConfigurationObject.banCmd) || 'ban'] = 'ban';
+        // ربط أمر الإسكات
+        dynamicCommandMappingDictionaryObject[cleanDatabaseCommandNameFunction(databaseCommandsConfigurationObject.timeoutCmd) || 'timeout'] = 'timeout';
+        // ربط أمر الاستدعاء
+        dynamicCommandMappingDictionaryObject[cleanDatabaseCommandNameFunction(databaseCommandsConfigurationObject.comeCmd) || 'come'] = 'come';
+        // ربط أمر التقييم
+        dynamicCommandMappingDictionaryObject[cleanDatabaseCommandNameFunction(databaseCommandsConfigurationObject.doneCmd) || 'done'] = 'done';
+        // ربط أمر تفاصيل المعاملة
+        dynamicCommandMappingDictionaryObject[cleanDatabaseCommandNameFunction(databaseCommandsConfigurationObject.tradeCmd) || 'trade'] = 'trade';
+
+        // البحث عن اسم الملف البرمجي الحقيقي المطابق لما كتبه العضو
+        const mappedRealCommandFileNameString = dynamicCommandMappingDictionaryObject[typedCommandNameLowerCaseString];
+        
+        let requestedCommandModuleToExecuteObject = null;
+
+        if (mappedRealCommandFileNameString !== undefined && mappedRealCommandFileNameString !== null) {
+            // إذا كان الأمر مخصصاً من الداشبورد
+            requestedCommandModuleToExecuteObject = discordClientObject.commands.get(mappedRealCommandFileNameString);
+        } else {
+            // البحث الاعتيادي (Fallback) بالاسم المباشر أو الاختصارات المبرمجة مسبقاً
+            requestedCommandModuleToExecuteObject = discordClientObject.commands.get(typedCommandNameLowerCaseString);
+            
+            if (requestedCommandModuleToExecuteObject === undefined || requestedCommandModuleToExecuteObject === null) {
+                requestedCommandModuleToExecuteObject = discordClientObject.commands.find(function(commandModule) {
+                    return commandModule.aliases && commandModule.aliases.includes(typedCommandNameLowerCaseString);
+                });
+            }
         }
 
-        // تنفيذ الأمر داخل كتلة Try/Catch لضمان عدم سقوط البوت إذا احتوى الأمر على خطأ برمجي
+        // إذا لم يكن الأمر موجوداً تماماً، يتم تجاهل الرسالة بصمت
+        const isCommandValidAndFoundBoolean = (requestedCommandModuleToExecuteObject !== undefined && requestedCommandModuleToExecuteObject !== null);
+        if (isCommandValidAndFoundBoolean === false) {
+            return; 
+        }
+
+        // =========================================================================================================
+        // 🚀 6. التنفيذ الفعلي للأمر مع حماية شاملة (Execution Engine with Full Protection)
+        // =========================================================================================================
+        
         try {
-            console.log(`[COMMAND EXECUTION] ⚡ User [${incomingMessageObject.author.tag}] executed command: [${targetCommandNameLowerCaseString}] in guild: [${targetDiscordGuildObject.name}]`);
+            console.log(`[COMMAND EXECUTION LOG] User [${incomingMessageObject.author.tag}] is executing command: [${typedCommandNameLowerCaseString}] in guild: [${targetDiscordGuildObject.name}]`);
             
-            // استدعاء دالة التنفيذ (execute) وتمرير جميع الكائنات التي سيحتاجها الأمر
-            await requestedCommandModuleObject.execute(
+            await requestedCommandModuleToExecuteObject.execute(
                 incomingMessageObject, 
                 extractedCommandArgumentsArray, 
                 discordClientObject, 
-                activeGuildConfigurationDocument
+                activeGuildConfigurationDocumentObject
             );
             
-        } catch (commandExecutionException) {
-            console.log(`[COMMAND EXECUTION ERROR] ❌ Critical Exception while executing command: [${targetCommandNameLowerCaseString}]`);
-            console.error(commandExecutionException);
+        } catch (criticalCommandExecutionExceptionError) {
             
-            const unexpectedErrorMessageContentString = '**❌ حدث خطأ داخلي غير متوقع أثناء محاولة تنفيذ هذا الأمر. يرجى إبلاغ الدعم الفني.**';
+            console.error(`[CRITICAL COMMAND EXECUTION ERROR] Exception caught while executing command: [${typedCommandNameLowerCaseString}]`);
+            console.error(criticalCommandExecutionExceptionError);
+            
+            const unexpectedErrorMessageContentTextString = '**❌ حدث خطأ داخلي غير متوقع أثناء محاولة تنفيذ هذا الأمر. يرجى مراجعة سجلات النظام.**';
             
             try {
-                // محاولة إبلاغ المستخدم بحدوث خطأ
-                await incomingMessageObject.reply({ content: unexpectedErrorMessageContentString });
-            } catch (errorReplyException) {
-                // التجاهل بأمان إذا كان البوت لا يمتلك صلاحية الرد أو تم حذف رسالة المستخدم
+                await incomingMessageObject.reply({ content: unexpectedErrorMessageContentTextString });
+            } catch (errorReplyDeliveryExceptionError) {
+                // التجاهل بأمان إذا تم حذف الرسالة الأصلية قبل إرسال التنبيه
             }
         }
     }
