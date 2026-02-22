@@ -1,158 +1,229 @@
 // =========================================================================================================
-// 🚀 نظام التشغيل الأساسي والقلب النابض (MAIN ENTRY POINT - ENTERPRISE EDITION)
+// 🚀 المحرك الرئيسي للبوت (MAIN ENTERPRISE BOT ENGINE)
 // ---------------------------------------------------------------------------------------------------------
-// هذا الملف هو نقطة البداية. يقوم بالاتصال بخوادم ديسكورد، يربط قاعدة البيانات،
-// ويحتوي على "المحرك الديناميكي" الذي يقوم بربط جميع ملفات المشروع ببعضها تلقائياً.
-// كما يحتوي على درع حماية (Anti-Crash) لمنع توقف البوت عند حدوث أي خطأ برمجي.
+// الوظيفة: تشغيل البوت، الاتصال بقاعدة البيانات، استدعاء الأوامر والأحداث،
+// تشغيل نظام الحماية من الانهيار (Anti-Crash)، وتشغيل الداشبورد المرتبطة به.
+// تم التعديل لسحب المتغيرة باسم (TOKEN) مباشرة من بيئة التشغيل.
 // =========================================================================================================
 
-// =========================================================================================================
-// 📦 1. استدعاء المكاتب الأساسية (Core Dependencies)
-// =========================================================================================================
+// استدعاء مكتبة قراءة المتغيرات السرية (يجب أن تكون في أعلى الملف)
+require('dotenv').config();
+
+// استدعاء مكتبات ديسكورد الأساسية
 const discordLibrary = require('discord.js');
-const mongooseDatabase = require('mongoose');
+const { Client, GatewayIntentBits, Partials, Collection } = discordLibrary;
+
+// استدعاء مكتبات النظام وقاعدة البيانات
+const mongoose = require('mongoose');
 const fileSystem = require('fs');
-const pathModule = require('path');
-require('dotenv').config(); // تحميل المتغيرات السرية (التوكن ورابط الداتابيز) من ملف .env
+const path = require('path');
 
 // =========================================================================================================
-// 🤖 2. إعداد الكلاينت والصلاحيات (Client Setup & Intents)
+// 🤖 1. تهيئة عميل ديسكورد (Discord Client Initialization)
 // =========================================================================================================
-const botClient = new discordLibrary.Client({
-    // الصلاحيات (Intents) التي يحتاجها البوت لرؤية ما يحدث في السيرفر
+
+const botClient = new Client({
+    // تفعيل جميع البوابات (Intents) اللازمة لعمل البوت بشكل كامل وبدون قيود
     intents: [
-        discordLibrary.GatewayIntentBits.Guilds,                      // قراءة السيرفرات (أساسي)
-        discordLibrary.GatewayIntentBits.GuildMessages,               // قراءة الرسائل في الرومات
-        discordLibrary.GatewayIntentBits.MessageContent,              // قراءة محتوى الرسائل (ضروري للأوامر بالبريفكس)
-        discordLibrary.GatewayIntentBits.GuildMembers,                // قراءة بيانات الأعضاء (للترحيب والرتب)
-        discordLibrary.GatewayIntentBits.GuildVoiceStates,            // قراءة حالات الفويس (للوجات الصوت والنقل)
-        discordLibrary.GatewayIntentBits.GuildMessageReactions,       // قراءة التفاعلات
-        discordLibrary.GatewayIntentBits.GuildPresences               // قراءة حالة التواجد
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildPresences
     ],
-    // البارشالز (Partials) للتعامل مع البيانات القديمة التي لم يتم تحميلها في الذاكرة
+    // تفعيل الأجزاء (Partials) لقراءة الرسائل القديمة التي لم تكن في الذاكرة الحية (RAM)
     partials: [
-        discordLibrary.Partials.Message, 
-        discordLibrary.Partials.Channel, 
-        discordLibrary.Partials.GuildMember, 
-        discordLibrary.Partials.User
+        Partials.Message,
+        Partials.Channel,
+        Partials.Reaction,
+        Partials.User,
+        Partials.GuildMember
     ]
 });
 
-// =========================================================================================================
-// 🧠 3. إنشاء حاويات الذاكرة للأوامر (Memory Collections)
-// =========================================================================================================
-botClient.commands = new discordLibrary.Collection(); // لحفظ الأوامر الديناميكية
-botClient.aliases = new discordLibrary.Collection();  // لحفظ اختصارات الأوامر إن وجدت
+// تهيئة مجموعات (Collections) لحفظ الأوامر والاختصارات في الذاكرة العشوائية لتسريع الاستجابة
+botClient.commands = new Collection();
+botClient.aliases = new Collection();
 
 // =========================================================================================================
-// 🛡️ 4. نظام الحماية الفولاذي من السقوط (Anti-Crash System)
-// يمنع البوت من التوقف عن العمل (Crash) إذا حدث خطأ برمجي غير متوقع في أي ملف آخر.
+// 🗄️ 2. الاتصال بقاعدة البيانات (MongoDB Connection Engine)
 // =========================================================================================================
-process.on('unhandledRejection', (rejectionReason, rejectedPromise) => {
-    console.log('\n[CRITICAL ERROR] Unhandled Rejection detected at:', rejectedPromise);
-    console.log('[CRITICAL ERROR] Reason:', rejectionReason);
-    // لا نقوم بإيقاف البوت، بل نسجل الخطأ فقط لضمان الاستمرارية
-});
 
-process.on('uncaughtException', (uncaughtError) => {
-    console.log('\n[CRITICAL ERROR] Uncaught Exception detected:');
-    console.error(uncaughtError);
-});
-
-process.on('uncaughtExceptionMonitor', (uncaughtError, errorOrigin) => {
-    console.log('\n[CRITICAL ERROR] Uncaught Exception Monitor triggered at:', errorOrigin);
-    console.error(uncaughtError);
-});
-
-// =========================================================================================================
-// 🗄️ 5. محرك الاتصال بقاعدة البيانات (Database Connection Engine)
-// =========================================================================================================
 const establishDatabaseConnection = async () => {
-    console.log('[SYSTEM] Attempting to connect to MongoDB Database...');
+    
+    // سحب رابط قاعدة البيانات من ملف .env أو متغيرات Railway
+    const mongoDatabaseUriString = process.env.MONGO_URI;
+
+    if (!mongoDatabaseUriString) {
+        console.error('====================================================');
+        console.error('[DATABASE CRITICAL ERROR] MONGO_URI is missing from your environment variables!');
+        console.error('====================================================');
+        process.exit(1); // إغلاق البوت فوراً إذا لم يكن هناك رابط لقاعدة البيانات لتجنب الأخطاء
+    }
+
+    mongoose.set('strictQuery', false);
+
     try {
-        mongooseDatabase.set('strictQuery', false);
-        await mongooseDatabase.connect(process.env.MONGO_URI, {
+        console.log('[DATABASE] Attempting to connect to MongoDB Cluster...');
+        await mongoose.connect(mongoDatabaseUriString, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            autoIndex: true, // بناء الـ Indexes تلقائياً لتسريع البحث
-            connectTimeoutMS: 15000, // مهلة الاتصال
-            socketTimeoutMS: 45000,
+            serverSelectionTimeoutMS: 15000 // انتظار 15 ثانية كحد أقصى للاتصال قبل إعلان الفشل
         });
-        console.log('[DATABASE] ✅ Successfully connected to MongoDB. Data is secure.');
+        console.log('[DATABASE] ✅ Successfully connected to MongoDB Enterprise Database.');
     } catch (databaseConnectionException) {
-        console.log('[DATABASE ERROR] ❌ Failed to connect to MongoDB. The bot cannot operate without a database. Error details:');
+        console.error('====================================================');
+        console.error('[DATABASE CRITICAL ERROR] Failed to connect to MongoDB!');
         console.error(databaseConnectionException);
-        process.exit(1); // إغلاق البوت إجبارياً إذا فشل الاتصال بالقاعدة لأنها العصب الأساسي
+        console.error('====================================================');
+        process.exit(1);
     }
 };
 
 // =========================================================================================================
-// ⚙️ 6. محرك الربط التلقائي الديناميكي (Dynamic Handlers Auto-Loader)
-// هذا هو النظام الذي يربط جميع الملفات في المشروع تلقائياً بمجرد إضافتها.
+// 📂 3. معالج الأوامر والأحداث (Dynamic Handlers System)
 // =========================================================================================================
+
 const loadSystemHandlers = () => {
-    console.log('[SYSTEM] Initiating Dynamic Handlers Loading Process...');
-    
-    // تحديد مسار مجلد المحركات (handlers)
-    const handlersDirectoryPath = pathModule.join(__dirname, 'handlers');
-    
-    // فحص ما إذا كان المجلد موجوداً لتجنب الأخطاء
-    if (fileSystem.existsSync(handlersDirectoryPath) === false) {
-        console.log('[SYSTEM WARNING] "handlers" directory is missing. Creating it now...');
-        fileSystem.mkdirSync(handlersDirectoryPath, { recursive: true });
-        console.log('[SYSTEM] "handlers" directory created. Please add your handler files.');
-        return;
+    console.log('\n[SYSTEM] Starting to load Event and Command Handlers...');
+
+    // ---------------------------------------------------------------------------------
+    // أ. معالج الأحداث (Events Handler)
+    // ---------------------------------------------------------------------------------
+    const eventsDirectoryPath = path.join(__dirname, 'events');
+    const eventFilesArray = fileSystem.readdirSync(eventsDirectoryPath).filter(file => file.endsWith('.js'));
+
+    let loadedEventsCount = 0;
+    for (const eventFile of eventFilesArray) {
+        const eventModulePath = path.join(eventsDirectoryPath, eventFile);
+        const eventModule = require(eventModulePath);
+
+        if (eventModule.once === true) {
+            botClient.once(eventModule.name, (...args) => eventModule.execute(...args, botClient));
+        } else {
+            botClient.on(eventModule.name, (...args) => eventModule.execute(...args, botClient));
+        }
+        loadedEventsCount++;
     }
+    console.log(`[EVENTS HANDLER] ✅ Successfully loaded ${loadedEventsCount} Event modules into memory.`);
 
-    // قراءة جميع الملفات التي تنتهي بصيغة .js فقط
-    const handlerJavascriptFilesArray = fileSystem.readdirSync(handlersDirectoryPath).filter(fileName => fileName.endsWith('.js'));
-    
-    let successfullyLoadedHandlersCount = 0;
+    // ---------------------------------------------------------------------------------
+    // ب. معالج الأوامر المتقدم (Commands Handler - Subfolder Support)
+    // ---------------------------------------------------------------------------------
+    const commandsDirectoryPath = path.join(__dirname, 'commands');
+    const commandFoldersArray = fileSystem.readdirSync(commandsDirectoryPath);
 
-    for (let fileIndex = 0; fileIndex < handlerJavascriptFilesArray.length; fileIndex++) {
-        const currentHandlerFileName = handlerJavascriptFilesArray[fileIndex];
+    let loadedCommandsCount = 0;
+    for (const folderName of commandFoldersArray) {
+        const specificFolderPath = path.join(commandsDirectoryPath, folderName);
         
-        try {
-            // استدعاء ملف الهاندلر وتمرير الكلاينت (botClient) له ليعمل داخله
-            require(`${handlersDirectoryPath}/${currentHandlerFileName}`)(botClient);
-            successfullyLoadedHandlersCount++;
-            console.log(`[SYSTEM LOG] 🔗 Successfully loaded and linked handler: ${currentHandlerFileName}`);
-        } catch (handlerLoadException) {
-            console.log(`[SYSTEM ERROR] ❌ Failed to load or link handler: ${currentHandlerFileName}`);
-            console.error(handlerLoadException);
+        // التأكد من أن المسار هو مجلد فعلي وليس ملف عادي
+        const isDirectoryBoolean = fileSystem.statSync(specificFolderPath).isDirectory();
+        
+        if (isDirectoryBoolean === true) {
+            const commandFilesArray = fileSystem.readdirSync(specificFolderPath).filter(file => file.endsWith('.js'));
+            
+            for (const commandFile of commandFilesArray) {
+                const commandModulePath = path.join(specificFolderPath, commandFile);
+                const commandModule = require(commandModulePath);
+                
+                if (commandModule.name) {
+                    botClient.commands.set(commandModule.name, commandModule);
+                    loadedCommandsCount++;
+                    
+                    // تحميل الاختصارات (Aliases) إذا وجدت داخل وحدة الأمر
+                    if (commandModule.aliases && Array.isArray(commandModule.aliases) === true) {
+                        for (let i = 0; i < commandModule.aliases.length; i++) {
+                            const currentAliasString = commandModule.aliases[i];
+                            botClient.aliases.set(currentAliasString, commandModule.name);
+                        }
+                    }
+                }
+            }
         }
     }
-    
-    console.log(`[SYSTEM LOG] Finished loading ${successfullyLoadedHandlersCount} system handlers.`);
+    console.log(`[COMMANDS HANDLER] ✅ Successfully loaded ${loadedCommandsCount} Command modules from subfolders.`);
 };
 
 // =========================================================================================================
-// 🚀 7. دالة الإقلاع الرئيسية (Main Boot Sequence)
+// 🛡️ 4. نظام الحماية من الانهيار المفاجئ (Enterprise Anti-Crash System)
 // =========================================================================================================
-const startBotEngine = async () => {
-    console.log('====================================================');
-    console.log('🚀 ENTERPRISE BOT ENGINE IS STARTING...');
-    console.log('====================================================');
 
-    // 1. الاتصال بقاعدة البيانات أولاً قبل أي شيء
+process.on('unhandledRejection', (rejectionReason, rejectedPromise) => {
+    console.log('\n=================== [ANTI-CRASH] UNHANDLED REJECTION ===================');
+    console.log('Reason: ', rejectionReason);
+    console.log('========================================================================\n');
+});
+
+process.on('uncaughtException', (uncaughtExceptionError, exceptionOrigin) => {
+    console.log('\n=================== [ANTI-CRASH] UNCAUGHT EXCEPTION ====================');
+    console.log('Exception: ', uncaughtExceptionError);
+    console.log('Origin: ', exceptionOrigin);
+    console.log('========================================================================\n');
+});
+
+process.on('uncaughtExceptionMonitor', (uncaughtExceptionError, exceptionOrigin) => {
+    console.log('\n================ [ANTI-CRASH] UNCAUGHT EXCEPTION MONITOR ===============');
+    console.log('Exception: ', uncaughtExceptionError);
+    console.log('========================================================================\n');
+});
+
+// =========================================================================================================
+// 🚀 5. تشغيل المحرك بالكامل وتفعيل البوت (Full Boot Sequence)
+// =========================================================================================================
+
+const startEnterpriseBotEngine = async () => {
+    
+    // الخطوة الأولى: الاتصال بقاعدة البيانات لضمان حفظ البيانات قبل استلام أي رسالة
     await establishDatabaseConnection();
-    
-    // 2. تحميل المحركات (التي ستقوم بدورها بتحميل الأوامر والأحداث تلقائياً)
+
+    // الخطوة الثانية: تحميل جميع الأوامر والأحداث إلى ذاكرة البوت
     loadSystemHandlers();
+
+    // الخطوة الثالثة: تسجيل الدخول إلى خوادم ديسكورد باستخدام التوكن السري
+    console.log('\n[SYSTEM] Attempting to login to Discord Gateway...');
     
-    // 3. تسجيل الدخول إلى خوادم ديسكورد باستخدام التوكن السري
-    console.log('[SYSTEM] Attempting to login to Discord...');
+    // ⚠️ التعديل المطلوب: تم تغيير المتغيرة هنا لتكون TOKEN بدلاً من BOT_TOKEN
+    const secretDiscordTokenString = process.env.TOKEN;
+    
+    if (!secretDiscordTokenString) {
+        console.error('====================================================');
+        console.error('[DISCORD CRITICAL ERROR] TOKEN is missing from your environment variables!');
+        console.error('====================================================');
+        process.exit(1);
+    }
+
     try {
-        await botClient.login(process.env.BOT_TOKEN);
-        console.log(`[DISCORD] ✅ Successfully logged in and online as: ${botClient.user?.tag}`);
+        await botClient.login(secretDiscordTokenString);
+        
+        console.log('====================================================');
+        console.log(`[DISCORD] ✅ Successfully logged in and online as: ${botClient.user.tag}`);
         console.log('====================================================');
         console.log('🛡️ BOT IS FULLY OPERATIONAL AND READY FOR COMMANDS.');
-        console.log('====================================================');
+        console.log('====================================================\n');
+        
+        // =================================================================================================
+        // 🌐 6. استدعاء وتشغيل خادم لوحة التحكم (Trigger Dashboard Express Server)
+        // =================================================================================================
+        console.log('[SYSTEM] Triggering Dashboard Web Server Boot Sequence...');
+        try {
+            const dashboardServerModuleFunction = require('./dashboard/server.js');
+            // تمرير البوت للداشبورد للاستفادة من الرومات والرتب في صفحات الـ HTML
+            dashboardServerModuleFunction(botClient); 
+        } catch (dashboardInitializationException) {
+            console.error('[DASHBOARD ERROR] Failed to initialize the dashboard web server:', dashboardInitializationException);
+        }
+
     } catch (discordLoginException) {
-        console.log('[DISCORD ERROR] ❌ Failed to login. Please verify your BOT_TOKEN in the .env file.');
+        console.error('====================================================');
+        console.error('[DISCORD ERROR] ❌ Failed to login. Please verify your TOKEN is valid and intents are enabled.');
         console.error(discordLoginException);
+        console.error('====================================================');
     }
 };
 
-// إعطاء إشارة البدء للمحرك
-startBotEngine();
+// إعطاء إشارة البدء النهائية لجميع محركات النظام
+startEnterpriseBotEngine();
