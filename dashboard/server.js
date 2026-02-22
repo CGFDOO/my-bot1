@@ -1,600 +1,600 @@
+// =========================================================================================================
+// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - OAUTH2 & EXPRESS)
+// ---------------------------------------------------------------------------------------------------------
+// المسار: dashboard/server.js
+// الوظيفة: تشغيل خادم ويب (Web Server)، ربط تسجيل الدخول بديسكورد (OAuth2)، 
+// عرض صفحات الـ EJS، ومعالجة وحفظ كافة إعدادات السيرفر (GuildConfig) بدقة متناهية.
+// تم كتابة الكود بطريقة (Hyper-Verbose) لضمان حماية كل مدخل من مدخلات الداشبورد.
+// =========================================================================================================
+
 const express = require('express');
-const passport = require('passport');
-const discordPassportStrategy = require('passport-discord').Strategy;
-const session = require('express-session');
+const app = express();
 const path = require('path');
+const session = require('express-session');
+const passport = require('passport');
+const DiscordStrategy = require('passport-discord').Strategy;
+const GuildConfigDatabaseModel = require('../models/GuildConfig');
 
-// استدعاء قاعدة البيانات ومكاتب ديسكورد
-const GuildConfig = require('../models/GuildConfig');
-const discordLibrary = require('discord.js');
-const EmbedBuilder = discordLibrary.EmbedBuilder;
-const ActionRowBuilder = discordLibrary.ActionRowBuilder;
-const ButtonBuilder = discordLibrary.ButtonBuilder;
-const ButtonStyle = discordLibrary.ButtonStyle;
+// =========================================================================================================
+// ⚙️ 1. الإعدادات الأساسية للمحرك (Engine Configuration)
+// =========================================================================================================
 
-module.exports = (client) => {
-    
-    const app = express();
-    
-    // =====================================================================
-    // ⚙️ إعدادات الـ Express الأساسية (مفرودة)
-    // =====================================================================
-    app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-    app.use(express.json({ limit: '50mb' }));
-    
-    const publicDirectoryPath = path.join(__dirname, 'public');
-    app.use(express.static(publicDirectoryPath));
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '../views'));
+app.use(express.static(path.join(__dirname, '../public')));
 
-    // =====================================================================
-    // 🔐 إعدادات الجلسات (Sessions)
-    // =====================================================================
-    const sessionSecretKey = process.env.SESSION_SECRET || 'MNC_COMMUNITY_SUPER_SECRET_KEY_2026';
-    
-    app.use(session({
-        secret: sessionSecretKey,
-        resave: false,
-        saveUninitialized: false,
-        cookie: { 
-            maxAge: 60000 * 60 * 24 * 7 // أسبوع كامل
+// توسيع حجم الطلبات (Payload) لاستيعاب البيانات الضخمة القادمة من الداشبورد
+// تم رفع الحد الأقصى إلى 100 ميجابايت لتفادي أي مشاكل عند حفظ إعدادات البانلات المتعددة
+app.use(express.urlencoded({ extended: true, limit: '100mb', parameterLimit: 100000 }));
+app.use(express.json({ limit: '100mb' }));
+
+// =========================================================================================================
+// 🔒 2. نظام الجلسات والحماية (Sessions & Security Configuration)
+// =========================================================================================================
+
+app.use(session({
+    secret: 'ENTERPRISE_ULTIMATE_SECRET_KEY_FOR_DASHBOARD_123!@#_SAAS_EDITION_SECURE',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24 * 7 // الجلسة تستمر لمدة 7 أيام متواصلة
+    }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// =========================================================================================================
+// 🔑 3. نظام تسجيل الدخول بواسطة ديسكورد (Discord OAuth2 Provider)
+// =========================================================================================================
+
+passport.use(new DiscordStrategy({
+    clientID: process.env.CLIENT_ID, 
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: process.env.CALLBACK_URL, 
+    scope: ['identify', 'guilds'] 
+}, function(accessToken, refreshToken, userProfile, doneCallback) {
+    // يتم تمرير بيانات المستخدم بمجرد نجاح المصادقة مع خوادم ديسكورد
+    return doneCallback(null, userProfile);
+}));
+
+passport.serializeUser(function(authenticatedUser, doneCallback) {
+    doneCallback(null, authenticatedUser);
+});
+
+passport.deserializeUser(function(serializedUserObj, doneCallback) {
+    doneCallback(null, serializedUserObj);
+});
+
+// =========================================================================================================
+// 🛡️ 4. دوال الحماية والتحقق الإضافية (Middleware Validation Engine)
+// =========================================================================================================
+
+// دالة حماية الصفحات: تمنع أي شخص غير مسجل من الدخول للداشبورد
+function checkAuthenticationValidation(request, response, nextFunction) {
+    if (request.isAuthenticated() === true) {
+        return nextFunction(); 
+    }
+    console.log('[DASHBOARD SECURITY] Unauthorized access attempt blocked. Redirecting to login.');
+    response.redirect('/auth/discord'); 
+}
+
+// دالة لمعالجة وتنظيف المصفوفات (Arrays) القادمة من الداشبورد
+function parseAndSanitizeArrayInput(rawInputData) {
+    if (rawInputData === undefined || rawInputData === null) {
+        return [];
+    }
+    if (Array.isArray(rawInputData) === true) {
+        return rawInputData.filter(item => item !== null && item.trim() !== '');
+    }
+    if (typeof rawInputData === 'string') {
+        const splitArray = rawInputData.split(',');
+        const cleanedArray = [];
+        for (let i = 0; i < splitArray.length; i++) {
+            const trimmedItem = splitArray[i].trim();
+            if (trimmedItem !== '') {
+                cleanedArray.push(trimmedItem);
+            }
         }
-    }));
+        return cleanedArray;
+    }
+    return [];
+}
 
-    // إعداد محرك القوالب
-    app.set('view engine', 'ejs');
-    const viewsDirectoryPath = path.join(__dirname, '../views');
-    app.set('views', viewsDirectoryPath);
+// دالة لمعالجة الحقول النصية التي يمكن أن تكون فارغة
+function parseAndSanitizeStringInput(rawInputData, defaultValue = null) {
+    if (rawInputData === undefined || rawInputData === null) {
+        return defaultValue;
+    }
+    const trimmedString = String(rawInputData).trim();
+    if (trimmedString === '' || trimmedString === 'none') {
+        return defaultValue;
+    }
+    return trimmedString;
+}
 
-    // =====================================================================
-    // 🛂 إعدادات تسجيل الدخول بحساب ديسكورد (Passport)
-    // =====================================================================
-    passport.serializeUser((user, done) => { 
-        done(null, user); 
+// =========================================================================================================
+// 🌐 5. مسارات الموقع الأساسية (Core Web Routes)
+// =========================================================================================================
+
+// مسار توجيه المستخدم لصفحة تسجيل دخول ديسكورد
+app.get('/auth/discord', passport.authenticate('discord'));
+
+// مسار استقبال المستخدم بعد عودته من ديسكورد
+app.get('/auth/discord/callback', passport.authenticate('discord', {
+    failureRedirect: '/?error=auth_failed'
+}), function(request, response) {
+    console.log(`[DASHBOARD AUTH] User ${request.user.username} successfully logged in.`);
+    response.redirect('/dashboard'); 
+});
+
+// مسار تسجيل الخروج
+app.get('/logout', function(request, response, nextFunction) {
+    request.logout(function(logoutError) {
+        if (logoutError) { 
+            console.error('[DASHBOARD ERROR] Logout failed:', logoutError);
+            return nextFunction(logoutError); 
+        }
+        response.redirect('/');
+    });
+});
+
+// الصفحة الرئيسية (Landing Page)
+app.get('/', (request, response) => {
+    response.render('index', { 
+        user: request.user || null 
+    });
+});
+
+// صفحة لوحة التحكم واختيار السيرفرات (Server Selection Page)
+app.get('/dashboard', checkAuthenticationValidation, (request, response) => {
+    // جلب السيرفرات التي يمتلك فيها المستخدم صلاحية Administrator أو Manage Server
+    const userAdminGuildsArray = request.user.guilds.filter(function(guildObject) {
+        const hasManageServerPermission = (guildObject.permissions & 0x20) === 0x20;
+        const hasAdministratorPermission = (guildObject.permissions & 0x8) === 0x8;
+        return hasManageServerPermission || hasAdministratorPermission;
     });
     
-    passport.deserializeUser((obj, done) => { 
-        done(null, obj); 
+    response.render('dashboard', { 
+        user: request.user, 
+        guilds: userAdminGuildsArray 
     });
+});
 
-    const discordStrategyConfig = {
-        clientID: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-        callbackURL: process.env.CALLBACK_URL,
-        scope: ['identify', 'guilds']
-    };
+// =========================================================================================================
+// ⚙️ 6. مسار جلب وعرض الإعدادات للسيرفر (Settings GET Route)
+// =========================================================================================================
 
-    passport.use(new discordPassportStrategy(discordStrategyConfig, (accessToken, refreshToken, profile, done) => {
-        process.nextTick(() => { 
-            return done(null, profile); 
+app.get('/settings/:guildId', checkAuthenticationValidation, async (request, response) => {
+    
+    const targetGuildDiscordIdString = request.params.guildId;
+    
+    // تأكيد ملكية السيرفر للمستخدم لمرة ثانية كطبقة حماية
+    let doesUserHaveAccessToGuildBoolean = false;
+    for (let i = 0; i < request.user.guilds.length; i++) {
+        const currentGuildItem = request.user.guilds[i];
+        if (currentGuildItem.id === targetGuildDiscordIdString) {
+            const hasManage = (currentGuildItem.permissions & 0x20) === 0x20;
+            const hasAdmin = (currentGuildItem.permissions & 0x8) === 0x8;
+            if (hasManage || hasAdmin) {
+                doesUserHaveAccessToGuildBoolean = true;
+                break;
+            }
+        }
+    }
+    
+    if (doesUserHaveAccessToGuildBoolean === false) {
+        console.log(`[DASHBOARD SECURITY] User ${request.user.username} tried to access unauthorized guild: ${targetGuildDiscordIdString}`);
+        return response.send('<h1 style="color:red; text-align:center; font-family:sans-serif;">❌ Access Denied! You do not have permission to manage this server.</h1>');
+    }
+
+    try {
+        let guildConfigurationDocumentObject = await GuildConfigDatabaseModel.findOne({ guildId: targetGuildDiscordIdString });
+        
+        // إنشاء ملف جديد في قاعدة البيانات إذا لم يكن موجوداً
+        if (guildConfigurationDocumentObject === null) {
+            console.log(`[DASHBOARD LOG] Creating new database entry for guild: ${targetGuildDiscordIdString}`);
+            guildConfigurationDocumentObject = new GuildConfigDatabaseModel({ guildId: targetGuildDiscordIdString });
+            await guildConfigurationDocumentObject.save();
+        }
+
+        response.render('settings', {
+            user: request.user,
+            guildId: targetGuildDiscordIdString,
+            config: guildConfigurationDocumentObject,
+            bot: request.app.locals.client // مفيد جداً لجلب الرومات والرتب في الـ EJS
         });
-    }));
 
-    app.use(passport.initialize());
-    app.use(passport.session());
+    } catch (databaseFetchExceptionError) {
+        console.error('[DASHBOARD DB ERROR] Failed to fetch settings for GET route:', databaseFetchExceptionError);
+        response.send('<h1 style="color:red; text-align:center;">❌ Internal Server Error while loading settings.</h1>');
+    }
+});
 
-    // =====================================================================
-    // 🌐 الروابط الأساسية (Routes)
-    // =====================================================================
-    app.get('/', (req, res) => { 
-        res.render('index', { user: req.user }); 
-    });
+// =========================================================================================================
+// 💾 7. مسار الحفظ العملاق والمفصل (THE BEHEMOTH POST ROUTE)
+// ---------------------------------------------------------------------------------------------------------
+// هذا المسار يستقبل جميع مدخلات الـ HTML Form. تم فرده بالكامل ليعالج كل متغير على حدة بدون اختصارات.
+// =========================================================================================================
+
+app.post('/settings/:guildId/save', checkAuthenticationValidation, async (request, response) => {
     
-    app.get('/login', passport.authenticate('discord'));
+    const targetGuildDiscordIdString = request.params.guildId;
     
-    app.get('/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => { 
-        res.redirect('/dashboard'); 
-    });
+    // التحقق الأمني قبل الحفظ
+    let doesUserHaveAccessToGuildBoolean = false;
+    for (let i = 0; i < request.user.guilds.length; i++) {
+        const currentGuildItem = request.user.guilds[i];
+        if (currentGuildItem.id === targetGuildDiscordIdString) {
+            const hasManage = (currentGuildItem.permissions & 0x20) === 0x20;
+            const hasAdmin = (currentGuildItem.permissions & 0x8) === 0x8;
+            if (hasManage || hasAdmin) {
+                doesUserHaveAccessToGuildBoolean = true;
+                break;
+            }
+        }
+    }
     
-    app.get('/logout', (req, res, next) => { 
-        req.logout((err) => { 
-            if (err) {
-                return next(err); 
-            }
-            res.redirect('/'); 
-        }); 
-    });
+    if (doesUserHaveAccessToGuildBoolean === false) {
+        return response.status(403).send('Forbidden: Access Denied');
+    }
 
-    // =====================================================================
-    // 🖥️ صفحة قائمة السيرفرات (Dashboard)
-    // =====================================================================
-    app.get('/dashboard', (req, res) => {
-        
-        if (!req.user) { 
-            return res.redirect('/login'); 
-        }
-        
-        const userGuildsArray = req.user.guilds;
-        const adminGuildsArray = userGuildsArray.filter((guild) => { 
-            const hasAdminPermission = (guild.permissions & 0x8) === 0x8;
-            return hasAdminPermission; 
-        });
-        
-        res.render('dashboard', { 
-            user: req.user, 
-            guilds: adminGuildsArray 
-        });
-    });
+    try {
+        const incomingFormDataPayloadObject = request.body;
+        console.log(`[DASHBOARD LOG] Received massive POST payload for Guild: ${targetGuildDiscordIdString}`);
 
-    // =====================================================================
-    // ⚙️ صفحة الإعدادات الشاملة للسيرفر (GET)
-    // =====================================================================
-    app.get('/settings/:guildID', async (req, res) => {
+        let guildConfigDocumentToUpdateObject = await GuildConfigDatabaseModel.findOne({ guildId: targetGuildDiscordIdString });
         
-        if (!req.user) { 
-            return res.redirect('/login'); 
-        }
-        
-        const targetGuildIDString = req.params.guildID;
-        const discordGuildObject = client.guilds.cache.get(targetGuildIDString);
-        
-        if (!discordGuildObject) { 
-            const botNotInGuildMessage = `<div style="text-align:center; padding-top:50px; color:white; background:#121212; height:100vh;"><h1>❌ البوت ليس متواجداً في هذا السيرفر! قم بدعوته أولاً.</h1></div>`;
-            return res.send(botNotInGuildMessage); 
+        if (guildConfigDocumentToUpdateObject === null) {
+            guildConfigDocumentToUpdateObject = new GuildConfigDatabaseModel({ guildId: targetGuildDiscordIdString });
         }
 
-        const userGuildsArray = req.user.guilds;
-        const userGuildDataObject = userGuildsArray.find((g) => g.id === targetGuildIDString);
-        
-        if (!userGuildDataObject || (userGuildDataObject.permissions & 0x8) !== 0x8) { 
-            const noPermissionMessage = `<div style="text-align:center; color:red; margin-top:50px; background:#121212; height:100vh;"><h1>❌ ليس لديك صلاحية Administrator لفتح هذه الصفحة!</h1></div>`;
-            return res.send(noPermissionMessage); 
-        }
-
-        let serverConfigDocument = await GuildConfig.findOne({ guildId: discordGuildObject.id });
-        
-        if (!serverConfigDocument) { 
-            serverConfigDocument = await GuildConfig.create({ guildId: discordGuildObject.id }); 
-        }
-
-        const guildChannelsCollection = discordGuildObject.channels.cache;
-        const textAndVoiceChannelsArray = guildChannelsCollection.filter((c) => { 
-            return c.type === 0 || c.type === 4 || c.type === 2; 
-        }).map((c) => { 
-            return { id: c.id, name: c.name, type: c.type }; 
-        });
-        
-        const guildRolesCollection = discordGuildObject.roles.cache;
-        const guildRolesArray = guildRolesCollection.filter((r) => { 
-            return r.name !== '@everyone'; 
-        }).map((r) => { 
-            return { id: r.id, name: r.name }; 
-        });
-
-        res.render('settings', { 
-            guild: discordGuildObject, 
-            config: serverConfigDocument, 
-            channels: textAndVoiceChannelsArray, 
-            roles: guildRolesArray, 
-            user: req.user, 
-            success: req.query.success 
-        });
-    });
-
-    // =====================================================================
-    // 💾 حفظ الإعدادات في الداتابيز (POST) (مفرود بالكامل لتجنب فقدان أي متغير)
-    // =====================================================================
-    app.post('/settings/:guildID', async (req, res) => {
-        
-        if (!req.user) { 
-            return res.redirect('/login'); 
-        }
-
-        const formatArrayFunction = (val) => {
-            if (Array.isArray(val)) {
-                return val; 
-            } else if (val) {
-                return [val]; 
-            } else {
-                return []; 
-            }
-        };
-        
-        let parsedTicketPanelsArray = [];
-        let parsedWarnReasonsARArray = [];
-        let parsedWarnReasonsENArray = [];
-        
-        const bodyTicketPanelsData = req.body.ticketPanelsData;
-        const bodyWarnReasonsARData = req.body.warnReasonsARData;
-        const bodyWarnReasonsENData = req.body.warnReasonsENData;
-
-        try {
-            if (bodyTicketPanelsData) {
-                parsedTicketPanelsArray = JSON.parse(bodyTicketPanelsData); 
-            }
-            if (bodyWarnReasonsARData) {
-                parsedWarnReasonsARArray = JSON.parse(bodyWarnReasonsARData); 
-            }
-            if (bodyWarnReasonsENData) {
-                parsedWarnReasonsENArray = JSON.parse(bodyWarnReasonsENData); 
-            }
-        } catch(parsingError) { 
-            console.log("Error parsing JSON data from dashboard:", parsingError); 
-        }
-
-        const formDataObject = req.body;
-        const targetGuildIDString = req.params.guildID;
-
-        // دالة الحفظ الشاملة لجميع المتغيرات في قاعدة البيانات
-        await GuildConfig.findOneAndUpdate(
-            { guildId: targetGuildIDString },
-            { 
-                // الأساسيات والحماية
-                prefix: formDataObject.prefix, 
-                autoRoleId: formDataObject.autoRoleId,
-                antiLinks: formDataObject.antiLinks === 'on', 
-                antiSpam: formDataObject.antiSpam === 'on', 
-                
-                // الألعاب والمستويات
-                gamesEnabled: formDataObject.gamesEnabled === 'on', 
-                gamesChannelId: formDataObject.gamesChannelId,
-                levelingEnabled: formDataObject.levelingEnabled === 'on', 
-                levelUpChannelId: formDataObject.levelUpChannelId, 
-                suggestionChannelId: formDataObject.suggestionChannelId,
-                
-                // نظام الترحيب
-                welcomeChannelId: formDataObject.welcomeChannelId, 
-                welcomeMessage: formDataObject.welcomeMessage, 
-                welcomeBgImage: formDataObject.welcomeBgImage, 
-                welcomeAvatarBorderColor: formDataObject.welcomeAvatarBorderColor,
-                welcomeEmbedColor: formDataObject.welcomeEmbedColor,
-                
-                // نظام التحذيرات المزدوج
-                warnPanelChannelId: formDataObject.warnPanelChannelId, 
-                warnLogChannelId: formDataObject.warnLogChannelId, 
-                warnPanelTitle: formDataObject.warnPanelTitle, 
-                warnPanelDesc: formDataObject.warnPanelDesc, 
-                warnPanelColor: formDataObject.warnPanelColor, 
-                warnMax: parseInt(formDataObject.warnMax) || 3, 
-                warnAction: formDataObject.warnAction, 
-                warnReasonsAR: parsedWarnReasonsARArray,
-                warnReasonsEN: parsedWarnReasonsENArray,
-                
-                // البانلات والتكتات
-                ticketPanels: parsedTicketPanelsArray,
-                maxTicketsPerUser: parseInt(formDataObject.maxTicketsPerUser) || 1, 
-                hideTicketOnClaim: formDataObject.hideTicketOnClaim === 'on', 
-                readOnlyStaffOnClaim: formDataObject.readOnlyStaffOnClaim === 'on',
-                
-                // الرتب 
-                adminRoleId: formDataObject.adminRoleId, 
-                highAdminRoles: formatArrayFunction(formDataObject.highAdminRoles), 
-                middlemanRoleId: formDataObject.middlemanRoleId, 
-                highMiddlemanRoles: formatArrayFunction(formDataObject.highMiddlemanRoles), 
-                
-                // الأوامر الديناميكية للغرف والتريد
-                cmdAdd: formDataObject.cmdAdd, 
-                cmdAddRoles: formatArrayFunction(formDataObject.cmdAddRoles), 
-                
-                cmdDone: formDataObject.cmdDone, 
-                cmdDoneRoles: formatArrayFunction(formDataObject.cmdDoneRoles), 
-                
-                cmdReqHigh: formDataObject.cmdReqHigh, 
-                cmdReqHighRoles: formatArrayFunction(formDataObject.cmdReqHighRoles), 
-                
-                cmdCome: formDataObject.cmdCome, 
-                cmdComeRoles: formatArrayFunction(formDataObject.cmdComeRoles), 
-                
-                cmdTrade: formDataObject.cmdTrade, 
-                cmdTradeRoles: formatArrayFunction(formDataObject.cmdTradeRoles), 
-                
-                tradeApproveRoles: formatArrayFunction(formDataObject.tradeApproveRoles), 
-                tradeMentionRoles: formatArrayFunction(formDataObject.tradeMentionRoles),
-                
-                cmdClear: formDataObject.cmdClear, 
-                cmdClearRoles: formatArrayFunction(formDataObject.cmdClearRoles), 
-                
-                cmdLock: formDataObject.cmdLock, 
-                cmdLockRoles: formatArrayFunction(formDataObject.cmdLockRoles), 
-                
-                cmdUnlock: formDataObject.cmdUnlock, 
-                cmdUnlockRoles: formatArrayFunction(formDataObject.cmdUnlockRoles), 
-                
-                cmdVmove: formDataObject.cmdVmove, 
-                cmdVmoveRoles: formatArrayFunction(formDataObject.cmdVmoveRoles), 
-                
-                // أوامر العقوبات
-                cmdBan: formDataObject.cmdBan, 
-                cmdBanRoles: formatArrayFunction(formDataObject.cmdBanRoles), 
-                
-                cmdTimeout: formDataObject.cmdTimeout, 
-                cmdTimeoutRoles: formatArrayFunction(formDataObject.cmdTimeoutRoles),
-                
-                cmdUnban: formDataObject.cmdUnban, 
-                cmdUnbanRoles: formatArrayFunction(formDataObject.cmdUnbanRoles),
-                
-                cmdUntimeout: formDataObject.cmdUntimeout, 
-                cmdUntimeoutRoles: formatArrayFunction(formDataObject.cmdUntimeoutRoles),
-                
-                cmdMove: formDataObject.cmdMove, 
-                cmdMoveRoles: formatArrayFunction(formDataObject.cmdMoveRoles),
-
-                // تحكم الألوان الشامل
-                logEmbedColor: formDataObject.logEmbedColor,
-                transcriptEmbedColor: formDataObject.transcriptEmbedColor,
-                basicRatingColor: formDataObject.basicRatingColor,
-                staffRatingColor: formDataObject.staffRatingColor,
-                closeEmbedColor: formDataObject.closeEmbedColor,
-                answersEmbedColor: formDataObject.answersEmbedColor,
-                tradeEmbedColor: formDataObject.tradeEmbedColor,
-                banEmbedColor: formDataObject.banEmbedColor,
-                unbanEmbedColor: formDataObject.unbanEmbedColor,
-                timeoutEmbedColor: formDataObject.timeoutEmbedColor,
-                untimeoutEmbedColor: formDataObject.untimeoutEmbedColor,
-                
-                // التقييمات والعقوبات
-                ratingStyle: formDataObject.ratingStyle,
-                customRatingTitle: formDataObject.customRatingTitle,
-                customRatingText: formDataObject.customRatingText,
-                customMiddlemanRatingTitle: formDataObject.customMiddlemanRatingTitle,
-                customMiddlemanRatingText: formDataObject.customMiddlemanRatingText,
-
-                punishmentStyle: formDataObject.punishmentStyle,
-                customBanTitle: formDataObject.customBanTitle,
-                customBanDesc: formDataObject.customBanDesc,
-                customUnbanTitle: formDataObject.customUnbanTitle,
-                customUnbanDesc: formDataObject.customUnbanDesc,
-                customTimeoutTitle: formDataObject.customTimeoutTitle,
-                customTimeoutDesc: formDataObject.customTimeoutDesc,
-                customUntimeoutTitle: formDataObject.customUntimeoutTitle,
-                customUntimeoutDesc: formDataObject.customUntimeoutDesc,
-
-                // اللوجات الشاملة (جميع الرومات)
-                transcriptChannelId: formDataObject.transcriptChannelId, 
-                ticketLogChannelId: formDataObject.ticketLogChannelId, 
-                staffRatingChannelId: formDataObject.staffRatingChannelId, 
-                middlemanRatingChannelId: formDataObject.middlemanRatingChannelId, 
-                logRoleCreateDeleteId: formDataObject.logRoleCreateDeleteId, 
-                logMemberRoleUpdateId: formDataObject.logMemberRoleUpdateId, 
-                logJoinLeaveId: formDataObject.logJoinLeaveId, 
-                logMsgDeleteId: formDataObject.logMsgDeleteId, 
-                logMsgUpdateId: formDataObject.logMsgUpdateId, 
-                logImgDeleteId: formDataObject.logImgDeleteId, 
-                logVoiceId: formDataObject.logVoiceId, 
-                logInviteId: formDataObject.logInviteId, 
-                logChannelThreadId: formDataObject.logChannelThreadId, 
-                logBanId: formDataObject.logBanId, 
-                logTimeoutId: formDataObject.logTimeoutId, 
-                logUnwarnId: formDataObject.logUnwarnId
-            },
-            { upsert: true }
-        );
-
-        const discordGuildObject = client.guilds.cache.get(targetGuildIDString);
-        
-        // =====================================================================
-        // 🔥 إرسال بانل التحذيرات (مطابق للصورة 5 تماماً: 3 زراير)
-        // =====================================================================
-        const targetWarnChannelIdString = formDataObject.warnPanelChannelId;
-        
-        if (discordGuildObject && targetWarnChannelIdString) {
-            
-            const warnChannelObject = discordGuildObject.channels.cache.get(targetWarnChannelIdString);
-            
-            if (warnChannelObject) {
-                
-                try {
-                    const fetchedWarnMessagesCollection = await warnChannelObject.messages.fetch({ limit: 30 });
-                    
-                    const oldWarnBotMessagesCollection = fetchedWarnMessagesCollection.filter(msgObj => { 
-                        return msgObj.author.id === client.user.id; 
-                    });
-                    
-                    await warnChannelObject.bulkDelete(oldWarnBotMessagesCollection);
-                } catch(deleteWarnMessagesError) {
-                    console.log("لا توجد صلاحية لمسح الرسائل في روم لوحة التحذيرات.");
-                }
-
-                const warnEmbedObject = new EmbedBuilder();
-                
-                const finalWarnTitleString = formDataObject.warnPanelTitle || 'لوحة تحكم التحذير';
-                warnEmbedObject.setTitle(finalWarnTitleString);
-                
-                const finalWarnDescString = formDataObject.warnPanelDesc || 'استخدم الأزرار أدناه لإدارة تحذيرات الأعضاء.';
-                warnEmbedObject.setDescription(finalWarnDescString);
-                
-                const finalWarnColorHex = formDataObject.warnPanelColor || '#ed4245';
-                warnEmbedObject.setColor(finalWarnColorHex);
-
-                const warnActionRowObject = new ActionRowBuilder();
-                
-                const giveWarnButtonObject = new ButtonBuilder();
-                giveWarnButtonObject.setCustomId('sys_warn_give');
-                giveWarnButtonObject.setLabel('تحذير عضو');
-                giveWarnButtonObject.setStyle(ButtonStyle.Danger); 
-                
-                const removeWarnButtonObject = new ButtonBuilder();
-                removeWarnButtonObject.setCustomId('sys_warn_remove');
-                removeWarnButtonObject.setLabel('إزالة تحذير');
-                removeWarnButtonObject.setStyle(ButtonStyle.Success); 
-                
-                const viewWarnButtonObject = new ButtonBuilder();
-                viewWarnButtonObject.setCustomId('sys_warn_view');
-                viewWarnButtonObject.setLabel('عرض سجل');
-                viewWarnButtonObject.setStyle(ButtonStyle.Primary); 
-                
-                warnActionRowObject.addComponents(giveWarnButtonObject, removeWarnButtonObject, viewWarnButtonObject);
-                
-                try {
-                    await warnChannelObject.send({ 
-                        embeds: [warnEmbedObject], 
-                        components: [warnActionRowObject] 
-                    });
-                } catch (sendWarnPanelError) {
-                    console.error("خطأ أثناء إرسال بانل التحذيرات:", sendWarnPanelError);
-                }
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم الأول: الإعدادات الأساسية
+        // -----------------------------------------------------------------------------------------
+        if (incomingFormDataPayloadObject.prefix !== undefined) {
+            const rawPrefix = String(incomingFormDataPayloadObject.prefix).trim();
+            if (rawPrefix !== '') {
+                guildConfigDocumentToUpdateObject.prefix = rawPrefix;
             }
         }
 
-        // =====================================================================
-        // 🔥 إرسال البانلات المتعددة إلى الرومات المخصصة لها (Multi-Panels)
-        // =====================================================================
-        if (discordGuildObject && parsedTicketPanelsArray && parsedTicketPanelsArray.length > 0) {
-            
-            for (let pIndex = 0; pIndex < parsedTicketPanelsArray.length; pIndex++) {
-                
-                const panelDataObject = parsedTicketPanelsArray[pIndex];
-                const targetPanelChannelIdString = panelDataObject.panelChannelId;
-                
-                if (targetPanelChannelIdString) {
-                    
-                    const targetChannelObject = discordGuildObject.channels.cache.get(targetPanelChannelIdString);
-                    
-                    if (targetChannelObject) {
-                        
-                        try {
-                            const fetchedTicketMessagesCollection = await targetChannelObject.messages.fetch({ limit: 30 });
-                            
-                            const oldBotMessagesCollection = fetchedTicketMessagesCollection.filter(msgObj => { 
-                                return msgObj.author.id === client.user.id; 
-                            });
-                            
-                            await targetChannelObject.bulkDelete(oldBotMessagesCollection);
-                        } catch(deleteTicketMessagesError) {
-                            console.log("لا توجد صلاحية لمسح الرسائل في روم البانل.");
-                        }
-
-                        const panelEmbedObject = new EmbedBuilder();
-                        
-                        const finalPanelTitleString = panelDataObject.embedTitle || 'الدعم الفني';
-                        panelEmbedObject.setTitle(finalPanelTitleString);
-                        
-                        const finalPanelDescString = panelDataObject.embedDesc || 'اضغط على الزر لفتح تذكرة';
-                        panelEmbedObject.setDescription(finalPanelDescString);
-                        
-                        const finalPanelColorHex = panelDataObject.embedColor || '#0099ff';
-                        panelEmbedObject.setColor(finalPanelColorHex);
-                        
-                        const guildIconUrlString = discordGuildObject.iconURL({ dynamic: true });
-                        panelEmbedObject.setThumbnail(guildIconUrlString);
-                        
-                        if (panelDataObject.embedImage) {
-                            panelEmbedObject.setImage(panelDataObject.embedImage);
-                        }
-
-                        const actionRowsArrayList = [];
-                        let currentActionRowObject = new ActionRowBuilder();
-
-                        const panelButtonsArray = panelDataObject.buttons;
-                        
-                        if (panelButtonsArray && panelButtonsArray.length > 0) {
-                            
-                            for (let i = 0; i < panelButtonsArray.length; i++) {
-                                
-                                const buttonDataObject = panelButtonsArray[i];
-                                
-                                if (i > 0 && i % 5 === 0) {
-                                    actionRowsArrayList.push(currentActionRowObject);
-                                    currentActionRowObject = new ActionRowBuilder();
-                                }
-                                
-                                let finalButtonStyle = ButtonStyle.Primary;
-                                const dataColorString = buttonDataObject.color;
-                                
-                                if (dataColorString === 'Success') {
-                                    finalButtonStyle = ButtonStyle.Success; 
-                                } else if (dataColorString === 'Danger') {
-                                    finalButtonStyle = ButtonStyle.Danger; 
-                                } else if (dataColorString === 'Secondary') {
-                                    finalButtonStyle = ButtonStyle.Secondary; 
-                                }
-
-                                const newTicketButtonObject = new ButtonBuilder();
-                                
-                                const finalButtonCustomId = `ticket_open_${buttonDataObject.id}`;
-                                newTicketButtonObject.setCustomId(finalButtonCustomId);
-                                
-                                newTicketButtonObject.setLabel(buttonDataObject.label);
-                                newTicketButtonObject.setStyle(finalButtonStyle);
-                                
-                                currentActionRowObject.addComponents(newTicketButtonObject);
-                            }
-                            
-                            actionRowsArrayList.push(currentActionRowObject);
-                        }
-                        
-                        try {
-                            await targetChannelObject.send({ 
-                                embeds: [panelEmbedObject], 
-                                components: actionRowsArrayList 
-                            });
-                        } catch (sendTicketPanelError) {
-                            console.error("خطأ في إرسال بانل التكت:", sendTicketPanelError);
-                        }
-                    }
-                }
-            }
-        }
-        
-        const redirectUrlString = `/settings/${targetGuildIDString}?success=saved`;
-        res.redirect(redirectUrlString);
-    });
-
-    // =====================================================================
-    // 🚀 صانع الإيمبد الحر للرومات
-    // =====================================================================
-    app.post('/settings/:guildID/send-embed', async (req, res) => {
-        
-        if (!req.user) { 
-            return res.redirect('/login'); 
-        }
-        
-        const targetGuildIDString = req.params.guildID;
-        const discordGuildObject = client.guilds.cache.get(targetGuildIDString);
-        
-        if (!discordGuildObject) { 
-            return res.redirect('/dashboard'); 
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم الثاني: نظام الوساطة الأساسي (Middleman System)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.middlemanSystem) {
+            guildConfigDocumentToUpdateObject.middlemanSystem = {};
         }
 
-        const targetChannelIdString = req.body.embedChannelId;
-        const targetChannelObject = discordGuildObject.channels.cache.get(targetChannelIdString);
+        // تفعيل أو تعطيل الوساطة
+        guildConfigDocumentToUpdateObject.middlemanSystem.enabled = (incomingFormDataPayloadObject.mm_enabled === 'on' || incomingFormDataPayloadObject.mm_enabled === 'true');
         
-        if (targetChannelObject) {
-            
-            let colorHexCodeString = req.body.embedColor;
-            if (!colorHexCodeString) {
-                colorHexCodeString = '#5865F2';
-            }
-            
-            const cleanColorHexCode = colorHexCodeString.replace('#', '');
-            const parsedColorInt = parseInt(cleanColorHexCode, 16);
-            
-            const customEmbedMessageObject = new EmbedBuilder();
-            
-            const bodyEmbedTitleString = req.body.embedTitle;
-            if (bodyEmbedTitleString) { 
-                customEmbedMessageObject.setTitle(bodyEmbedTitleString); 
-            }
-            
-            const bodyEmbedDescString = req.body.embedDesc;
-            if (bodyEmbedDescString) { 
-                customEmbedMessageObject.setDescription(bodyEmbedDescString); 
-            }
-            
-            customEmbedMessageObject.setColor(parsedColorInt);
-            
-            const bodyEmbedImageString = req.body.embedImage;
-            if (bodyEmbedImageString) { 
-                customEmbedMessageObject.setImage(bodyEmbedImageString); 
-            }
-            
-            const bodyEmbedFooterString = req.body.embedFooter;
-            if (bodyEmbedFooterString) { 
-                customEmbedMessageObject.setFooter({ text: bodyEmbedFooterString }); 
-            }
-            
+        // الأيديهات (IDs)
+        if (incomingFormDataPayloadObject.mm_categoryId !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.categoryId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_categoryId);
+        }
+        if (incomingFormDataPayloadObject.mm_panelChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.panelChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelChannelId);
+        }
+
+        // نصوص بانل الوساطة الخارجي
+        if (incomingFormDataPayloadObject.mm_panelTitle !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.panelTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelTitle, 'تذكرة وساطة آمنة');
+        }
+        if (incomingFormDataPayloadObject.mm_panelDescription !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.panelDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelDescription, 'لطلب وسيط معتمد من الإدارة، يرجى فتح تذكرة من هنا.');
+        }
+        if (incomingFormDataPayloadObject.mm_panelColor !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.panelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelColor, '#f2a658');
+        }
+        if (incomingFormDataPayloadObject.mm_buttonLabel !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.buttonLabel = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_buttonLabel, 'طلب وسيط 🛡️');
+        }
+
+        // نصوص النافذة المنبثقة للوساطة (Modal)
+        if (incomingFormDataPayloadObject.mm_modalTitle !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.modalTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_modalTitle, 'بيانات الوساطة (Trade Info)');
+        }
+
+        // معالجة أسئلة النافذة (Modal Fields JSON)
+        if (incomingFormDataPayloadObject.mm_modalFieldsData !== undefined && incomingFormDataPayloadObject.mm_modalFieldsData !== '') {
             try {
-                await targetChannelObject.send({ embeds: [customEmbedMessageObject] });
-            } catch (embedSendError) {
-                console.log("Error sending custom embed:", embedSendError);
+                const parsedModalFieldsArray = JSON.parse(incomingFormDataPayloadObject.mm_modalFieldsData);
+                if (Array.isArray(parsedModalFieldsArray)) {
+                    guildConfigDocumentToUpdateObject.middlemanSystem.modalFields = parsedModalFieldsArray;
+                }
+            } catch (jsonParsingError) {
+                console.error('[DASHBOARD PARSE ERROR] Failed to parse Middleman Modal Fields Array.', jsonParsingError);
             }
         }
-        
-        const successRedirectUrl = `/settings/${targetGuildIDString}?success=embed_sent`;
-        res.redirect(successRedirectUrl);
-    });
 
-    const serverPortNumber = process.env.PORT || 8080;
+        // نصوص الإيمبد الداخلي لتذكرة الوساطة
+        if (incomingFormDataPayloadObject.mm_insideTicketTitle !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketTitle, 'تذكرة الوساطة');
+        }
+        if (incomingFormDataPayloadObject.mm_insideTicketDescription !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketDescription, 'يرجى انتظار الوسيط، وكتابة تفاصيل المعاملة بدقة.');
+        }
+        if (incomingFormDataPayloadObject.mm_insideTicketColor !== undefined) {
+            guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketColor, '#f2a658');
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم الثالث: نظام التذاكر المتعددة (Ticket Panels Arrays)
+        // -----------------------------------------------------------------------------------------
+        if (incomingFormDataPayloadObject.ticketPanelsData !== undefined && incomingFormDataPayloadObject.ticketPanelsData !== '') {
+            try {
+                // الداشبورد سترسل مصفوفة البانلات كاملة كـ JSON String ضخم
+                const parsedTicketPanelsArray = JSON.parse(incomingFormDataPayloadObject.ticketPanelsData);
+                if (Array.isArray(parsedTicketPanelsArray)) {
+                    guildConfigDocumentToUpdateObject.ticketPanels = parsedTicketPanelsArray;
+                }
+            } catch (jsonParsingError) {
+                console.error('[DASHBOARD PARSE ERROR] Failed to parse Custom Ticket Panels Array.', jsonParsingError);
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم الرابع: نظام التقييمات (Ratings)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.ratings) {
+            guildConfigDocumentToUpdateObject.ratings = {};
+        }
+
+        if (incomingFormDataPayloadObject.rating_middlemanLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.ratings.middlemanLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.rating_middlemanEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.ratings.middlemanEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanEmbedColor, '#f2a658');
+        }
+        
+        if (incomingFormDataPayloadObject.rating_staffLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.ratings.staffLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.rating_staffEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.ratings.staffEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffEmbedColor, '#3ba55d');
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم الخامس: إعدادات تحكم التذاكر والترانسكريبت (Ticket Controls & Transcript)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.ticketControls) {
+            guildConfigDocumentToUpdateObject.ticketControls = {};
+        }
+
+        if (incomingFormDataPayloadObject.tc_maxOpenTicketsPerUser !== undefined) {
+            const parsedMaxTicketsInt = parseInt(incomingFormDataPayloadObject.tc_maxOpenTicketsPerUser);
+            if (!isNaN(parsedMaxTicketsInt) && parsedMaxTicketsInt > 0) {
+                guildConfigDocumentToUpdateObject.ticketControls.maxOpenTicketsPerUser = parsedMaxTicketsInt;
+            }
+        }
+
+        if (incomingFormDataPayloadObject.tc_controlPanelColor !== undefined) {
+            guildConfigDocumentToUpdateObject.ticketControls.controlPanelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_controlPanelColor, '#2b2d31');
+        }
+        
+        if (incomingFormDataPayloadObject.tc_ticketLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.ticketControls.ticketLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_ticketLogChannelId);
+        }
+        
+        if (incomingFormDataPayloadObject.tc_transcriptChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.ticketControls.transcriptChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptChannelId);
+        }
+        
+        if (incomingFormDataPayloadObject.tc_transcriptEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.ticketControls.transcriptEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptEmbedColor, '#2b2d31');
+        }
+
+        // أزرار التحكم المنطقية (Booleans)
+        guildConfigDocumentToUpdateObject.ticketControls.hideTicketOnClaim = (incomingFormDataPayloadObject.tc_hideTicketOnClaim === 'on' || incomingFormDataPayloadObject.tc_hideTicketOnClaim === 'true');
+        guildConfigDocumentToUpdateObject.ticketControls.readOnlyStaffOnClaim = (incomingFormDataPayloadObject.tc_readOnlyStaffOnClaim === 'on' || incomingFormDataPayloadObject.tc_readOnlyStaffOnClaim === 'true');
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم السادس: نظام الرتب والصلاحيات (Hierarchy & Roles Configuration)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.roles) {
+            guildConfigDocumentToUpdateObject.roles = {};
+        }
+
+        // الرتب الفردية الأساسية
+        if (incomingFormDataPayloadObject.role_adminRoleId !== undefined) {
+            guildConfigDocumentToUpdateObject.roles.adminRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_adminRoleId);
+        }
+        if (incomingFormDataPayloadObject.role_middlemanRoleId !== undefined) {
+            guildConfigDocumentToUpdateObject.roles.middlemanRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_middlemanRoleId);
+        }
+
+        // مصفوفات الرتب المتعددة (Multiple Roles Arrays)
+        if (incomingFormDataPayloadObject.role_highAdminRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.roles.highAdminRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highAdminRoles);
+        }
+        if (incomingFormDataPayloadObject.role_highMiddlemanRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.roles.highMiddlemanRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highMiddlemanRoles);
+        }
+        if (incomingFormDataPayloadObject.role_tradePingRoleIds !== undefined) {
+            guildConfigDocumentToUpdateObject.roles.tradePingRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradePingRoleIds);
+        }
+        if (incomingFormDataPayloadObject.role_tradeApproveRoleIds !== undefined) {
+            guildConfigDocumentToUpdateObject.roles.tradeApproveRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradeApproveRoleIds);
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم السابع: الأوامر الديناميكية ورتبها (Dynamic Commands & Allowed Roles)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.commands) {
+            guildConfigDocumentToUpdateObject.commands = {};
+        }
+
+        // 1. أمر مسح الرسائل (Clear)
+        if (incomingFormDataPayloadObject.cmd_clearCmd !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.clearCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_clearCmd, 'clear');
+        }
+        if (incomingFormDataPayloadObject.cmd_clearAllowedRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.clearAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_clearAllowedRoles);
+        }
+
+        // 2. أمر الحظر (Ban)
+        if (incomingFormDataPayloadObject.cmd_banCmd !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.banCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_banCmd, 'ban');
+        }
+        if (incomingFormDataPayloadObject.cmd_banAllowedRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.banAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_banAllowedRoles);
+        }
+
+        // 3. أمر الإسكات (Timeout)
+        if (incomingFormDataPayloadObject.cmd_timeoutCmd !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.timeoutCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_timeoutCmd, 'timeout');
+        }
+        if (incomingFormDataPayloadObject.cmd_timeoutAllowedRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.timeoutAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_timeoutAllowedRoles);
+        }
+
+        // 4. أمر الاستدعاء الفخم (Come)
+        if (incomingFormDataPayloadObject.cmd_comeCmd !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.comeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_comeCmd, 'come');
+        }
+        if (incomingFormDataPayloadObject.cmd_comeAllowedRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.comeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_comeAllowedRoles);
+        }
+
+        // 5. أمر تقييم الوسيط (Done)
+        if (incomingFormDataPayloadObject.cmd_doneCmd !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.doneCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_doneCmd, 'done');
+        }
+        if (incomingFormDataPayloadObject.cmd_doneAllowedRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.doneAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_doneAllowedRoles);
+        }
+
+        // 6. أمر طلب بيانات الوساطة (Trade)
+        if (incomingFormDataPayloadObject.cmd_tradeCmd !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.tradeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeCmd, 'trade');
+        }
+        if (incomingFormDataPayloadObject.cmd_tradeAllowedRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.tradeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_tradeAllowedRoles);
+        }
+        if (incomingFormDataPayloadObject.cmd_tradeEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.commands.tradeEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeEmbedColor, '#f2a658');
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم الثامن: سجلات السيرفر المفصلة والمدمجة (Server Logs & Events Logging)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.serverLogs) {
+            guildConfigDocumentToUpdateObject.serverLogs = {};
+        }
+
+        // سجل الرسائل (حذف النصوص، حذف الصور، تعديل الرسائل) - مدمج
+        if (incomingFormDataPayloadObject.log_messageLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.messageLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.log_messageLogEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.messageLogEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogEmbedColor, '#fee75c');
+        }
+
+        // سجل الدخول والخروج من السيرفر (Join / Leave)
+        if (incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.memberJoinLeaveLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.log_memberJoinEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.memberJoinEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinEmbedColor, '#3ba55d');
+        }
+        if (incomingFormDataPayloadObject.log_memberLeaveEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.memberLeaveEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberLeaveEmbedColor, '#ed4245');
+        }
+
+        // سجل الحالات الصوتية (Voice States)
+        if (incomingFormDataPayloadObject.log_voiceStateLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.voiceStateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.log_voiceStateEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.voiceStateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateEmbedColor, '#5865F2');
+        }
+
+        // سجل تحديثات الرتب (Role Updates)
+        if (incomingFormDataPayloadObject.log_roleUpdateLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.roleUpdateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.log_roleUpdateEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.roleUpdateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateEmbedColor, '#ffffff');
+        }
+
+        // سجل العقوبات الصارمة (Ban & Kick)
+        if (incomingFormDataPayloadObject.log_banKickLogChannelId !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.banKickLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickLogChannelId);
+        }
+        if (incomingFormDataPayloadObject.log_banKickEmbedColor !== undefined) {
+            guildConfigDocumentToUpdateObject.serverLogs.banKickEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickEmbedColor, '#992d22');
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم التاسع: نظام التحذيرات والعقوبات التلقائية (Warnings & Auto Punishments)
+        // -----------------------------------------------------------------------------------------
+        if (!guildConfigDocumentToUpdateObject.warnings) {
+            guildConfigDocumentToUpdateObject.warnings = {};
+        }
+
+        // الحد الأقصى للتحذيرات قبل تطبيق العقوبة
+        if (incomingFormDataPayloadObject.warn_maxWarnings !== undefined) {
+            const parsedMaxWarningsInt = parseInt(incomingFormDataPayloadObject.warn_maxWarnings);
+            if (!isNaN(parsedMaxWarningsInt) && parsedMaxWarningsInt > 0) {
+                guildConfigDocumentToUpdateObject.warnings.maxWarnings = parsedMaxWarningsInt;
+            }
+        }
+
+        // نوع العقوبة التلقائية (timeout, kick, ban)
+        if (incomingFormDataPayloadObject.warn_autoAction !== undefined) {
+            const requestedActionString = String(incomingFormDataPayloadObject.warn_autoAction).toLowerCase().trim();
+            const validWarningActionsArray = ['timeout', 'kick', 'ban'];
+            
+            if (validWarningActionsArray.includes(requestedActionString)) {
+                guildConfigDocumentToUpdateObject.warnings.autoAction = requestedActionString;
+            }
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // 🔹 القسم العاشر والأخير: حفظ المستند النهائي في قاعدة البيانات (Save Document)
+        // -----------------------------------------------------------------------------------------
+        
+        // استخدام Save لتطبيق جميع التعديلات أعلاه بأمان
+        await guildConfigDocumentToUpdateObject.save();
+        
+        console.log(`[DASHBOARD LOG] ✅ Mongoose Database has successfully saved the massive payload for Guild ID: ${targetGuildDiscordIdString}`);
+
+        // إعادة التوجيه للصفحة مرة أخرى مع عرض إشعار النجاح للمستخدم
+        response.redirect(`/settings/${targetGuildDiscordIdString}?success=true`);
+
+    } catch (databaseSaveCriticalExceptionError) {
+        
+        console.error('====================================================');
+        console.error(`[DASHBOARD CRITICAL ERROR] Failed to save massive settings object to MongoDB for Guild ID: ${targetGuildDiscordIdString}`);
+        console.error('Exception Details:');
+        console.error(databaseSaveCriticalExceptionError);
+        console.error('====================================================');
+        
+        // إعادة التوجيه للصفحة مع عرض رسالة خطأ للمستخدم
+        response.redirect(`/settings/${targetGuildDiscordIdString}?error=true`);
+    }
+});
+
+// =========================================================================================================
+// 🚀 8. تهيئة وتشغيل خادم الويب (Server Boot & Network Listener Initialization)
+// =========================================================================================================
+
+module.exports = (discordClientObject) => {
     
-    app.listen(serverPortNumber, () => { 
-        console.log(`🌐 Dashboard Running smoothly on port ${serverPortNumber}`); 
+    // تمرير البوت للـ Views لاستخدامه بشكل مباشر في جلب الرومات والرتب في صفحات الـ HTML/EJS
+    // هذه الخطوة ضرورية جداً لبناء الـ Select Menus في الداشبورد
+    app.locals.client = discordClientObject;
+
+    // استخراج البورت من متغيرات البيئة (مهم جداً لسيرفرات مثل Railway و Heroku)
+    const DASHBOARD_NETWORK_PORT_NUMBER = process.env.PORT || 8080;
+
+    // بدء الاستماع على الشبكة
+    app.listen(DASHBOARD_NETWORK_PORT_NUMBER, () => {
+        console.log('\n====================================================');
+        console.log(`[DASHBOARD SYSTEM BOOT] 🌐 Ultimate Enterprise Web Dashboard is ONLINE`);
+        console.log(`[DASHBOARD SYSTEM BOOT] 📡 Express Server is actively listening on PORT: ${DASHBOARD_NETWORK_PORT_NUMBER}`);
+        console.log(`[DASHBOARD SYSTEM BOOT] 🔒 OAuth2 Session Secret and Passport Strategies are configured.`);
+        console.log('====================================================\n');
     });
 };
