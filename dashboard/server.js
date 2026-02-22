@@ -1,10 +1,10 @@
 // =========================================================================================================
-// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - OAUTH2 & EXPRESS)
+// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - PROBOT KILLER EDITION)
 // ---------------------------------------------------------------------------------------------------------
 // المسار: dashboard/server.js
-// الوظيفة: تشغيل خادم ويب (Web Server)، ربط تسجيل الدخول بديسكورد (OAuth2)، 
-// عرض صفحات الـ EJS، ومعالجة وحفظ كافة إعدادات السيرفر (GuildConfig) بدقة متناهية.
-// تم كتابة الكود بطريقة (Hyper-Verbose) لضمان حماية كل مدخل من مدخلات الداشبورد.
+// الوظيفة: خادم ويب (Express) مجهز لاستقبال ومعالجة 15 قسم كامل من إعدادات السيرفر
+// تم ربط المتغيرات السرية بناءً على خوادم Railway: (CLIENT_ID, CLIENT_SECRET, CALLBACK_URL, TOKEN, MONGO_URI)
+// مسار العودة (Callback) مضبوط على /callback ليتطابق مع إعدادات ديسكورد ديفيلوبر.
 // =========================================================================================================
 
 const express = require('express');
@@ -23,13 +23,12 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// توسيع حجم الطلبات (Payload) لاستيعاب البيانات الضخمة القادمة من الداشبورد
-// تم رفع الحد الأقصى إلى 100 ميجابايت لتفادي أي مشاكل عند حفظ إعدادات البانلات المتعددة
+// توسيع حجم الطلبات (Payload) لاستيعاب البيانات الضخمة جداً (100 ميجا)
 app.use(express.urlencoded({ extended: true, limit: '100mb', parameterLimit: 100000 }));
 app.use(express.json({ limit: '100mb' }));
 
 // =========================================================================================================
-// 🔒 2. نظام الجلسات والحماية (Sessions & Security Configuration)
+// 🔒 2. نظام الجلسات والحماية (Sessions & Security)
 // =========================================================================================================
 
 app.use(session({
@@ -54,7 +53,6 @@ passport.use(new DiscordStrategy({
     callbackURL: process.env.CALLBACK_URL, 
     scope: ['identify', 'guilds'] 
 }, function(accessToken, refreshToken, userProfile, doneCallback) {
-    // يتم تمرير بيانات المستخدم بمجرد نجاح المصادقة مع خوادم ديسكورد
     return doneCallback(null, userProfile);
 }));
 
@@ -70,7 +68,6 @@ passport.deserializeUser(function(serializedUserObj, doneCallback) {
 // 🛡️ 4. دوال الحماية والتحقق الإضافية (Middleware Validation Engine)
 // =========================================================================================================
 
-// دالة حماية الصفحات: تمنع أي شخص غير مسجل من الدخول للداشبورد
 function checkAuthenticationValidation(request, response, nextFunction) {
     if (request.isAuthenticated() === true) {
         return nextFunction(); 
@@ -79,37 +76,19 @@ function checkAuthenticationValidation(request, response, nextFunction) {
     response.redirect('/auth/discord'); 
 }
 
-// دالة لمعالجة وتنظيف المصفوفات (Arrays) القادمة من الداشبورد
 function parseAndSanitizeArrayInput(rawInputData) {
-    if (rawInputData === undefined || rawInputData === null) {
-        return [];
-    }
-    if (Array.isArray(rawInputData) === true) {
-        return rawInputData.filter(item => item !== null && item.trim() !== '');
-    }
+    if (rawInputData === undefined || rawInputData === null) return [];
+    if (Array.isArray(rawInputData) === true) return rawInputData.filter(item => item !== null && String(item).trim() !== '');
     if (typeof rawInputData === 'string') {
-        const splitArray = rawInputData.split(',');
-        const cleanedArray = [];
-        for (let i = 0; i < splitArray.length; i++) {
-            const trimmedItem = splitArray[i].trim();
-            if (trimmedItem !== '') {
-                cleanedArray.push(trimmedItem);
-            }
-        }
-        return cleanedArray;
+        return rawInputData.split(',').map(item => item.trim()).filter(item => item !== '');
     }
     return [];
 }
 
-// دالة لمعالجة الحقول النصية التي يمكن أن تكون فارغة
 function parseAndSanitizeStringInput(rawInputData, defaultValue = null) {
-    if (rawInputData === undefined || rawInputData === null) {
-        return defaultValue;
-    }
+    if (rawInputData === undefined || rawInputData === null) return defaultValue;
     const trimmedString = String(rawInputData).trim();
-    if (trimmedString === '' || trimmedString === 'none') {
-        return defaultValue;
-    }
+    if (trimmedString === '' || trimmedString === 'none') return defaultValue;
     return trimmedString;
 }
 
@@ -117,83 +96,57 @@ function parseAndSanitizeStringInput(rawInputData, defaultValue = null) {
 // 🌐 5. مسارات الموقع الأساسية (Core Web Routes)
 // =========================================================================================================
 
-// مسار توجيه المستخدم لصفحة تسجيل دخول ديسكورد
 app.get('/auth/discord', passport.authenticate('discord'));
 
-// مسار استقبال المستخدم بعد عودته من ديسكورد
-app.get('/auth/discord/callback', passport.authenticate('discord', {
+// ⚠️ مسار الـ Callback مضبوط ليتطابق مع ما وضعته أنت في ديسكورد ديفيلوبر
+app.get('/callback', passport.authenticate('discord', {
     failureRedirect: '/?error=auth_failed'
 }), function(request, response) {
     console.log(`[DASHBOARD AUTH] User ${request.user.username} successfully logged in.`);
     response.redirect('/dashboard'); 
 });
 
-// مسار تسجيل الخروج
 app.get('/logout', function(request, response, nextFunction) {
     request.logout(function(logoutError) {
-        if (logoutError) { 
-            console.error('[DASHBOARD ERROR] Logout failed:', logoutError);
-            return nextFunction(logoutError); 
-        }
+        if (logoutError) return nextFunction(logoutError); 
         response.redirect('/');
     });
 });
 
-// الصفحة الرئيسية (Landing Page)
 app.get('/', (request, response) => {
-    response.render('index', { 
-        user: request.user || null 
-    });
+    response.render('index', { user: request.user || null });
 });
 
-// صفحة لوحة التحكم واختيار السيرفرات (Server Selection Page)
 app.get('/dashboard', checkAuthenticationValidation, (request, response) => {
-    // جلب السيرفرات التي يمتلك فيها المستخدم صلاحية Administrator أو Manage Server
     const userAdminGuildsArray = request.user.guilds.filter(function(guildObject) {
-        const hasManageServerPermission = (guildObject.permissions & 0x20) === 0x20;
-        const hasAdministratorPermission = (guildObject.permissions & 0x8) === 0x8;
-        return hasManageServerPermission || hasAdministratorPermission;
+        return (guildObject.permissions & 0x20) === 0x20 || (guildObject.permissions & 0x8) === 0x8;
     });
-    
-    response.render('dashboard', { 
-        user: request.user, 
-        guilds: userAdminGuildsArray 
-    });
+    response.render('dashboard', { user: request.user, guilds: userAdminGuildsArray });
 });
 
 // =========================================================================================================
-// ⚙️ 6. مسار جلب وعرض الإعدادات للسيرفر (Settings GET Route)
+// ⚙️ 6. مسار جلب الإعدادات (Settings GET Route)
 // =========================================================================================================
 
 app.get('/settings/:guildId', checkAuthenticationValidation, async (request, response) => {
-    
     const targetGuildDiscordIdString = request.params.guildId;
     
-    // تأكيد ملكية السيرفر للمستخدم لمرة ثانية كطبقة حماية
     let doesUserHaveAccessToGuildBoolean = false;
     for (let i = 0; i < request.user.guilds.length; i++) {
-        const currentGuildItem = request.user.guilds[i];
-        if (currentGuildItem.id === targetGuildDiscordIdString) {
-            const hasManage = (currentGuildItem.permissions & 0x20) === 0x20;
-            const hasAdmin = (currentGuildItem.permissions & 0x8) === 0x8;
-            if (hasManage || hasAdmin) {
-                doesUserHaveAccessToGuildBoolean = true;
-                break;
-            }
+        if (request.user.guilds[i].id === targetGuildDiscordIdString) {
+            const hasManage = (request.user.guilds[i].permissions & 0x20) === 0x20;
+            const hasAdmin = (request.user.guilds[i].permissions & 0x8) === 0x8;
+            if (hasManage || hasAdmin) { doesUserHaveAccessToGuildBoolean = true; break; }
         }
     }
     
     if (doesUserHaveAccessToGuildBoolean === false) {
-        console.log(`[DASHBOARD SECURITY] User ${request.user.username} tried to access unauthorized guild: ${targetGuildDiscordIdString}`);
-        return response.send('<h1 style="color:red; text-align:center; font-family:sans-serif;">❌ Access Denied! You do not have permission to manage this server.</h1>');
+        return response.send('<h1 style="color:red; text-align:center;">❌ Access Denied! لا تمتلك صلاحية لهذا السيرفر.</h1>');
     }
 
     try {
         let guildConfigurationDocumentObject = await GuildConfigDatabaseModel.findOne({ guildId: targetGuildDiscordIdString });
-        
-        // إنشاء ملف جديد في قاعدة البيانات إذا لم يكن موجوداً
         if (guildConfigurationDocumentObject === null) {
-            console.log(`[DASHBOARD LOG] Creating new database entry for guild: ${targetGuildDiscordIdString}`);
             guildConfigurationDocumentObject = new GuildConfigDatabaseModel({ guildId: targetGuildDiscordIdString });
             await guildConfigurationDocumentObject.save();
         }
@@ -202,399 +155,319 @@ app.get('/settings/:guildId', checkAuthenticationValidation, async (request, res
             user: request.user,
             guildId: targetGuildDiscordIdString,
             config: guildConfigurationDocumentObject,
-            bot: request.app.locals.client // مفيد جداً لجلب الرومات والرتب في الـ EJS
+            bot: request.app.locals.client 
         });
 
     } catch (databaseFetchExceptionError) {
-        console.error('[DASHBOARD DB ERROR] Failed to fetch settings for GET route:', databaseFetchExceptionError);
-        response.send('<h1 style="color:red; text-align:center;">❌ Internal Server Error while loading settings.</h1>');
+        response.send('<h1 style="color:red; text-align:center;">❌ حدث خطأ داخلي.</h1>');
     }
 });
 
 // =========================================================================================================
-// 💾 7. مسار الحفظ العملاق والمفصل (THE BEHEMOTH POST ROUTE)
-// ---------------------------------------------------------------------------------------------------------
-// هذا المسار يستقبل جميع مدخلات الـ HTML Form. تم فرده بالكامل ليعالج كل متغير على حدة بدون اختصارات.
+// 💾 7. مسار الحفظ العملاق والمفصل (THE BEHEMOTH POST ROUTE - ALL 15 SECTIONS)
 // =========================================================================================================
 
 app.post('/settings/:guildId/save', checkAuthenticationValidation, async (request, response) => {
     
     const targetGuildDiscordIdString = request.params.guildId;
     
-    // التحقق الأمني قبل الحفظ
     let doesUserHaveAccessToGuildBoolean = false;
     for (let i = 0; i < request.user.guilds.length; i++) {
-        const currentGuildItem = request.user.guilds[i];
-        if (currentGuildItem.id === targetGuildDiscordIdString) {
-            const hasManage = (currentGuildItem.permissions & 0x20) === 0x20;
-            const hasAdmin = (currentGuildItem.permissions & 0x8) === 0x8;
-            if (hasManage || hasAdmin) {
-                doesUserHaveAccessToGuildBoolean = true;
-                break;
-            }
+        if (request.user.guilds[i].id === targetGuildDiscordIdString) {
+            const hasManage = (request.user.guilds[i].permissions & 0x20) === 0x20;
+            const hasAdmin = (request.user.guilds[i].permissions & 0x8) === 0x8;
+            if (hasManage || hasAdmin) { doesUserHaveAccessToGuildBoolean = true; break; }
         }
     }
     
-    if (doesUserHaveAccessToGuildBoolean === false) {
-        return response.status(403).send('Forbidden: Access Denied');
-    }
+    if (doesUserHaveAccessToGuildBoolean === false) return response.status(403).send('Forbidden: Access Denied');
 
     try {
         const incomingFormDataPayloadObject = request.body;
         console.log(`[DASHBOARD LOG] Received massive POST payload for Guild: ${targetGuildDiscordIdString}`);
 
         let guildConfigDocumentToUpdateObject = await GuildConfigDatabaseModel.findOne({ guildId: targetGuildDiscordIdString });
-        
         if (guildConfigDocumentToUpdateObject === null) {
             guildConfigDocumentToUpdateObject = new GuildConfigDatabaseModel({ guildId: targetGuildDiscordIdString });
         }
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم الأول: الإعدادات الأساسية
-        // -----------------------------------------------------------------------------------------
+        // =====================================================================
+        // 1️⃣ الإعدادات العامة (General Settings)
+        // =====================================================================
         if (incomingFormDataPayloadObject.prefix !== undefined) {
-            const rawPrefix = String(incomingFormDataPayloadObject.prefix).trim();
-            if (rawPrefix !== '') {
-                guildConfigDocumentToUpdateObject.prefix = rawPrefix;
-            }
+            guildConfigDocumentToUpdateObject.prefix = parseAndSanitizeStringInput(incomingFormDataPayloadObject.prefix, '!');
+        }
+        if (incomingFormDataPayloadObject.language !== undefined) {
+            guildConfigDocumentToUpdateObject.language = parseAndSanitizeStringInput(incomingFormDataPayloadObject.language, 'ar');
         }
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم الثاني: نظام الوساطة الأساسي (Middleman System)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.middlemanSystem) {
-            guildConfigDocumentToUpdateObject.middlemanSystem = {};
-        }
-
-        // تفعيل أو تعطيل الوساطة
-        guildConfigDocumentToUpdateObject.middlemanSystem.enabled = (incomingFormDataPayloadObject.mm_enabled === 'on' || incomingFormDataPayloadObject.mm_enabled === 'true');
+        // =====================================================================
+        // 2️⃣ التحكم الشامل في الإيمبدات (Global Embeds Control)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.embedSetup) guildConfigDocumentToUpdateObject.embedSetup = {};
         
-        // الأيديهات (IDs)
-        if (incomingFormDataPayloadObject.mm_categoryId !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.categoryId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_categoryId);
-        }
-        if (incomingFormDataPayloadObject.mm_panelChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.panelChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelChannelId);
-        }
+        if (incomingFormDataPayloadObject.emb_successColor !== undefined) guildConfigDocumentToUpdateObject.embedSetup.successColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_successColor, '#3ba55d');
+        if (incomingFormDataPayloadObject.emb_errorColor !== undefined) guildConfigDocumentToUpdateObject.embedSetup.errorColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_errorColor, '#ed4245');
+        if (incomingFormDataPayloadObject.emb_primaryColor !== undefined) guildConfigDocumentToUpdateObject.embedSetup.primaryColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_primaryColor, '#5865F2');
+        if (incomingFormDataPayloadObject.emb_footerText !== undefined) guildConfigDocumentToUpdateObject.embedSetup.footerText = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_footerText, 'Enterprise System © 2024');
+        if (incomingFormDataPayloadObject.emb_footerIconUrl !== undefined) guildConfigDocumentToUpdateObject.embedSetup.footerIconUrl = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_footerIconUrl);
+        if (incomingFormDataPayloadObject.emb_thumbnailUrl !== undefined) guildConfigDocumentToUpdateObject.embedSetup.thumbnailUrl = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_thumbnailUrl);
 
-        // نصوص بانل الوساطة الخارجي
-        if (incomingFormDataPayloadObject.mm_panelTitle !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.panelTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelTitle, 'تذكرة وساطة آمنة');
-        }
-        if (incomingFormDataPayloadObject.mm_panelDescription !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.panelDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelDescription, 'لطلب وسيط معتمد من الإدارة، يرجى فتح تذكرة من هنا.');
-        }
-        if (incomingFormDataPayloadObject.mm_panelColor !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.panelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelColor, '#f2a658');
-        }
-        if (incomingFormDataPayloadObject.mm_buttonLabel !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.buttonLabel = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_buttonLabel, 'طلب وسيط 🛡️');
-        }
+        // =====================================================================
+        // 3️⃣ نظام الوساطة المتقدم (Middleman System)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.middlemanSystem) guildConfigDocumentToUpdateObject.middlemanSystem = {};
 
-        // نصوص النافذة المنبثقة للوساطة (Modal)
-        if (incomingFormDataPayloadObject.mm_modalTitle !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.modalTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_modalTitle, 'بيانات الوساطة (Trade Info)');
-        }
-
-        // معالجة أسئلة النافذة (Modal Fields JSON)
+        guildConfigDocumentToUpdateObject.middlemanSystem.enabled = (incomingFormDataPayloadObject.mm_enabled === 'on' || incomingFormDataPayloadObject.mm_enabled === 'true');
+        if (incomingFormDataPayloadObject.mm_categoryId !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.categoryId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_categoryId);
+        if (incomingFormDataPayloadObject.mm_panelChannelId !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelChannelId);
+        
+        if (incomingFormDataPayloadObject.mm_panelTitle !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelTitle, 'تذكرة وساطة آمنة');
+        if (incomingFormDataPayloadObject.mm_panelDescription !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelDescription, 'لطلب وسيط معتمد، يرجى فتح تذكرة.');
+        if (incomingFormDataPayloadObject.mm_panelColor !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelColor, '#f2a658');
+        if (incomingFormDataPayloadObject.mm_buttonLabel !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.buttonLabel = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_buttonLabel, 'طلب وسيط 🛡️');
+        
+        if (incomingFormDataPayloadObject.mm_modalTitle !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.modalTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_modalTitle, 'بيانات الوساطة');
         if (incomingFormDataPayloadObject.mm_modalFieldsData !== undefined && incomingFormDataPayloadObject.mm_modalFieldsData !== '') {
             try {
                 const parsedModalFieldsArray = JSON.parse(incomingFormDataPayloadObject.mm_modalFieldsData);
-                if (Array.isArray(parsedModalFieldsArray)) {
-                    guildConfigDocumentToUpdateObject.middlemanSystem.modalFields = parsedModalFieldsArray;
-                }
-            } catch (jsonParsingError) {
-                console.error('[DASHBOARD PARSE ERROR] Failed to parse Middleman Modal Fields Array.', jsonParsingError);
-            }
+                if (Array.isArray(parsedModalFieldsArray)) guildConfigDocumentToUpdateObject.middlemanSystem.modalFields = parsedModalFieldsArray;
+            } catch (jsonParsingError) {}
         }
 
-        // نصوص الإيمبد الداخلي لتذكرة الوساطة
-        if (incomingFormDataPayloadObject.mm_insideTicketTitle !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketTitle, 'تذكرة الوساطة');
-        }
-        if (incomingFormDataPayloadObject.mm_insideTicketDescription !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketDescription, 'يرجى انتظار الوسيط، وكتابة تفاصيل المعاملة بدقة.');
-        }
-        if (incomingFormDataPayloadObject.mm_insideTicketColor !== undefined) {
-            guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketColor, '#f2a658');
-        }
+        if (incomingFormDataPayloadObject.mm_insideTicketTitle !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketTitle, 'تذكرة الوساطة');
+        if (incomingFormDataPayloadObject.mm_insideTicketDescription !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketDescription, 'يرجى انتظار الوسيط وكتابة التفاصيل.');
+        if (incomingFormDataPayloadObject.mm_insideTicketColor !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketColor, '#f2a658');
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم الثالث: نظام التذاكر المتعددة (Ticket Panels Arrays)
-        // -----------------------------------------------------------------------------------------
+        // =====================================================================
+        // 4️⃣ نظام التذاكر المتعددة (Custom Ticket Panels)
+        // =====================================================================
         if (incomingFormDataPayloadObject.ticketPanelsData !== undefined && incomingFormDataPayloadObject.ticketPanelsData !== '') {
             try {
-                // الداشبورد سترسل مصفوفة البانلات كاملة كـ JSON String ضخم
                 const parsedTicketPanelsArray = JSON.parse(incomingFormDataPayloadObject.ticketPanelsData);
-                if (Array.isArray(parsedTicketPanelsArray)) {
-                    guildConfigDocumentToUpdateObject.ticketPanels = parsedTicketPanelsArray;
-                }
-            } catch (jsonParsingError) {
-                console.error('[DASHBOARD PARSE ERROR] Failed to parse Custom Ticket Panels Array.', jsonParsingError);
-            }
+                if (Array.isArray(parsedTicketPanelsArray)) guildConfigDocumentToUpdateObject.ticketPanels = parsedTicketPanelsArray;
+            } catch (jsonParsingError) {}
         }
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم الرابع: نظام التقييمات (Ratings)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.ratings) {
-            guildConfigDocumentToUpdateObject.ratings = {};
-        }
+        // =====================================================================
+        // 5️⃣ نظام التقييمات المزدوج (Dual Ratings)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.ratings) guildConfigDocumentToUpdateObject.ratings = {};
 
-        if (incomingFormDataPayloadObject.rating_middlemanLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.ratings.middlemanLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.rating_middlemanEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.ratings.middlemanEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanEmbedColor, '#f2a658');
+        if (incomingFormDataPayloadObject.rating_middlemanLogChannelId !== undefined) guildConfigDocumentToUpdateObject.ratings.middlemanLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanLogChannelId);
+        if (incomingFormDataPayloadObject.rating_middlemanEmbedColor !== undefined) guildConfigDocumentToUpdateObject.ratings.middlemanEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanEmbedColor, '#f2a658');
+        if (incomingFormDataPayloadObject.rating_staffLogChannelId !== undefined) guildConfigDocumentToUpdateObject.ratings.staffLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffLogChannelId);
+        if (incomingFormDataPayloadObject.rating_staffEmbedColor !== undefined) guildConfigDocumentToUpdateObject.ratings.staffEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffEmbedColor, '#3ba55d');
+        
+        if (incomingFormDataPayloadObject.rating_customReviewOptions !== undefined) {
+            guildConfigDocumentToUpdateObject.ratings.customReviewOptions = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.rating_customReviewOptions);
         }
         
-        if (incomingFormDataPayloadObject.rating_staffLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.ratings.staffLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.rating_staffEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.ratings.staffEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffEmbedColor, '#3ba55d');
-        }
+        guildConfigDocumentToUpdateObject.ratings.allowCustomText = (incomingFormDataPayloadObject.rating_allowCustomText === 'on' || incomingFormDataPayloadObject.rating_allowCustomText === 'true');
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم الخامس: إعدادات تحكم التذاكر والترانسكريبت (Ticket Controls & Transcript)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.ticketControls) {
-            guildConfigDocumentToUpdateObject.ticketControls = {};
-        }
+        // =====================================================================
+        // 6️⃣ التحكم الذكي في التذاكر (Ticket Controls)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.ticketControls) guildConfigDocumentToUpdateObject.ticketControls = {};
 
         if (incomingFormDataPayloadObject.tc_maxOpenTicketsPerUser !== undefined) {
             const parsedMaxTicketsInt = parseInt(incomingFormDataPayloadObject.tc_maxOpenTicketsPerUser);
-            if (!isNaN(parsedMaxTicketsInt) && parsedMaxTicketsInt > 0) {
-                guildConfigDocumentToUpdateObject.ticketControls.maxOpenTicketsPerUser = parsedMaxTicketsInt;
-            }
+            if (!isNaN(parsedMaxTicketsInt) && parsedMaxTicketsInt > 0) guildConfigDocumentToUpdateObject.ticketControls.maxOpenTicketsPerUser = parsedMaxTicketsInt;
         }
 
-        if (incomingFormDataPayloadObject.tc_controlPanelColor !== undefined) {
-            guildConfigDocumentToUpdateObject.ticketControls.controlPanelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_controlPanelColor, '#2b2d31');
-        }
-        
-        if (incomingFormDataPayloadObject.tc_ticketLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.ticketControls.ticketLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_ticketLogChannelId);
-        }
-        
-        if (incomingFormDataPayloadObject.tc_transcriptChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.ticketControls.transcriptChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptChannelId);
-        }
-        
-        if (incomingFormDataPayloadObject.tc_transcriptEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.ticketControls.transcriptEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptEmbedColor, '#2b2d31');
-        }
+        if (incomingFormDataPayloadObject.tc_controlPanelColor !== undefined) guildConfigDocumentToUpdateObject.ticketControls.controlPanelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_controlPanelColor, '#2b2d31');
+        if (incomingFormDataPayloadObject.tc_ticketLogChannelId !== undefined) guildConfigDocumentToUpdateObject.ticketControls.ticketLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_ticketLogChannelId);
+        if (incomingFormDataPayloadObject.tc_transcriptChannelId !== undefined) guildConfigDocumentToUpdateObject.ticketControls.transcriptChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptChannelId);
+        if (incomingFormDataPayloadObject.tc_transcriptEmbedColor !== undefined) guildConfigDocumentToUpdateObject.ticketControls.transcriptEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptEmbedColor, '#2b2d31');
 
-        // أزرار التحكم المنطقية (Booleans)
         guildConfigDocumentToUpdateObject.ticketControls.hideTicketOnClaim = (incomingFormDataPayloadObject.tc_hideTicketOnClaim === 'on' || incomingFormDataPayloadObject.tc_hideTicketOnClaim === 'true');
         guildConfigDocumentToUpdateObject.ticketControls.readOnlyStaffOnClaim = (incomingFormDataPayloadObject.tc_readOnlyStaffOnClaim === 'on' || incomingFormDataPayloadObject.tc_readOnlyStaffOnClaim === 'true');
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم السادس: نظام الرتب والصلاحيات (Hierarchy & Roles Configuration)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.roles) {
-            guildConfigDocumentToUpdateObject.roles = {};
-        }
+        // =====================================================================
+        // 7️⃣ نظام الرتب والصلاحيات (Roles Hierarchy)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.roles) guildConfigDocumentToUpdateObject.roles = {};
 
-        // الرتب الفردية الأساسية
-        if (incomingFormDataPayloadObject.role_adminRoleId !== undefined) {
-            guildConfigDocumentToUpdateObject.roles.adminRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_adminRoleId);
-        }
-        if (incomingFormDataPayloadObject.role_middlemanRoleId !== undefined) {
-            guildConfigDocumentToUpdateObject.roles.middlemanRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_middlemanRoleId);
-        }
+        if (incomingFormDataPayloadObject.role_adminRoleId !== undefined) guildConfigDocumentToUpdateObject.roles.adminRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_adminRoleId);
+        if (incomingFormDataPayloadObject.role_middlemanRoleId !== undefined) guildConfigDocumentToUpdateObject.roles.middlemanRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_middlemanRoleId);
+        
+        if (incomingFormDataPayloadObject.role_highAdminRoles !== undefined) guildConfigDocumentToUpdateObject.roles.highAdminRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highAdminRoles);
+        if (incomingFormDataPayloadObject.role_highMiddlemanRoles !== undefined) guildConfigDocumentToUpdateObject.roles.highMiddlemanRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highMiddlemanRoles);
+        if (incomingFormDataPayloadObject.role_tradePingRoleIds !== undefined) guildConfigDocumentToUpdateObject.roles.tradePingRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradePingRoleIds);
+        if (incomingFormDataPayloadObject.role_tradeApproveRoleIds !== undefined) guildConfigDocumentToUpdateObject.roles.tradeApproveRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradeApproveRoleIds);
 
-        // مصفوفات الرتب المتعددة (Multiple Roles Arrays)
-        if (incomingFormDataPayloadObject.role_highAdminRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.roles.highAdminRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highAdminRoles);
-        }
-        if (incomingFormDataPayloadObject.role_highMiddlemanRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.roles.highMiddlemanRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highMiddlemanRoles);
-        }
-        if (incomingFormDataPayloadObject.role_tradePingRoleIds !== undefined) {
-            guildConfigDocumentToUpdateObject.roles.tradePingRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradePingRoleIds);
-        }
-        if (incomingFormDataPayloadObject.role_tradeApproveRoleIds !== undefined) {
-            guildConfigDocumentToUpdateObject.roles.tradeApproveRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradeApproveRoleIds);
-        }
+        // =====================================================================
+        // 8️⃣ الأوامر الديناميكية (Dynamic Commands)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.commands) guildConfigDocumentToUpdateObject.commands = {};
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم السابع: الأوامر الديناميكية ورتبها (Dynamic Commands & Allowed Roles)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.commands) {
-            guildConfigDocumentToUpdateObject.commands = {};
-        }
+        if (incomingFormDataPayloadObject.cmd_clearCmd !== undefined) guildConfigDocumentToUpdateObject.commands.clearCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_clearCmd, 'clear');
+        if (incomingFormDataPayloadObject.cmd_clearAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.clearAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_clearAllowedRoles);
+        if (incomingFormDataPayloadObject.cmd_banCmd !== undefined) guildConfigDocumentToUpdateObject.commands.banCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_banCmd, 'ban');
+        if (incomingFormDataPayloadObject.cmd_banAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.banAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_banAllowedRoles);
+        if (incomingFormDataPayloadObject.cmd_timeoutCmd !== undefined) guildConfigDocumentToUpdateObject.commands.timeoutCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_timeoutCmd, 'timeout');
+        if (incomingFormDataPayloadObject.cmd_timeoutAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.timeoutAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_timeoutAllowedRoles);
+        if (incomingFormDataPayloadObject.cmd_comeCmd !== undefined) guildConfigDocumentToUpdateObject.commands.comeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_comeCmd, 'come');
+        if (incomingFormDataPayloadObject.cmd_comeAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.comeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_comeAllowedRoles);
+        if (incomingFormDataPayloadObject.cmd_doneCmd !== undefined) guildConfigDocumentToUpdateObject.commands.doneCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_doneCmd, 'done');
+        if (incomingFormDataPayloadObject.cmd_doneAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.doneAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_doneAllowedRoles);
+        if (incomingFormDataPayloadObject.cmd_tradeCmd !== undefined) guildConfigDocumentToUpdateObject.commands.tradeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeCmd, 'trade');
+        if (incomingFormDataPayloadObject.cmd_tradeAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.tradeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_tradeAllowedRoles);
+        if (incomingFormDataPayloadObject.cmd_tradeEmbedColor !== undefined) guildConfigDocumentToUpdateObject.commands.tradeEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeEmbedColor, '#f2a658');
 
-        // 1. أمر مسح الرسائل (Clear)
-        if (incomingFormDataPayloadObject.cmd_clearCmd !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.clearCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_clearCmd, 'clear');
-        }
-        if (incomingFormDataPayloadObject.cmd_clearAllowedRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.clearAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_clearAllowedRoles);
-        }
+        // =====================================================================
+        // 9️⃣ سجلات السيرفر المفصلة (Unified Logs)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.serverLogs) guildConfigDocumentToUpdateObject.serverLogs = {};
 
-        // 2. أمر الحظر (Ban)
-        if (incomingFormDataPayloadObject.cmd_banCmd !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.banCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_banCmd, 'ban');
-        }
-        if (incomingFormDataPayloadObject.cmd_banAllowedRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.banAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_banAllowedRoles);
-        }
+        if (incomingFormDataPayloadObject.log_messageLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.messageLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogChannelId);
+        if (incomingFormDataPayloadObject.log_messageLogEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.messageLogEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogEmbedColor, '#fee75c');
+        if (incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.memberJoinLeaveLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId);
+        if (incomingFormDataPayloadObject.log_memberJoinEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.memberJoinEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinEmbedColor, '#3ba55d');
+        if (incomingFormDataPayloadObject.log_memberLeaveEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.memberLeaveEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberLeaveEmbedColor, '#ed4245');
+        if (incomingFormDataPayloadObject.log_voiceStateLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.voiceStateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateLogChannelId);
+        if (incomingFormDataPayloadObject.log_voiceStateEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.voiceStateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateEmbedColor, '#5865F2');
+        if (incomingFormDataPayloadObject.log_roleUpdateLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.roleUpdateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateLogChannelId);
+        if (incomingFormDataPayloadObject.log_roleUpdateEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.roleUpdateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateEmbedColor, '#ffffff');
+        if (incomingFormDataPayloadObject.log_banKickLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.banKickLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickLogChannelId);
+        if (incomingFormDataPayloadObject.log_banKickEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.banKickEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickEmbedColor, '#992d22');
 
-        // 3. أمر الإسكات (Timeout)
-        if (incomingFormDataPayloadObject.cmd_timeoutCmd !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.timeoutCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_timeoutCmd, 'timeout');
-        }
-        if (incomingFormDataPayloadObject.cmd_timeoutAllowedRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.timeoutAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_timeoutAllowedRoles);
-        }
+        // =====================================================================
+        // 🔟 نظام التحذيرات (Warnings System)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.warnings) guildConfigDocumentToUpdateObject.warnings = { presetReasons: {} };
 
-        // 4. أمر الاستدعاء الفخم (Come)
-        if (incomingFormDataPayloadObject.cmd_comeCmd !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.comeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_comeCmd, 'come');
-        }
-        if (incomingFormDataPayloadObject.cmd_comeAllowedRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.comeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_comeAllowedRoles);
-        }
-
-        // 5. أمر تقييم الوسيط (Done)
-        if (incomingFormDataPayloadObject.cmd_doneCmd !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.doneCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_doneCmd, 'done');
-        }
-        if (incomingFormDataPayloadObject.cmd_doneAllowedRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.doneAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_doneAllowedRoles);
-        }
-
-        // 6. أمر طلب بيانات الوساطة (Trade)
-        if (incomingFormDataPayloadObject.cmd_tradeCmd !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.tradeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeCmd, 'trade');
-        }
-        if (incomingFormDataPayloadObject.cmd_tradeAllowedRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.tradeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_tradeAllowedRoles);
-        }
-        if (incomingFormDataPayloadObject.cmd_tradeEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.commands.tradeEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeEmbedColor, '#f2a658');
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم الثامن: سجلات السيرفر المفصلة والمدمجة (Server Logs & Events Logging)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.serverLogs) {
-            guildConfigDocumentToUpdateObject.serverLogs = {};
-        }
-
-        // سجل الرسائل (حذف النصوص، حذف الصور، تعديل الرسائل) - مدمج
-        if (incomingFormDataPayloadObject.log_messageLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.messageLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.log_messageLogEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.messageLogEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogEmbedColor, '#fee75c');
-        }
-
-        // سجل الدخول والخروج من السيرفر (Join / Leave)
-        if (incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.memberJoinLeaveLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.log_memberJoinEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.memberJoinEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinEmbedColor, '#3ba55d');
-        }
-        if (incomingFormDataPayloadObject.log_memberLeaveEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.memberLeaveEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberLeaveEmbedColor, '#ed4245');
-        }
-
-        // سجل الحالات الصوتية (Voice States)
-        if (incomingFormDataPayloadObject.log_voiceStateLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.voiceStateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.log_voiceStateEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.voiceStateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateEmbedColor, '#5865F2');
-        }
-
-        // سجل تحديثات الرتب (Role Updates)
-        if (incomingFormDataPayloadObject.log_roleUpdateLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.roleUpdateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.log_roleUpdateEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.roleUpdateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateEmbedColor, '#ffffff');
-        }
-
-        // سجل العقوبات الصارمة (Ban & Kick)
-        if (incomingFormDataPayloadObject.log_banKickLogChannelId !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.banKickLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickLogChannelId);
-        }
-        if (incomingFormDataPayloadObject.log_banKickEmbedColor !== undefined) {
-            guildConfigDocumentToUpdateObject.serverLogs.banKickEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickEmbedColor, '#992d22');
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم التاسع: نظام التحذيرات والعقوبات التلقائية (Warnings & Auto Punishments)
-        // -----------------------------------------------------------------------------------------
-        if (!guildConfigDocumentToUpdateObject.warnings) {
-            guildConfigDocumentToUpdateObject.warnings = {};
-        }
-
-        // الحد الأقصى للتحذيرات قبل تطبيق العقوبة
         if (incomingFormDataPayloadObject.warn_maxWarnings !== undefined) {
             const parsedMaxWarningsInt = parseInt(incomingFormDataPayloadObject.warn_maxWarnings);
-            if (!isNaN(parsedMaxWarningsInt) && parsedMaxWarningsInt > 0) {
-                guildConfigDocumentToUpdateObject.warnings.maxWarnings = parsedMaxWarningsInt;
-            }
+            if (!isNaN(parsedMaxWarningsInt) && parsedMaxWarningsInt > 0) guildConfigDocumentToUpdateObject.warnings.maxWarnings = parsedMaxWarningsInt;
         }
 
-        // نوع العقوبة التلقائية (timeout, kick, ban)
         if (incomingFormDataPayloadObject.warn_autoAction !== undefined) {
             const requestedActionString = String(incomingFormDataPayloadObject.warn_autoAction).toLowerCase().trim();
-            const validWarningActionsArray = ['timeout', 'kick', 'ban'];
-            
-            if (validWarningActionsArray.includes(requestedActionString)) {
+            if (['timeout', 'kick', 'ban'].includes(requestedActionString)) {
                 guildConfigDocumentToUpdateObject.warnings.autoAction = requestedActionString;
             }
         }
 
-        // -----------------------------------------------------------------------------------------
-        // 🔹 القسم العاشر والأخير: حفظ المستند النهائي في قاعدة البيانات (Save Document)
-        // -----------------------------------------------------------------------------------------
-        
-        // استخدام Save لتطبيق جميع التعديلات أعلاه بأمان
-        await guildConfigDocumentToUpdateObject.save();
-        
-        console.log(`[DASHBOARD LOG] ✅ Mongoose Database has successfully saved the massive payload for Guild ID: ${targetGuildDiscordIdString}`);
+        // أسباب التحذيرات بالعربي والإنجليزي
+        if (!guildConfigDocumentToUpdateObject.warnings.presetReasons) guildConfigDocumentToUpdateObject.warnings.presetReasons = {};
+        if (incomingFormDataPayloadObject.warn_presetReasons_ar !== undefined) {
+            guildConfigDocumentToUpdateObject.warnings.presetReasons.ar = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.warn_presetReasons_ar);
+        }
+        if (incomingFormDataPayloadObject.warn_presetReasons_en !== undefined) {
+            guildConfigDocumentToUpdateObject.warnings.presetReasons.en = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.warn_presetReasons_en);
+        }
 
-        // إعادة التوجيه للصفحة مرة أخرى مع عرض إشعار النجاح للمستخدم
+        // =====================================================================
+        // 🌟 11. نظام الترحيب والمغادرة (Welcome System)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.welcomeSystem) guildConfigDocumentToUpdateObject.welcomeSystem = {};
+
+        guildConfigDocumentToUpdateObject.welcomeSystem.enabled = (incomingFormDataPayloadObject.wel_enabled === 'on' || incomingFormDataPayloadObject.wel_enabled === 'true');
+        if (incomingFormDataPayloadObject.wel_channelId !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.channelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_channelId);
+        if (incomingFormDataPayloadObject.wel_messageText !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.messageText = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_messageText, 'مرحباً بك {user} في سيرفر {server}!');
+        if (incomingFormDataPayloadObject.wel_embedColor !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.embedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_embedColor, '#3ba55d');
+        if (incomingFormDataPayloadObject.wel_imageUrl !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.imageUrl = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_imageUrl);
+
+        // =====================================================================
+        // 🌟 12. الرتب والرد التلقائي (Auto-Roles & Responders)
+        // =====================================================================
+        if (incomingFormDataPayloadObject.autoRoles !== undefined) {
+            guildConfigDocumentToUpdateObject.autoRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.autoRoles);
+        }
+
+        if (incomingFormDataPayloadObject.autoRespondersData !== undefined && incomingFormDataPayloadObject.autoRespondersData !== '') {
+            try {
+                const parsedRespondersArray = JSON.parse(incomingFormDataPayloadObject.autoRespondersData);
+                if (Array.isArray(parsedRespondersArray)) guildConfigDocumentToUpdateObject.autoResponders = parsedRespondersArray;
+            } catch (jsonParsingError) {}
+        }
+
+        // =====================================================================
+        // 🌟 13. نظام الحماية ومكافحة الغزو (Protection & Anti-Nuke)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.protection) guildConfigDocumentToUpdateObject.protection = {};
+
+        guildConfigDocumentToUpdateObject.protection.antiLinkEnabled = (incomingFormDataPayloadObject.prot_antiLinkEnabled === 'on' || incomingFormDataPayloadObject.prot_antiLinkEnabled === 'true');
+        if (incomingFormDataPayloadObject.prot_antiLinkAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.protection.antiLinkAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.prot_antiLinkAllowedRoles);
+        
+        guildConfigDocumentToUpdateObject.protection.antiSpamEnabled = (incomingFormDataPayloadObject.prot_antiSpamEnabled === 'on' || incomingFormDataPayloadObject.prot_antiSpamEnabled === 'true');
+        if (incomingFormDataPayloadObject.prot_antiSpamAction !== undefined) guildConfigDocumentToUpdateObject.protection.antiSpamAction = parseAndSanitizeStringInput(incomingFormDataPayloadObject.prot_antiSpamAction, 'mute');
+
+        guildConfigDocumentToUpdateObject.protection.antiNukeEnabled = (incomingFormDataPayloadObject.prot_antiNukeEnabled === 'on' || incomingFormDataPayloadObject.prot_antiNukeEnabled === 'true');
+        
+        if (incomingFormDataPayloadObject.prot_maxChannelDeletesPerMinute !== undefined) {
+            const parsedChannelDeletes = parseInt(incomingFormDataPayloadObject.prot_maxChannelDeletesPerMinute);
+            if (!isNaN(parsedChannelDeletes) && parsedChannelDeletes > 0) guildConfigDocumentToUpdateObject.protection.maxChannelDeletesPerMinute = parsedChannelDeletes;
+        }
+        if (incomingFormDataPayloadObject.prot_maxBanPerMinute !== undefined) {
+            const parsedBanLimit = parseInt(incomingFormDataPayloadObject.prot_maxBanPerMinute);
+            if (!isNaN(parsedBanLimit) && parsedBanLimit > 0) guildConfigDocumentToUpdateObject.protection.maxBanPerMinute = parsedBanLimit;
+        }
+
+        // =====================================================================
+        // 🌟 14. الاقتصاد والألعاب (Economy & Games)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.economy) guildConfigDocumentToUpdateObject.economy = {};
+
+        guildConfigDocumentToUpdateObject.economy.enabled = (incomingFormDataPayloadObject.eco_enabled === 'on' || incomingFormDataPayloadObject.eco_enabled === 'true');
+        
+        if (incomingFormDataPayloadObject.eco_dailyMin !== undefined) {
+            const parsedDailyMin = parseInt(incomingFormDataPayloadObject.eco_dailyMin);
+            if (!isNaN(parsedDailyMin)) guildConfigDocumentToUpdateObject.economy.dailyMin = parsedDailyMin;
+        }
+        if (incomingFormDataPayloadObject.eco_dailyMax !== undefined) {
+            const parsedDailyMax = parseInt(incomingFormDataPayloadObject.eco_dailyMax);
+            if (!isNaN(parsedDailyMax)) guildConfigDocumentToUpdateObject.economy.dailyMax = parsedDailyMax;
+        }
+        if (incomingFormDataPayloadObject.eco_transferTaxPercentage !== undefined) {
+            const parsedTax = parseInt(incomingFormDataPayloadObject.eco_transferTaxPercentage);
+            if (!isNaN(parsedTax)) guildConfigDocumentToUpdateObject.economy.transferTaxPercentage = parsedTax;
+        }
+        guildConfigDocumentToUpdateObject.economy.gamesEnabled = (incomingFormDataPayloadObject.eco_gamesEnabled === 'on' || incomingFormDataPayloadObject.eco_gamesEnabled === 'true');
+
+        // =====================================================================
+        // 🌟 15. نظام المستويات والرتب (Leveling & Role Rewards)
+        // =====================================================================
+        if (!guildConfigDocumentToUpdateObject.leveling) guildConfigDocumentToUpdateObject.leveling = {};
+
+        guildConfigDocumentToUpdateObject.leveling.enabled = (incomingFormDataPayloadObject.lvl_enabled === 'on' || incomingFormDataPayloadObject.lvl_enabled === 'true');
+        if (incomingFormDataPayloadObject.lvl_levelUpChannelId !== undefined) guildConfigDocumentToUpdateObject.leveling.levelUpChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.lvl_levelUpChannelId);
+        if (incomingFormDataPayloadObject.lvl_levelUpMessage !== undefined) guildConfigDocumentToUpdateObject.leveling.levelUpMessage = parseAndSanitizeStringInput(incomingFormDataPayloadObject.lvl_levelUpMessage, 'مبروك {user}! وصلت للمستوى **{level}** 🚀');
+
+        if (incomingFormDataPayloadObject.lvl_roleRewardsData !== undefined && incomingFormDataPayloadObject.lvl_roleRewardsData !== '') {
+            try {
+                const parsedRewardsArray = JSON.parse(incomingFormDataPayloadObject.lvl_roleRewardsData);
+                if (Array.isArray(parsedRewardsArray)) guildConfigDocumentToUpdateObject.leveling.roleRewards = parsedRewardsArray;
+            } catch (jsonParsingError) {}
+        }
+
+        // =====================================================================
+        // 🚀 حفظ المستند العملاق النهائي
+        // =====================================================================
+        await guildConfigDocumentToUpdateObject.save();
+        console.log(`[DASHBOARD LOG] ✅ Successfully saved massive payload (15 Sections) for Guild ID: ${targetGuildDiscordIdString}`);
         response.redirect(`/settings/${targetGuildDiscordIdString}?success=true`);
 
     } catch (databaseSaveCriticalExceptionError) {
-        
-        console.error('====================================================');
-        console.error(`[DASHBOARD CRITICAL ERROR] Failed to save massive settings object to MongoDB for Guild ID: ${targetGuildDiscordIdString}`);
-        console.error('Exception Details:');
-        console.error(databaseSaveCriticalExceptionError);
-        console.error('====================================================');
-        
-        // إعادة التوجيه للصفحة مع عرض رسالة خطأ للمستخدم
+        console.error('[DASHBOARD CRITICAL ERROR] Failed to save settings to MongoDB:', databaseSaveCriticalExceptionError);
         response.redirect(`/settings/${targetGuildDiscordIdString}?error=true`);
     }
 });
 
 // =========================================================================================================
-// 🚀 8. تهيئة وتشغيل خادم الويب (Server Boot & Network Listener Initialization)
+// 🚀 8. تهيئة وتشغيل خادم الويب
 // =========================================================================================================
 
 module.exports = (discordClientObject) => {
     
-    // تمرير البوت للـ Views لاستخدامه بشكل مباشر في جلب الرومات والرتب في صفحات الـ HTML/EJS
-    // هذه الخطوة ضرورية جداً لبناء الـ Select Menus في الداشبورد
     app.locals.client = discordClientObject;
-
-    // استخراج البورت من متغيرات البيئة (مهم جداً لسيرفرات مثل Railway و Heroku)
     const DASHBOARD_NETWORK_PORT_NUMBER = process.env.PORT || 8080;
 
-    // بدء الاستماع على الشبكة
     app.listen(DASHBOARD_NETWORK_PORT_NUMBER, () => {
         console.log('\n====================================================');
         console.log(`[DASHBOARD SYSTEM BOOT] 🌐 Ultimate Enterprise Web Dashboard is ONLINE`);
         console.log(`[DASHBOARD SYSTEM BOOT] 📡 Express Server is actively listening on PORT: ${DASHBOARD_NETWORK_PORT_NUMBER}`);
-        console.log(`[DASHBOARD SYSTEM BOOT] 🔒 OAuth2 Session Secret and Passport Strategies are configured.`);
         console.log('====================================================\n');
     });
 };
