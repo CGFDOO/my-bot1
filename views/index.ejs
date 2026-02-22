@@ -3,51 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MNC System | تسجيل الدخول</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <title>لوحة التحكم | الصفحة الرئيسية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            font-family: 'Tajawal', sans-serif;
-            background-color: #121212;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
+            background-color: #0f172a; /* لون ليلي فخم */
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .container {
-            background: #1e1e24;
-            padding: 50px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border-top: 5px solid #5865F2;
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        h1 { margin-bottom: 10px; color: #ffffff; }
-        p { color: #a3a6aa; margin-bottom: 30px; }
-        .login-btn {
-            background-color: #5865F2;
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            transition: 0.3s;
-            display: inline-block;
-        }
-        .login-btn:hover { background-color: #4752c4; transform: translateY(-3px); }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>👑 MNC COMMUNITY</h1>
-        <p>لوحة التحكم الشاملة لإدارة سيرفرك باحترافية</p>
+<body class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+    
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-50"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-50"></div>
+
+    <div class="z-10 glass-panel p-10 rounded-2xl shadow-2xl max-w-lg w-full text-center">
+        <img src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Bot Logo" class="w-32 h-32 rounded-full mx-auto mb-6 border-4 border-blue-500 shadow-lg shadow-blue-500/50">
+        
+        <h1 class="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+            Enterprise Dashboard
+        </h1>
+        <p class="text-slate-300 mb-8 text-lg">
+            تحكم في كل إعدادات سيرفرك، تذاكرك، وأنظمة الحماية من مكان واحد وبأقصى سهولة.
+        </p>
+
         <% if (!user) { %>
-            <a href="/login" class="login-btn">تسجيل الدخول بواسطة Discord</a>
+            <a href="/auth/discord" class="inline-flex items-center justify-center w-full px-8 py-4 text-lg font-bold text-white transition-all duration-300 bg-[#5865F2] rounded-xl hover:bg-[#4752C4] hover:shadow-lg hover:shadow-[#5865F2]/50 hover:-translate-y-1">
+                <svg class="w-6 h-6 ml-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>
+                تسجيل الدخول بواسطة Discord
+            </a>
         <% } else { %>
-            <a href="/dashboard" class="login-btn" style="background-color: #3ba55d;">الذهاب إلى لوحة التحكم</a>
+            <div class="bg-slate-800/50 p-4 rounded-xl mb-4 border border-slate-700">
+                <p class="text-slate-300">مرحباً بك مجدداً، <span class="text-white font-bold"><%= user.username %></span>!</p>
+            </div>
+            <a href="/dashboard" class="inline-flex items-center justify-center w-full px-8 py-4 text-lg font-bold text-white transition-all duration-300 bg-blue-600 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/50 hover:-translate-y-1 mb-3">
+                الذهاب للوحة التحكم 🚀
+            </a>
+            <a href="/logout" class="inline-block text-slate-400 hover:text-red-400 transition-colors">تسجيل الخروج</a>
         <% } %>
     </div>
 </body>
