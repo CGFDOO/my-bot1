@@ -1,7 +1,7 @@
 // =========================================================================================================
-// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - V3 FINAL)
+// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - THE FINAL BOSS)
 // ---------------------------------------------------------------------------------------------------------
-// هذا الخادم مبرمج لاستقبال أكثر من 100 متغير من لوحة التحكم (بما فيها الـ AI، اللوجات المفصلة، والبانلات).
+// تمت مراجعة جميع طلبات الإمبراطور: (صانع الإيمبد الفوري، التقييمات المفصلة، الموافقة العليا، واللوجات الشاملة).
 // =========================================================================================================
 
 const express = require('express');
@@ -11,6 +11,7 @@ const session = require('express-session');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const GuildConfigDatabaseModel = require('../models/GuildConfig');
+const { EmbedBuilder } = require('discord.js'); // لإنشاء الإيمبدات الفورية من الداشبورد
 
 // =========================================================================================================
 // ⚙️ 1. الإعدادات الأساسية
@@ -20,7 +21,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// توسيع حجم الطلبات لاستيعاب البانلات اللانهائية وصانع الإيمبد
+// توسيع الحجم لاستيعاب كل بيانات البانلات والقوانين
 app.use(express.urlencoded({ extended: true, limit: '100mb', parameterLimit: 100000 }));
 app.use(express.json({ limit: '100mb' }));
 
@@ -73,22 +74,12 @@ function cleanString(rawInput, defaultVal = null) {
 }
 
 // =========================================================================================================
-// 🌐 4. مسارات العرض الأساسية
+// 🌐 4. المسارات الأساسية والعرض
 // =========================================================================================================
 
 app.get('/auth/discord', passport.authenticate('discord'));
-
-app.get('/callback', passport.authenticate('discord', { failureRedirect: '/?error=auth_failed' }), (req, res) => {
-    res.redirect('/dashboard'); 
-});
-
-app.get('/logout', (req, res, next) => {
-    req.logout((err) => {
-        if (err) return next(err);
-        res.redirect('/');
-    });
-});
-
+app.get('/callback', passport.authenticate('discord', { failureRedirect: '/?error=auth_failed' }), (req, res) => res.redirect('/dashboard'));
+app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return next(err); res.redirect('/'); }); });
 app.get('/', (req, res) => res.render('index', { user: req.user || null }));
 
 app.get('/dashboard', checkAuth, (req, res) => {
@@ -96,27 +87,49 @@ app.get('/dashboard', checkAuth, (req, res) => {
     res.render('dashboard', { user: req.user, guilds: adminGuilds });
 });
 
-// =========================================================================================================
-// ⚙️ 5. مسار جلب إعدادات السيرفر (Settings GET)
-// =========================================================================================================
-
 app.get('/settings/:guildId', checkAuth, async (req, res) => {
     const guildId = req.params.guildId;
-    
     const hasAccess = req.user.guilds.some(g => g.id === guildId && ((g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8));
-    if (!hasAccess) return res.send('<h1 style="color:red; text-align:center;">❌ غير مصرح لك بإدارة هذا السيرفر.</h1>');
+    if (!hasAccess) return res.send('<h1 style="color:red; text-align:center;">❌ غير مصرح لك.</h1>');
 
     try {
         let config = await GuildConfigDatabaseModel.findOne({ guildId });
-        if (!config) {
-            config = new GuildConfigDatabaseModel({ guildId });
-            await config.save();
-        }
-
+        if (!config) { config = new GuildConfigDatabaseModel({ guildId }); await config.save(); }
         res.render('settings', { user: req.user, guildId, config, bot: req.app.locals.client });
     } catch (err) {
-        console.error(err);
-        res.send('<h1 style="color:red; text-align:center;">❌ حدث خطأ داخلي أثناء تحميل الإعدادات.</h1>');
+        res.send('<h1 style="color:red;">❌ حدث خطأ.</h1>');
+    }
+});
+
+// =========================================================================================================
+// 🚀 5. مسار صانع الإيمبد الفوري (Live Embed Maker Route)
+// =========================================================================================================
+
+app.post('/api/send-embed/:guildId', checkAuth, async (req, res) => {
+    const guildId = req.params.guildId;
+    const hasAccess = req.user.guilds.some(g => g.id === guildId && ((g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8));
+    if (!hasAccess) return res.status(403).json({ error: 'Forbidden' });
+
+    const { channelId, title, description, color, imageUrl } = req.body;
+    const bot = req.app.locals.client;
+    
+    try {
+        const guild = bot.guilds.cache.get(guildId);
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel) return res.status(404).json({ error: 'الروم غير موجودة' });
+
+        const customEmbed = new EmbedBuilder()
+            .setTitle(title || null)
+            .setDescription(description || null)
+            .setColor(color || '#5865F2')
+            .setTimestamp();
+        
+        if (imageUrl) customEmbed.setImage(imageUrl);
+
+        await channel.send({ embeds: [customEmbed] });
+        res.json({ success: true, message: 'تم إرسال الإيمبد بنجاح!' });
+    } catch (error) {
+        res.status(500).json({ error: 'حدث خطأ أثناء إرسال الإيمبد.' });
     }
 });
 
@@ -134,11 +147,9 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         let config = await GuildConfigDatabaseModel.findOne({ guildId });
         if (!config) config = new GuildConfigDatabaseModel({ guildId });
 
-        // 1️⃣ العامة
+        // 1️⃣ العامة والألوان
         config.prefix = cleanString(body.prefix, '!');
         config.language = cleanString(body.language, 'ar');
-
-        // 2️⃣ ألوان السيرفر والتصميم
         if (!config.embedSetup) config.embedSetup = {};
         config.embedSetup.successColor = cleanString(body.emb_successColor, '#3ba55d');
         config.embedSetup.errorColor = cleanString(body.emb_errorColor, '#ed4245');
@@ -147,52 +158,32 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.embedSetup.footerIconUrl = cleanString(body.emb_footerIconUrl);
         config.embedSetup.thumbnailUrl = cleanString(body.emb_thumbnailUrl);
 
-        // 3️⃣ نظام الوساطة
-        if (!config.middlemanSystem) config.middlemanSystem = {};
-        config.middlemanSystem.enabled = (body.mm_enabled === 'on' || body.mm_enabled === 'true');
-        config.middlemanSystem.categoryId = cleanString(body.mm_categoryId);
-        config.middlemanSystem.panelChannelId = cleanString(body.mm_panelChannelId);
-        config.middlemanSystem.panelTitle = cleanString(body.mm_panelTitle, 'تذكرة وساطة آمنة');
-        config.middlemanSystem.panelDescription = cleanString(body.mm_panelDescription, 'لطلب وسيط معتمد، يرجى فتح تذكرة.');
-        config.middlemanSystem.panelColor = cleanString(body.mm_panelColor, '#f2a658');
-        config.middlemanSystem.buttonLabel = cleanString(body.mm_buttonLabel, 'طلب وسيط 🛡️');
-        config.middlemanSystem.modalTitle = cleanString(body.mm_modalTitle, 'بيانات الوساطة');
-        
-        if (body.mm_modalFieldsData) {
-            try { config.middlemanSystem.modalFields = JSON.parse(body.mm_modalFieldsData); } catch(e){}
-        }
-
-        config.middlemanSystem.insideTicketTitle = cleanString(body.mm_insideTicketTitle, 'تذكرة الوساطة');
-        config.middlemanSystem.insideTicketDescription = cleanString(body.mm_insideTicketDescription, 'يرجى انتظار الوسيط.');
-        config.middlemanSystem.insideTicketColor = cleanString(body.mm_insideTicketColor, '#f2a658');
-
-        // 4️⃣ البانلات الديناميكية
+        // 2️⃣ البانلات الديناميكية (Frontend will compile buttons/modals into this JSON string)
         if (body.ticketPanelsData) {
             try { config.ticketPanels = JSON.parse(body.ticketPanelsData); } catch(e){}
         }
 
-        // 5️⃣ التذاكر والترانسكريبت (Ticket Counter)
+        // 3️⃣ تحكم التذاكر والترانسكريبت
         if (!config.ticketControls) config.ticketControls = {};
         if (body.tc_ticketCounter) config.ticketControls.ticketCounter = parseInt(body.tc_ticketCounter) || 1;
-        if (body.tc_maxOpenTicketsPerUser) config.ticketControls.maxOpenTicketsPerUser = parseInt(body.tc_maxOpenTicketsPerUser) || 1;
         config.ticketControls.controlPanelColor = cleanString(body.tc_controlPanelColor, '#2b2d31');
         config.ticketControls.ticketLogChannelId = cleanString(body.tc_ticketLogChannelId);
         config.ticketControls.transcriptChannelId = cleanString(body.tc_transcriptChannelId);
         config.ticketControls.hideTicketOnClaim = (body.tc_hideTicketOnClaim === 'on');
         config.ticketControls.readOnlyStaffOnClaim = (body.tc_readOnlyStaffOnClaim === 'on');
 
-        // 6️⃣ التقييمات
+        // 4️⃣ التقييمات المزدوجة (DM & Logs)
         if (!config.ratings) config.ratings = {};
         config.ratings.middlemanLogChannelId = cleanString(body.rating_middlemanLogChannelId);
-        config.ratings.middlemanEmbedColor = cleanString(body.rating_middlemanEmbedColor, '#f2a658');
         config.ratings.staffLogChannelId = cleanString(body.rating_staffLogChannelId);
+        config.ratings.middlemanEmbedColor = cleanString(body.rating_middlemanEmbedColor, '#f2a658');
         config.ratings.staffEmbedColor = cleanString(body.rating_staffEmbedColor, '#3ba55d');
         if (body.rating_customReviewOptions) {
             config.ratings.customReviewOptions = body.rating_customReviewOptions.split('\n').map(r => r.trim()).filter(r => r !== '');
         }
         config.ratings.allowCustomText = (body.rating_allowCustomText === 'on');
 
-        // 7️⃣ الرتب والصلاحيات
+        // 5️⃣ الرتب والصلاحيات (Multiple Approvals)
         if (!config.roles) config.roles = {};
         config.roles.adminRoleId = cleanString(body.role_adminRoleId);
         config.roles.middlemanRoleId = cleanString(body.role_middlemanRoleId);
@@ -200,7 +191,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.roles.tradePingRoleIds = cleanArray(body.role_tradePingRoleIds);
         config.roles.tradeApproveRoleIds = cleanArray(body.role_tradeApproveRoleIds);
 
-        // 8️⃣ الأوامر الديناميكية
+        // 6️⃣ الأوامر الديناميكية
         if (!config.commands) config.commands = {};
         config.commands.clearCmd = cleanString(body.cmd_clearCmd, 'clear');
         config.commands.clearAllowedRoles = cleanArray(body.cmd_clearAllowedRoles);
@@ -214,8 +205,10 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.commands.doneAllowedRoles = cleanArray(body.cmd_doneAllowedRoles);
         config.commands.tradeCmd = cleanString(body.cmd_tradeCmd, 'trade');
         config.commands.tradeAllowedRoles = cleanArray(body.cmd_tradeAllowedRoles);
+        config.commands.approveCmd = cleanString(body.cmd_approveCmd, 'approve');
+        config.commands.approveAllowedRoles = cleanArray(body.cmd_approveAllowedRoles);
 
-        // 9️⃣ السجلات المفصلة جداً (Ultra Logs)
+        // 7️⃣ السجلات الدقيقة (Ultra Logs)
         if (!config.serverLogs) config.serverLogs = {};
         config.serverLogs.messageDeleteLogId = cleanString(body.log_messageDeleteLogId);
         config.serverLogs.messageEditLogId = cleanString(body.log_messageEditLogId);
@@ -223,18 +216,21 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.serverLogs.memberJoinLeaveLogId = cleanString(body.log_memberJoinLeaveLogId);
         config.serverLogs.voiceStateLogId = cleanString(body.log_voiceStateLogId);
         config.serverLogs.roleGiveTakeLogId = cleanString(body.log_roleGiveTakeLogId);
+        config.serverLogs.roleCreateDeleteLogId = cleanString(body.log_roleCreateDeleteLogId);
         config.serverLogs.banKickLogId = cleanString(body.log_banKickLogId);
         config.serverLogs.suggestionsLogId = cleanString(body.log_suggestionsLogId);
         config.serverLogs.warningsLogId = cleanString(body.log_warningsLogId);
 
-        // 🔟 التحذيرات
+        // 8️⃣ التحذيرات والقوانين باللغتين
         if (!config.warnings) config.warnings = { presetReasonsAr: [], presetReasonsEn: [] };
         config.warnings.maxWarnings = parseInt(body.warn_maxWarnings) || 3;
         config.warnings.autoAction = cleanString(body.warn_autoAction, 'timeout');
         if (body.warn_presetReasonsAr) config.warnings.presetReasonsAr = body.warn_presetReasonsAr.split('\n').map(r=>r.trim()).filter(r=>r!=='');
         if (body.warn_presetReasonsEn) config.warnings.presetReasonsEn = body.warn_presetReasonsEn.split('\n').map(r=>r.trim()).filter(r=>r!=='');
+        config.warnings.serverRulesAr = cleanString(body.warn_serverRulesAr, 'الرجاء الالتزام بقوانين السيرفر.');
+        config.warnings.serverRulesEn = cleanString(body.warn_serverRulesEn, 'Please follow the server rules.');
 
-        // 🌟 11. الترحيب (الخلفية وإطار الصورة)
+        // 🌟 9. الترحيب (الخلفية ولون الإطار)
         if (!config.welcomeSystem) config.welcomeSystem = {};
         config.welcomeSystem.enabled = (body.wel_enabled === 'on');
         config.welcomeSystem.channelId = cleanString(body.wel_channelId);
@@ -242,7 +238,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.welcomeSystem.backgroundUrl = cleanString(body.wel_backgroundUrl);
         config.welcomeSystem.avatarBorderHex = cleanString(body.wel_avatarBorderHex, '#ffffff');
 
-        // 🌟 12. الحماية ومكافحة الغزو
+        // 🌟 10. الحماية
         if (!config.protection) config.protection = {};
         config.protection.antiLinkEnabled = (body.prot_antiLinkEnabled === 'on');
         config.protection.antiLinkAllowedRoles = cleanArray(body.prot_antiLinkAllowedRoles);
@@ -252,13 +248,13 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.protection.maxChannelDeletesPerMinute = parseInt(body.prot_maxChannelDeletesPerMinute) || 3;
         config.protection.maxBanPerMinute = parseInt(body.prot_maxBanPerMinute) || 3;
 
-        // 🌟 13. الرتب والرد التلقائي
+        // 🌟 11. الرتب والرد التلقائي
         config.autoRoles = cleanArray(body.autoRoles);
         if (body.autoRespondersData) {
             try { config.autoResponders = JSON.parse(body.autoRespondersData); } catch(e){}
         }
 
-        // 🌟 14. الاقتصاد واللفلات
+        // 🌟 12. الاقتصاد واللفلات
         if (!config.economy) config.economy = {};
         config.economy.enabled = (body.eco_enabled === 'on');
         config.economy.dailyMin = parseInt(body.eco_dailyMin) || 1000;
@@ -273,13 +269,12 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
             try { config.leveling.roleRewards = JSON.parse(body.lvl_roleRewardsData); } catch(e){}
         }
 
-        // 🤖 15. نظام الذكاء الاصطناعي (AI System)
+        // 🤖 13. نظام الذكاء الاصطناعي
         if (!config.aiSystem) config.aiSystem = {};
         config.aiSystem.enabled = (body.ai_enabled === 'on');
         config.aiSystem.chatChannelId = cleanString(body.ai_chatChannelId);
         config.aiSystem.autoModToxicity = (body.ai_autoModToxicity === 'on');
 
-        // حفظ كل العظمة دي
         await config.save();
         res.redirect(`/settings/${guildId}?success=true`);
 
@@ -289,14 +284,10 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
     }
 });
 
-// =========================================================================================================
-// 🚀 7. التشغيل
-// =========================================================================================================
-
 module.exports = (client) => {
     app.locals.client = client;
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {
-        console.log(`\n[DASHBOARD V3] 🌐 The Ultimate Enterprise Dashboard is running on PORT: ${PORT}\n`);
+        console.log(`\n[DASHBOARD FINAL V4] 🌐 Ultimate Enterprise Dashboard Online on PORT: ${PORT}\n`);
     });
 };
