@@ -1,7 +1,7 @@
 // =========================================================================================================
-// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - THE FINAL BOSS)
+// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - V5 FINAL FIX)
 // ---------------------------------------------------------------------------------------------------------
-// تمت مراجعة جميع طلبات الإمبراطور: (صانع الإيمبد الفوري، التقييمات المفصلة، الموافقة العليا، واللوجات الشاملة).
+// تمت إضافة "الإصلاح السحري" لمعالجة خطأ (Internal Server Error) للسيرفرات القديمة.
 // =========================================================================================================
 
 const express = require('express');
@@ -11,7 +11,7 @@ const session = require('express-session');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const GuildConfigDatabaseModel = require('../models/GuildConfig');
-const { EmbedBuilder } = require('discord.js'); // لإنشاء الإيمبدات الفورية من الداشبورد
+const { EmbedBuilder } = require('discord.js');
 
 // =========================================================================================================
 // ⚙️ 1. الإعدادات الأساسية
@@ -29,7 +29,7 @@ app.use(session({
     secret: 'ENTERPRISE_ULTIMATE_SECRET_KEY_FOR_DASHBOARD',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
+    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 } // الجلسة تستمر 7 أيام
 }));
 
 app.use(passport.initialize());
@@ -83,26 +83,53 @@ app.get('/logout', (req, res, next) => { req.logout((err) => { if (err) return n
 app.get('/', (req, res) => res.render('index', { user: req.user || null }));
 
 app.get('/dashboard', checkAuth, (req, res) => {
+    // فلترة السيرفرات التي يملك فيها المستخدم صلاحية إدارة
     const adminGuilds = req.user.guilds.filter(g => (g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8);
     res.render('dashboard', { user: req.user, guilds: adminGuilds });
 });
 
+// =========================================================================================================
+// ⚙️ 5. مسار جلب إعدادات السيرفر (مع الإصلاح السحري للشاشة البيضاء)
+// =========================================================================================================
+
 app.get('/settings/:guildId', checkAuth, async (req, res) => {
     const guildId = req.params.guildId;
     const hasAccess = req.user.guilds.some(g => g.id === guildId && ((g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8));
-    if (!hasAccess) return res.send('<h1 style="color:red; text-align:center;">❌ غير مصرح لك.</h1>');
+    if (!hasAccess) return res.send('<h1 style="color:red; text-align:center;">❌ غير مصرح لك بإدارة هذا السيرفر.</h1>');
 
     try {
         let config = await GuildConfigDatabaseModel.findOne({ guildId });
-        if (!config) { config = new GuildConfigDatabaseModel({ guildId }); await config.save(); }
+        if (!config) { 
+            config = new GuildConfigDatabaseModel({ guildId }); 
+        }
+
+        // 🛠️ الإصلاح السحري: بناء الأقسام الجديدة للسيرفرات القديمة لتجنب كراش الواجهة (Internal Server Error)
+        if (!config.embedSetup) config.embedSetup = {};
+        if (!config.middlemanSystem) config.middlemanSystem = {};
+        if (!config.ticketControls) config.ticketControls = {};
+        if (!config.ratings) config.ratings = {};
+        if (!config.roles) config.roles = {};
+        if (!config.commands) config.commands = {};
+        if (!config.serverLogs) config.serverLogs = {};
+        if (!config.warnings) config.warnings = { presetReasonsAr: [], presetReasonsEn: [] };
+        if (!config.welcomeSystem) config.welcomeSystem = {};
+        if (!config.protection) config.protection = {};
+        if (!config.economy) config.economy = {};
+        if (!config.leveling) config.leveling = {};
+        if (!config.aiSystem) config.aiSystem = {};
+
+        // حفظ التعديلات السحرية في قاعدة البيانات حتى تقرأها الواجهة بأمان
+        await config.save(); 
+
         res.render('settings', { user: req.user, guildId, config, bot: req.app.locals.client });
     } catch (err) {
-        res.send('<h1 style="color:red;">❌ حدث خطأ.</h1>');
+        console.error('[RENDER CRITICAL ERROR]', err);
+        res.send('<h1 style="color:red; text-align:center;">❌ حدث خطأ أثناء تحميل الإعدادات. يرجى مراجعة الكونسول.</h1>');
     }
 });
 
 // =========================================================================================================
-// 🚀 5. مسار صانع الإيمبد الفوري (Live Embed Maker Route)
+// 🚀 6. مسار صانع الإيمبد الفوري (Live Embed Maker Route)
 // =========================================================================================================
 
 app.post('/api/send-embed/:guildId', checkAuth, async (req, res) => {
@@ -134,7 +161,7 @@ app.post('/api/send-embed/:guildId', checkAuth, async (req, res) => {
 });
 
 // =========================================================================================================
-// 💾 6. مسار الحفظ العملاق (The Master POST Route)
+// 💾 7. مسار الحفظ العملاق (The Master POST Route)
 // =========================================================================================================
 
 app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
@@ -158,21 +185,39 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.embedSetup.footerIconUrl = cleanString(body.emb_footerIconUrl);
         config.embedSetup.thumbnailUrl = cleanString(body.emb_thumbnailUrl);
 
-        // 2️⃣ البانلات الديناميكية (Frontend will compile buttons/modals into this JSON string)
+        // 2️⃣ البانلات الديناميكية
         if (body.ticketPanelsData) {
             try { config.ticketPanels = JSON.parse(body.ticketPanelsData); } catch(e){}
         }
 
-        // 3️⃣ تحكم التذاكر والترانسكريبت
+        // 3️⃣ نظام الوساطة
+        if (!config.middlemanSystem) config.middlemanSystem = {};
+        config.middlemanSystem.enabled = (body.mm_enabled === 'on');
+        config.middlemanSystem.categoryId = cleanString(body.mm_categoryId);
+        config.middlemanSystem.panelChannelId = cleanString(body.mm_panelChannelId);
+        config.middlemanSystem.panelTitle = cleanString(body.mm_panelTitle, 'تذكرة وساطة آمنة');
+        config.middlemanSystem.panelDescription = cleanString(body.mm_panelDescription, 'لطلب وسيط معتمد، يرجى فتح تذكرة.');
+        config.middlemanSystem.panelColor = cleanString(body.mm_panelColor, '#f2a658');
+        config.middlemanSystem.buttonLabel = cleanString(body.mm_buttonLabel, 'طلب وسيط 🛡️');
+        config.middlemanSystem.modalTitle = cleanString(body.mm_modalTitle, 'بيانات الوساطة');
+        if (body.mm_modalFieldsData) {
+            try { config.middlemanSystem.modalFields = JSON.parse(body.mm_modalFieldsData); } catch(e){}
+        }
+        config.middlemanSystem.insideTicketTitle = cleanString(body.mm_insideTicketTitle, 'تذكرة الوساطة');
+        config.middlemanSystem.insideTicketDescription = cleanString(body.mm_insideTicketDescription, 'يرجى انتظار الوسيط.');
+        config.middlemanSystem.insideTicketColor = cleanString(body.mm_insideTicketColor, '#f2a658');
+
+        // 4️⃣ تحكم التذاكر والترانسكريبت
         if (!config.ticketControls) config.ticketControls = {};
         if (body.tc_ticketCounter) config.ticketControls.ticketCounter = parseInt(body.tc_ticketCounter) || 1;
+        if (body.tc_maxOpenTicketsPerUser) config.ticketControls.maxOpenTicketsPerUser = parseInt(body.tc_maxOpenTicketsPerUser) || 1;
         config.ticketControls.controlPanelColor = cleanString(body.tc_controlPanelColor, '#2b2d31');
         config.ticketControls.ticketLogChannelId = cleanString(body.tc_ticketLogChannelId);
         config.ticketControls.transcriptChannelId = cleanString(body.tc_transcriptChannelId);
         config.ticketControls.hideTicketOnClaim = (body.tc_hideTicketOnClaim === 'on');
         config.ticketControls.readOnlyStaffOnClaim = (body.tc_readOnlyStaffOnClaim === 'on');
 
-        // 4️⃣ التقييمات المزدوجة (DM & Logs)
+        // 5️⃣ التقييمات المزدوجة (DM & Logs)
         if (!config.ratings) config.ratings = {};
         config.ratings.middlemanLogChannelId = cleanString(body.rating_middlemanLogChannelId);
         config.ratings.staffLogChannelId = cleanString(body.rating_staffLogChannelId);
@@ -183,7 +228,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         }
         config.ratings.allowCustomText = (body.rating_allowCustomText === 'on');
 
-        // 5️⃣ الرتب والصلاحيات (Multiple Approvals)
+        // 6️⃣ الرتب والصلاحيات
         if (!config.roles) config.roles = {};
         config.roles.adminRoleId = cleanString(body.role_adminRoleId);
         config.roles.middlemanRoleId = cleanString(body.role_middlemanRoleId);
@@ -191,7 +236,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.roles.tradePingRoleIds = cleanArray(body.role_tradePingRoleIds);
         config.roles.tradeApproveRoleIds = cleanArray(body.role_tradeApproveRoleIds);
 
-        // 6️⃣ الأوامر الديناميكية
+        // 7️⃣ الأوامر الديناميكية
         if (!config.commands) config.commands = {};
         config.commands.clearCmd = cleanString(body.cmd_clearCmd, 'clear');
         config.commands.clearAllowedRoles = cleanArray(body.cmd_clearAllowedRoles);
@@ -208,7 +253,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.commands.approveCmd = cleanString(body.cmd_approveCmd, 'approve');
         config.commands.approveAllowedRoles = cleanArray(body.cmd_approveAllowedRoles);
 
-        // 7️⃣ السجلات الدقيقة (Ultra Logs)
+        // 8️⃣ السجلات الدقيقة (Ultra Logs)
         if (!config.serverLogs) config.serverLogs = {};
         config.serverLogs.messageDeleteLogId = cleanString(body.log_messageDeleteLogId);
         config.serverLogs.messageEditLogId = cleanString(body.log_messageEditLogId);
@@ -221,7 +266,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.serverLogs.suggestionsLogId = cleanString(body.log_suggestionsLogId);
         config.serverLogs.warningsLogId = cleanString(body.log_warningsLogId);
 
-        // 8️⃣ التحذيرات والقوانين باللغتين
+        // 9️⃣ التحذيرات والقوانين باللغتين
         if (!config.warnings) config.warnings = { presetReasonsAr: [], presetReasonsEn: [] };
         config.warnings.maxWarnings = parseInt(body.warn_maxWarnings) || 3;
         config.warnings.autoAction = cleanString(body.warn_autoAction, 'timeout');
@@ -230,7 +275,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.warnings.serverRulesAr = cleanString(body.warn_serverRulesAr, 'الرجاء الالتزام بقوانين السيرفر.');
         config.warnings.serverRulesEn = cleanString(body.warn_serverRulesEn, 'Please follow the server rules.');
 
-        // 🌟 9. الترحيب (الخلفية ولون الإطار)
+        // 🌟 10. الترحيب الملكي
         if (!config.welcomeSystem) config.welcomeSystem = {};
         config.welcomeSystem.enabled = (body.wel_enabled === 'on');
         config.welcomeSystem.channelId = cleanString(body.wel_channelId);
@@ -238,7 +283,7 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.welcomeSystem.backgroundUrl = cleanString(body.wel_backgroundUrl);
         config.welcomeSystem.avatarBorderHex = cleanString(body.wel_avatarBorderHex, '#ffffff');
 
-        // 🌟 10. الحماية
+        // 🌟 11. الحماية
         if (!config.protection) config.protection = {};
         config.protection.antiLinkEnabled = (body.prot_antiLinkEnabled === 'on');
         config.protection.antiLinkAllowedRoles = cleanArray(body.prot_antiLinkAllowedRoles);
@@ -248,13 +293,13 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
         config.protection.maxChannelDeletesPerMinute = parseInt(body.prot_maxChannelDeletesPerMinute) || 3;
         config.protection.maxBanPerMinute = parseInt(body.prot_maxBanPerMinute) || 3;
 
-        // 🌟 11. الرتب والرد التلقائي
+        // 🌟 12. الرتب والرد التلقائي
         config.autoRoles = cleanArray(body.autoRoles);
         if (body.autoRespondersData) {
             try { config.autoResponders = JSON.parse(body.autoRespondersData); } catch(e){}
         }
 
-        // 🌟 12. الاقتصاد واللفلات
+        // 🌟 13. الاقتصاد واللفلات
         if (!config.economy) config.economy = {};
         config.economy.enabled = (body.eco_enabled === 'on');
         config.economy.dailyMin = parseInt(body.eco_dailyMin) || 1000;
@@ -269,12 +314,13 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
             try { config.leveling.roleRewards = JSON.parse(body.lvl_roleRewardsData); } catch(e){}
         }
 
-        // 🤖 13. نظام الذكاء الاصطناعي
+        // 🤖 14. نظام الذكاء الاصطناعي
         if (!config.aiSystem) config.aiSystem = {};
         config.aiSystem.enabled = (body.ai_enabled === 'on');
         config.aiSystem.chatChannelId = cleanString(body.ai_chatChannelId);
         config.aiSystem.autoModToxicity = (body.ai_autoModToxicity === 'on');
 
+        // حفظ كل العظمة دي
         await config.save();
         res.redirect(`/settings/${guildId}?success=true`);
 
@@ -284,10 +330,14 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
     }
 });
 
+// =========================================================================================================
+// 🚀 التشغيل
+// =========================================================================================================
+
 module.exports = (client) => {
     app.locals.client = client;
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {
-        console.log(`\n[DASHBOARD FINAL V4] 🌐 Ultimate Enterprise Dashboard Online on PORT: ${PORT}\n`);
+        console.log(`\n[DASHBOARD FINAL V5] 🌐 Ultimate Enterprise Dashboard Online on PORT: ${PORT}\n`);
     });
 };
