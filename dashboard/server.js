@@ -1,10 +1,7 @@
 // =========================================================================================================
-// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - PROBOT KILLER EDITION)
+// 🌐 محرك لوحة التحكم العملاق (ULTIMATE ENTERPRISE DASHBOARD SERVER - V3 FINAL)
 // ---------------------------------------------------------------------------------------------------------
-// المسار: dashboard/server.js
-// الوظيفة: خادم ويب (Express) مجهز لاستقبال ومعالجة 15 قسم كامل من إعدادات السيرفر
-// تم ربط المتغيرات السرية بناءً على خوادم Railway: (CLIENT_ID, CLIENT_SECRET, CALLBACK_URL, TOKEN, MONGO_URI)
-// مسار العودة (Callback) مضبوط على /callback ليتطابق مع إعدادات ديسكورد ديفيلوبر.
+// هذا الخادم مبرمج لاستقبال أكثر من 100 متغير من لوحة التحكم (بما فيها الـ AI، اللوجات المفصلة، والبانلات).
 // =========================================================================================================
 
 const express = require('express');
@@ -16,35 +13,29 @@ const DiscordStrategy = require('passport-discord').Strategy;
 const GuildConfigDatabaseModel = require('../models/GuildConfig');
 
 // =========================================================================================================
-// ⚙️ 1. الإعدادات الأساسية للمحرك (Engine Configuration)
+// ⚙️ 1. الإعدادات الأساسية
 // =========================================================================================================
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// توسيع حجم الطلبات (Payload) لاستيعاب البيانات الضخمة جداً (100 ميجا)
+// توسيع حجم الطلبات لاستيعاب البانلات اللانهائية وصانع الإيمبد
 app.use(express.urlencoded({ extended: true, limit: '100mb', parameterLimit: 100000 }));
 app.use(express.json({ limit: '100mb' }));
 
-// =========================================================================================================
-// 🔒 2. نظام الجلسات والحماية (Sessions & Security)
-// =========================================================================================================
-
 app.use(session({
-    secret: 'ENTERPRISE_ULTIMATE_SECRET_KEY_FOR_DASHBOARD_123!@#_SAAS_EDITION_SECURE',
+    secret: 'ENTERPRISE_ULTIMATE_SECRET_KEY_FOR_DASHBOARD',
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7 // الجلسة تستمر لمدة 7 أيام متواصلة
-    }
+    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 // =========================================================================================================
-// 🔑 3. نظام تسجيل الدخول بواسطة ديسكورد (Discord OAuth2 Provider)
+// 🔑 2. نظام تسجيل الدخول (Discord OAuth2)
 // =========================================================================================================
 
 passport.use(new DiscordStrategy({
@@ -52,422 +43,260 @@ passport.use(new DiscordStrategy({
     clientSecret: process.env.CLIENT_SECRET,
     callbackURL: process.env.CALLBACK_URL, 
     scope: ['identify', 'guilds'] 
-}, function(accessToken, refreshToken, userProfile, doneCallback) {
-    return doneCallback(null, userProfile);
+}, function(accessToken, refreshToken, userProfile, done) {
+    return done(null, userProfile);
 }));
 
-passport.serializeUser(function(authenticatedUser, doneCallback) {
-    doneCallback(null, authenticatedUser);
-});
-
-passport.deserializeUser(function(serializedUserObj, doneCallback) {
-    doneCallback(null, serializedUserObj);
-});
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
 
 // =========================================================================================================
-// 🛡️ 4. دوال الحماية والتحقق الإضافية (Middleware Validation Engine)
+// 🛡️ 3. دوال الحماية والتنظيف (Middleware)
 // =========================================================================================================
 
-function checkAuthenticationValidation(request, response, nextFunction) {
-    if (request.isAuthenticated() === true) {
-        return nextFunction(); 
-    }
-    console.log('[DASHBOARD SECURITY] Unauthorized access attempt blocked. Redirecting to login.');
-    response.redirect('/auth/discord'); 
+function checkAuth(req, res, next) {
+    if (req.isAuthenticated()) return next();
+    res.redirect('/auth/discord'); 
 }
 
-function parseAndSanitizeArrayInput(rawInputData) {
-    if (rawInputData === undefined || rawInputData === null) return [];
-    if (Array.isArray(rawInputData) === true) return rawInputData.filter(item => item !== null && String(item).trim() !== '');
-    if (typeof rawInputData === 'string') {
-        return rawInputData.split(',').map(item => item.trim()).filter(item => item !== '');
-    }
+function cleanArray(rawInput) {
+    if (!rawInput) return [];
+    if (Array.isArray(rawInput)) return rawInput.filter(i => i && String(i).trim() !== '');
+    if (typeof rawInput === 'string') return rawInput.split(',').map(i => i.trim()).filter(i => i !== '');
     return [];
 }
 
-function parseAndSanitizeStringInput(rawInputData, defaultValue = null) {
-    if (rawInputData === undefined || rawInputData === null) return defaultValue;
-    const trimmedString = String(rawInputData).trim();
-    if (trimmedString === '' || trimmedString === 'none') return defaultValue;
-    return trimmedString;
+function cleanString(rawInput, defaultVal = null) {
+    if (!rawInput) return defaultVal;
+    const str = String(rawInput).trim();
+    return (str === '' || str === 'none') ? defaultVal : str;
 }
 
 // =========================================================================================================
-// 🌐 5. مسارات الموقع الأساسية (Core Web Routes)
+// 🌐 4. مسارات العرض الأساسية
 // =========================================================================================================
 
 app.get('/auth/discord', passport.authenticate('discord'));
 
-// ⚠️ مسار الـ Callback مضبوط ليتطابق مع ما وضعته أنت في ديسكورد ديفيلوبر
-app.get('/callback', passport.authenticate('discord', {
-    failureRedirect: '/?error=auth_failed'
-}), function(request, response) {
-    console.log(`[DASHBOARD AUTH] User ${request.user.username} successfully logged in.`);
-    response.redirect('/dashboard'); 
+app.get('/callback', passport.authenticate('discord', { failureRedirect: '/?error=auth_failed' }), (req, res) => {
+    res.redirect('/dashboard'); 
 });
 
-app.get('/logout', function(request, response, nextFunction) {
-    request.logout(function(logoutError) {
-        if (logoutError) return nextFunction(logoutError); 
-        response.redirect('/');
+app.get('/logout', (req, res, next) => {
+    req.logout((err) => {
+        if (err) return next(err);
+        res.redirect('/');
     });
 });
 
-app.get('/', (request, response) => {
-    response.render('index', { user: request.user || null });
-});
+app.get('/', (req, res) => res.render('index', { user: req.user || null }));
 
-app.get('/dashboard', checkAuthenticationValidation, (request, response) => {
-    const userAdminGuildsArray = request.user.guilds.filter(function(guildObject) {
-        return (guildObject.permissions & 0x20) === 0x20 || (guildObject.permissions & 0x8) === 0x8;
-    });
-    response.render('dashboard', { user: request.user, guilds: userAdminGuildsArray });
+app.get('/dashboard', checkAuth, (req, res) => {
+    const adminGuilds = req.user.guilds.filter(g => (g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8);
+    res.render('dashboard', { user: req.user, guilds: adminGuilds });
 });
 
 // =========================================================================================================
-// ⚙️ 6. مسار جلب الإعدادات (Settings GET Route)
+// ⚙️ 5. مسار جلب إعدادات السيرفر (Settings GET)
 // =========================================================================================================
 
-app.get('/settings/:guildId', checkAuthenticationValidation, async (request, response) => {
-    const targetGuildDiscordIdString = request.params.guildId;
+app.get('/settings/:guildId', checkAuth, async (req, res) => {
+    const guildId = req.params.guildId;
     
-    let doesUserHaveAccessToGuildBoolean = false;
-    for (let i = 0; i < request.user.guilds.length; i++) {
-        if (request.user.guilds[i].id === targetGuildDiscordIdString) {
-            const hasManage = (request.user.guilds[i].permissions & 0x20) === 0x20;
-            const hasAdmin = (request.user.guilds[i].permissions & 0x8) === 0x8;
-            if (hasManage || hasAdmin) { doesUserHaveAccessToGuildBoolean = true; break; }
-        }
-    }
-    
-    if (doesUserHaveAccessToGuildBoolean === false) {
-        return response.send('<h1 style="color:red; text-align:center;">❌ Access Denied! لا تمتلك صلاحية لهذا السيرفر.</h1>');
-    }
+    const hasAccess = req.user.guilds.some(g => g.id === guildId && ((g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8));
+    if (!hasAccess) return res.send('<h1 style="color:red; text-align:center;">❌ غير مصرح لك بإدارة هذا السيرفر.</h1>');
 
     try {
-        let guildConfigurationDocumentObject = await GuildConfigDatabaseModel.findOne({ guildId: targetGuildDiscordIdString });
-        if (guildConfigurationDocumentObject === null) {
-            guildConfigurationDocumentObject = new GuildConfigDatabaseModel({ guildId: targetGuildDiscordIdString });
-            await guildConfigurationDocumentObject.save();
+        let config = await GuildConfigDatabaseModel.findOne({ guildId });
+        if (!config) {
+            config = new GuildConfigDatabaseModel({ guildId });
+            await config.save();
         }
 
-        response.render('settings', {
-            user: request.user,
-            guildId: targetGuildDiscordIdString,
-            config: guildConfigurationDocumentObject,
-            bot: request.app.locals.client 
-        });
-
-    } catch (databaseFetchExceptionError) {
-        response.send('<h1 style="color:red; text-align:center;">❌ حدث خطأ داخلي.</h1>');
+        res.render('settings', { user: req.user, guildId, config, bot: req.app.locals.client });
+    } catch (err) {
+        console.error(err);
+        res.send('<h1 style="color:red; text-align:center;">❌ حدث خطأ داخلي أثناء تحميل الإعدادات.</h1>');
     }
 });
 
 // =========================================================================================================
-// 💾 7. مسار الحفظ العملاق والمفصل (THE BEHEMOTH POST ROUTE - ALL 15 SECTIONS)
+// 💾 6. مسار الحفظ العملاق (The Master POST Route)
 // =========================================================================================================
 
-app.post('/settings/:guildId/save', checkAuthenticationValidation, async (request, response) => {
-    
-    const targetGuildDiscordIdString = request.params.guildId;
-    
-    let doesUserHaveAccessToGuildBoolean = false;
-    for (let i = 0; i < request.user.guilds.length; i++) {
-        if (request.user.guilds[i].id === targetGuildDiscordIdString) {
-            const hasManage = (request.user.guilds[i].permissions & 0x20) === 0x20;
-            const hasAdmin = (request.user.guilds[i].permissions & 0x8) === 0x8;
-            if (hasManage || hasAdmin) { doesUserHaveAccessToGuildBoolean = true; break; }
-        }
-    }
-    
-    if (doesUserHaveAccessToGuildBoolean === false) return response.status(403).send('Forbidden: Access Denied');
+app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
+    const guildId = req.params.guildId;
+    const hasAccess = req.user.guilds.some(g => g.id === guildId && ((g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8));
+    if (!hasAccess) return res.status(403).send('Forbidden');
 
     try {
-        const incomingFormDataPayloadObject = request.body;
-        console.log(`[DASHBOARD LOG] Received massive POST payload for Guild: ${targetGuildDiscordIdString}`);
+        const body = req.body;
+        let config = await GuildConfigDatabaseModel.findOne({ guildId });
+        if (!config) config = new GuildConfigDatabaseModel({ guildId });
 
-        let guildConfigDocumentToUpdateObject = await GuildConfigDatabaseModel.findOne({ guildId: targetGuildDiscordIdString });
-        if (guildConfigDocumentToUpdateObject === null) {
-            guildConfigDocumentToUpdateObject = new GuildConfigDatabaseModel({ guildId: targetGuildDiscordIdString });
-        }
+        // 1️⃣ العامة
+        config.prefix = cleanString(body.prefix, '!');
+        config.language = cleanString(body.language, 'ar');
 
-        // =====================================================================
-        // 1️⃣ الإعدادات العامة (General Settings)
-        // =====================================================================
-        if (incomingFormDataPayloadObject.prefix !== undefined) {
-            guildConfigDocumentToUpdateObject.prefix = parseAndSanitizeStringInput(incomingFormDataPayloadObject.prefix, '!');
-        }
-        if (incomingFormDataPayloadObject.language !== undefined) {
-            guildConfigDocumentToUpdateObject.language = parseAndSanitizeStringInput(incomingFormDataPayloadObject.language, 'ar');
-        }
+        // 2️⃣ ألوان السيرفر والتصميم
+        if (!config.embedSetup) config.embedSetup = {};
+        config.embedSetup.successColor = cleanString(body.emb_successColor, '#3ba55d');
+        config.embedSetup.errorColor = cleanString(body.emb_errorColor, '#ed4245');
+        config.embedSetup.primaryColor = cleanString(body.emb_primaryColor, '#5865F2');
+        config.embedSetup.footerText = cleanString(body.emb_footerText, 'Enterprise System');
+        config.embedSetup.footerIconUrl = cleanString(body.emb_footerIconUrl);
+        config.embedSetup.thumbnailUrl = cleanString(body.emb_thumbnailUrl);
 
-        // =====================================================================
-        // 2️⃣ التحكم الشامل في الإيمبدات (Global Embeds Control)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.embedSetup) guildConfigDocumentToUpdateObject.embedSetup = {};
+        // 3️⃣ نظام الوساطة
+        if (!config.middlemanSystem) config.middlemanSystem = {};
+        config.middlemanSystem.enabled = (body.mm_enabled === 'on' || body.mm_enabled === 'true');
+        config.middlemanSystem.categoryId = cleanString(body.mm_categoryId);
+        config.middlemanSystem.panelChannelId = cleanString(body.mm_panelChannelId);
+        config.middlemanSystem.panelTitle = cleanString(body.mm_panelTitle, 'تذكرة وساطة آمنة');
+        config.middlemanSystem.panelDescription = cleanString(body.mm_panelDescription, 'لطلب وسيط معتمد، يرجى فتح تذكرة.');
+        config.middlemanSystem.panelColor = cleanString(body.mm_panelColor, '#f2a658');
+        config.middlemanSystem.buttonLabel = cleanString(body.mm_buttonLabel, 'طلب وسيط 🛡️');
+        config.middlemanSystem.modalTitle = cleanString(body.mm_modalTitle, 'بيانات الوساطة');
         
-        if (incomingFormDataPayloadObject.emb_successColor !== undefined) guildConfigDocumentToUpdateObject.embedSetup.successColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_successColor, '#3ba55d');
-        if (incomingFormDataPayloadObject.emb_errorColor !== undefined) guildConfigDocumentToUpdateObject.embedSetup.errorColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_errorColor, '#ed4245');
-        if (incomingFormDataPayloadObject.emb_primaryColor !== undefined) guildConfigDocumentToUpdateObject.embedSetup.primaryColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_primaryColor, '#5865F2');
-        if (incomingFormDataPayloadObject.emb_footerText !== undefined) guildConfigDocumentToUpdateObject.embedSetup.footerText = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_footerText, 'Enterprise System © 2024');
-        if (incomingFormDataPayloadObject.emb_footerIconUrl !== undefined) guildConfigDocumentToUpdateObject.embedSetup.footerIconUrl = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_footerIconUrl);
-        if (incomingFormDataPayloadObject.emb_thumbnailUrl !== undefined) guildConfigDocumentToUpdateObject.embedSetup.thumbnailUrl = parseAndSanitizeStringInput(incomingFormDataPayloadObject.emb_thumbnailUrl);
-
-        // =====================================================================
-        // 3️⃣ نظام الوساطة المتقدم (Middleman System)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.middlemanSystem) guildConfigDocumentToUpdateObject.middlemanSystem = {};
-
-        guildConfigDocumentToUpdateObject.middlemanSystem.enabled = (incomingFormDataPayloadObject.mm_enabled === 'on' || incomingFormDataPayloadObject.mm_enabled === 'true');
-        if (incomingFormDataPayloadObject.mm_categoryId !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.categoryId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_categoryId);
-        if (incomingFormDataPayloadObject.mm_panelChannelId !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelChannelId);
-        
-        if (incomingFormDataPayloadObject.mm_panelTitle !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelTitle, 'تذكرة وساطة آمنة');
-        if (incomingFormDataPayloadObject.mm_panelDescription !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelDescription, 'لطلب وسيط معتمد، يرجى فتح تذكرة.');
-        if (incomingFormDataPayloadObject.mm_panelColor !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.panelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_panelColor, '#f2a658');
-        if (incomingFormDataPayloadObject.mm_buttonLabel !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.buttonLabel = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_buttonLabel, 'طلب وسيط 🛡️');
-        
-        if (incomingFormDataPayloadObject.mm_modalTitle !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.modalTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_modalTitle, 'بيانات الوساطة');
-        if (incomingFormDataPayloadObject.mm_modalFieldsData !== undefined && incomingFormDataPayloadObject.mm_modalFieldsData !== '') {
-            try {
-                const parsedModalFieldsArray = JSON.parse(incomingFormDataPayloadObject.mm_modalFieldsData);
-                if (Array.isArray(parsedModalFieldsArray)) guildConfigDocumentToUpdateObject.middlemanSystem.modalFields = parsedModalFieldsArray;
-            } catch (jsonParsingError) {}
+        if (body.mm_modalFieldsData) {
+            try { config.middlemanSystem.modalFields = JSON.parse(body.mm_modalFieldsData); } catch(e){}
         }
 
-        if (incomingFormDataPayloadObject.mm_insideTicketTitle !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketTitle = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketTitle, 'تذكرة الوساطة');
-        if (incomingFormDataPayloadObject.mm_insideTicketDescription !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketDescription = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketDescription, 'يرجى انتظار الوسيط وكتابة التفاصيل.');
-        if (incomingFormDataPayloadObject.mm_insideTicketColor !== undefined) guildConfigDocumentToUpdateObject.middlemanSystem.insideTicketColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.mm_insideTicketColor, '#f2a658');
+        config.middlemanSystem.insideTicketTitle = cleanString(body.mm_insideTicketTitle, 'تذكرة الوساطة');
+        config.middlemanSystem.insideTicketDescription = cleanString(body.mm_insideTicketDescription, 'يرجى انتظار الوسيط.');
+        config.middlemanSystem.insideTicketColor = cleanString(body.mm_insideTicketColor, '#f2a658');
 
-        // =====================================================================
-        // 4️⃣ نظام التذاكر المتعددة (Custom Ticket Panels)
-        // =====================================================================
-        if (incomingFormDataPayloadObject.ticketPanelsData !== undefined && incomingFormDataPayloadObject.ticketPanelsData !== '') {
-            try {
-                const parsedTicketPanelsArray = JSON.parse(incomingFormDataPayloadObject.ticketPanelsData);
-                if (Array.isArray(parsedTicketPanelsArray)) guildConfigDocumentToUpdateObject.ticketPanels = parsedTicketPanelsArray;
-            } catch (jsonParsingError) {}
+        // 4️⃣ البانلات الديناميكية
+        if (body.ticketPanelsData) {
+            try { config.ticketPanels = JSON.parse(body.ticketPanelsData); } catch(e){}
         }
 
-        // =====================================================================
-        // 5️⃣ نظام التقييمات المزدوج (Dual Ratings)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.ratings) guildConfigDocumentToUpdateObject.ratings = {};
+        // 5️⃣ التذاكر والترانسكريبت (Ticket Counter)
+        if (!config.ticketControls) config.ticketControls = {};
+        if (body.tc_ticketCounter) config.ticketControls.ticketCounter = parseInt(body.tc_ticketCounter) || 1;
+        if (body.tc_maxOpenTicketsPerUser) config.ticketControls.maxOpenTicketsPerUser = parseInt(body.tc_maxOpenTicketsPerUser) || 1;
+        config.ticketControls.controlPanelColor = cleanString(body.tc_controlPanelColor, '#2b2d31');
+        config.ticketControls.ticketLogChannelId = cleanString(body.tc_ticketLogChannelId);
+        config.ticketControls.transcriptChannelId = cleanString(body.tc_transcriptChannelId);
+        config.ticketControls.hideTicketOnClaim = (body.tc_hideTicketOnClaim === 'on');
+        config.ticketControls.readOnlyStaffOnClaim = (body.tc_readOnlyStaffOnClaim === 'on');
 
-        if (incomingFormDataPayloadObject.rating_middlemanLogChannelId !== undefined) guildConfigDocumentToUpdateObject.ratings.middlemanLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanLogChannelId);
-        if (incomingFormDataPayloadObject.rating_middlemanEmbedColor !== undefined) guildConfigDocumentToUpdateObject.ratings.middlemanEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_middlemanEmbedColor, '#f2a658');
-        if (incomingFormDataPayloadObject.rating_staffLogChannelId !== undefined) guildConfigDocumentToUpdateObject.ratings.staffLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffLogChannelId);
-        if (incomingFormDataPayloadObject.rating_staffEmbedColor !== undefined) guildConfigDocumentToUpdateObject.ratings.staffEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.rating_staffEmbedColor, '#3ba55d');
-        
-        if (incomingFormDataPayloadObject.rating_customReviewOptions !== undefined) {
-            guildConfigDocumentToUpdateObject.ratings.customReviewOptions = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.rating_customReviewOptions);
+        // 6️⃣ التقييمات
+        if (!config.ratings) config.ratings = {};
+        config.ratings.middlemanLogChannelId = cleanString(body.rating_middlemanLogChannelId);
+        config.ratings.middlemanEmbedColor = cleanString(body.rating_middlemanEmbedColor, '#f2a658');
+        config.ratings.staffLogChannelId = cleanString(body.rating_staffLogChannelId);
+        config.ratings.staffEmbedColor = cleanString(body.rating_staffEmbedColor, '#3ba55d');
+        if (body.rating_customReviewOptions) {
+            config.ratings.customReviewOptions = body.rating_customReviewOptions.split('\n').map(r => r.trim()).filter(r => r !== '');
         }
-        
-        guildConfigDocumentToUpdateObject.ratings.allowCustomText = (incomingFormDataPayloadObject.rating_allowCustomText === 'on' || incomingFormDataPayloadObject.rating_allowCustomText === 'true');
+        config.ratings.allowCustomText = (body.rating_allowCustomText === 'on');
 
-        // =====================================================================
-        // 6️⃣ التحكم الذكي في التذاكر (Ticket Controls)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.ticketControls) guildConfigDocumentToUpdateObject.ticketControls = {};
+        // 7️⃣ الرتب والصلاحيات
+        if (!config.roles) config.roles = {};
+        config.roles.adminRoleId = cleanString(body.role_adminRoleId);
+        config.roles.middlemanRoleId = cleanString(body.role_middlemanRoleId);
+        config.roles.highAdminRoles = cleanArray(body.role_highAdminRoles);
+        config.roles.tradePingRoleIds = cleanArray(body.role_tradePingRoleIds);
+        config.roles.tradeApproveRoleIds = cleanArray(body.role_tradeApproveRoleIds);
 
-        if (incomingFormDataPayloadObject.tc_maxOpenTicketsPerUser !== undefined) {
-            const parsedMaxTicketsInt = parseInt(incomingFormDataPayloadObject.tc_maxOpenTicketsPerUser);
-            if (!isNaN(parsedMaxTicketsInt) && parsedMaxTicketsInt > 0) guildConfigDocumentToUpdateObject.ticketControls.maxOpenTicketsPerUser = parsedMaxTicketsInt;
-        }
+        // 8️⃣ الأوامر الديناميكية
+        if (!config.commands) config.commands = {};
+        config.commands.clearCmd = cleanString(body.cmd_clearCmd, 'clear');
+        config.commands.clearAllowedRoles = cleanArray(body.cmd_clearAllowedRoles);
+        config.commands.banCmd = cleanString(body.cmd_banCmd, 'ban');
+        config.commands.banAllowedRoles = cleanArray(body.cmd_banAllowedRoles);
+        config.commands.timeoutCmd = cleanString(body.cmd_timeoutCmd, 'timeout');
+        config.commands.timeoutAllowedRoles = cleanArray(body.cmd_timeoutAllowedRoles);
+        config.commands.comeCmd = cleanString(body.cmd_comeCmd, 'come');
+        config.commands.comeAllowedRoles = cleanArray(body.cmd_comeAllowedRoles);
+        config.commands.doneCmd = cleanString(body.cmd_doneCmd, 'done');
+        config.commands.doneAllowedRoles = cleanArray(body.cmd_doneAllowedRoles);
+        config.commands.tradeCmd = cleanString(body.cmd_tradeCmd, 'trade');
+        config.commands.tradeAllowedRoles = cleanArray(body.cmd_tradeAllowedRoles);
 
-        if (incomingFormDataPayloadObject.tc_controlPanelColor !== undefined) guildConfigDocumentToUpdateObject.ticketControls.controlPanelColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_controlPanelColor, '#2b2d31');
-        if (incomingFormDataPayloadObject.tc_ticketLogChannelId !== undefined) guildConfigDocumentToUpdateObject.ticketControls.ticketLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_ticketLogChannelId);
-        if (incomingFormDataPayloadObject.tc_transcriptChannelId !== undefined) guildConfigDocumentToUpdateObject.ticketControls.transcriptChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptChannelId);
-        if (incomingFormDataPayloadObject.tc_transcriptEmbedColor !== undefined) guildConfigDocumentToUpdateObject.ticketControls.transcriptEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.tc_transcriptEmbedColor, '#2b2d31');
+        // 9️⃣ السجلات المفصلة جداً (Ultra Logs)
+        if (!config.serverLogs) config.serverLogs = {};
+        config.serverLogs.messageDeleteLogId = cleanString(body.log_messageDeleteLogId);
+        config.serverLogs.messageEditLogId = cleanString(body.log_messageEditLogId);
+        config.serverLogs.imageDeleteLogId = cleanString(body.log_imageDeleteLogId);
+        config.serverLogs.memberJoinLeaveLogId = cleanString(body.log_memberJoinLeaveLogId);
+        config.serverLogs.voiceStateLogId = cleanString(body.log_voiceStateLogId);
+        config.serverLogs.roleGiveTakeLogId = cleanString(body.log_roleGiveTakeLogId);
+        config.serverLogs.banKickLogId = cleanString(body.log_banKickLogId);
+        config.serverLogs.suggestionsLogId = cleanString(body.log_suggestionsLogId);
+        config.serverLogs.warningsLogId = cleanString(body.log_warningsLogId);
 
-        guildConfigDocumentToUpdateObject.ticketControls.hideTicketOnClaim = (incomingFormDataPayloadObject.tc_hideTicketOnClaim === 'on' || incomingFormDataPayloadObject.tc_hideTicketOnClaim === 'true');
-        guildConfigDocumentToUpdateObject.ticketControls.readOnlyStaffOnClaim = (incomingFormDataPayloadObject.tc_readOnlyStaffOnClaim === 'on' || incomingFormDataPayloadObject.tc_readOnlyStaffOnClaim === 'true');
+        // 🔟 التحذيرات
+        if (!config.warnings) config.warnings = { presetReasonsAr: [], presetReasonsEn: [] };
+        config.warnings.maxWarnings = parseInt(body.warn_maxWarnings) || 3;
+        config.warnings.autoAction = cleanString(body.warn_autoAction, 'timeout');
+        if (body.warn_presetReasonsAr) config.warnings.presetReasonsAr = body.warn_presetReasonsAr.split('\n').map(r=>r.trim()).filter(r=>r!=='');
+        if (body.warn_presetReasonsEn) config.warnings.presetReasonsEn = body.warn_presetReasonsEn.split('\n').map(r=>r.trim()).filter(r=>r!=='');
 
-        // =====================================================================
-        // 7️⃣ نظام الرتب والصلاحيات (Roles Hierarchy)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.roles) guildConfigDocumentToUpdateObject.roles = {};
+        // 🌟 11. الترحيب (الخلفية وإطار الصورة)
+        if (!config.welcomeSystem) config.welcomeSystem = {};
+        config.welcomeSystem.enabled = (body.wel_enabled === 'on');
+        config.welcomeSystem.channelId = cleanString(body.wel_channelId);
+        config.welcomeSystem.messageText = cleanString(body.wel_messageText, 'مرحباً بك {user}!');
+        config.welcomeSystem.backgroundUrl = cleanString(body.wel_backgroundUrl);
+        config.welcomeSystem.avatarBorderHex = cleanString(body.wel_avatarBorderHex, '#ffffff');
 
-        if (incomingFormDataPayloadObject.role_adminRoleId !== undefined) guildConfigDocumentToUpdateObject.roles.adminRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_adminRoleId);
-        if (incomingFormDataPayloadObject.role_middlemanRoleId !== undefined) guildConfigDocumentToUpdateObject.roles.middlemanRoleId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.role_middlemanRoleId);
-        
-        if (incomingFormDataPayloadObject.role_highAdminRoles !== undefined) guildConfigDocumentToUpdateObject.roles.highAdminRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highAdminRoles);
-        if (incomingFormDataPayloadObject.role_highMiddlemanRoles !== undefined) guildConfigDocumentToUpdateObject.roles.highMiddlemanRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_highMiddlemanRoles);
-        if (incomingFormDataPayloadObject.role_tradePingRoleIds !== undefined) guildConfigDocumentToUpdateObject.roles.tradePingRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradePingRoleIds);
-        if (incomingFormDataPayloadObject.role_tradeApproveRoleIds !== undefined) guildConfigDocumentToUpdateObject.roles.tradeApproveRoleIds = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.role_tradeApproveRoleIds);
+        // 🌟 12. الحماية ومكافحة الغزو
+        if (!config.protection) config.protection = {};
+        config.protection.antiLinkEnabled = (body.prot_antiLinkEnabled === 'on');
+        config.protection.antiLinkAllowedRoles = cleanArray(body.prot_antiLinkAllowedRoles);
+        config.protection.antiSpamEnabled = (body.prot_antiSpamEnabled === 'on');
+        config.protection.antiSpamAction = cleanString(body.prot_antiSpamAction, 'mute');
+        config.protection.antiNukeEnabled = (body.prot_antiNukeEnabled === 'on');
+        config.protection.maxChannelDeletesPerMinute = parseInt(body.prot_maxChannelDeletesPerMinute) || 3;
+        config.protection.maxBanPerMinute = parseInt(body.prot_maxBanPerMinute) || 3;
 
-        // =====================================================================
-        // 8️⃣ الأوامر الديناميكية (Dynamic Commands)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.commands) guildConfigDocumentToUpdateObject.commands = {};
-
-        if (incomingFormDataPayloadObject.cmd_clearCmd !== undefined) guildConfigDocumentToUpdateObject.commands.clearCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_clearCmd, 'clear');
-        if (incomingFormDataPayloadObject.cmd_clearAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.clearAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_clearAllowedRoles);
-        if (incomingFormDataPayloadObject.cmd_banCmd !== undefined) guildConfigDocumentToUpdateObject.commands.banCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_banCmd, 'ban');
-        if (incomingFormDataPayloadObject.cmd_banAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.banAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_banAllowedRoles);
-        if (incomingFormDataPayloadObject.cmd_timeoutCmd !== undefined) guildConfigDocumentToUpdateObject.commands.timeoutCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_timeoutCmd, 'timeout');
-        if (incomingFormDataPayloadObject.cmd_timeoutAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.timeoutAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_timeoutAllowedRoles);
-        if (incomingFormDataPayloadObject.cmd_comeCmd !== undefined) guildConfigDocumentToUpdateObject.commands.comeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_comeCmd, 'come');
-        if (incomingFormDataPayloadObject.cmd_comeAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.comeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_comeAllowedRoles);
-        if (incomingFormDataPayloadObject.cmd_doneCmd !== undefined) guildConfigDocumentToUpdateObject.commands.doneCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_doneCmd, 'done');
-        if (incomingFormDataPayloadObject.cmd_doneAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.doneAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_doneAllowedRoles);
-        if (incomingFormDataPayloadObject.cmd_tradeCmd !== undefined) guildConfigDocumentToUpdateObject.commands.tradeCmd = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeCmd, 'trade');
-        if (incomingFormDataPayloadObject.cmd_tradeAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.commands.tradeAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.cmd_tradeAllowedRoles);
-        if (incomingFormDataPayloadObject.cmd_tradeEmbedColor !== undefined) guildConfigDocumentToUpdateObject.commands.tradeEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.cmd_tradeEmbedColor, '#f2a658');
-
-        // =====================================================================
-        // 9️⃣ سجلات السيرفر المفصلة (Unified Logs)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.serverLogs) guildConfigDocumentToUpdateObject.serverLogs = {};
-
-        if (incomingFormDataPayloadObject.log_messageLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.messageLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogChannelId);
-        if (incomingFormDataPayloadObject.log_messageLogEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.messageLogEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_messageLogEmbedColor, '#fee75c');
-        if (incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.memberJoinLeaveLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinLeaveLogChannelId);
-        if (incomingFormDataPayloadObject.log_memberJoinEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.memberJoinEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberJoinEmbedColor, '#3ba55d');
-        if (incomingFormDataPayloadObject.log_memberLeaveEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.memberLeaveEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_memberLeaveEmbedColor, '#ed4245');
-        if (incomingFormDataPayloadObject.log_voiceStateLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.voiceStateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateLogChannelId);
-        if (incomingFormDataPayloadObject.log_voiceStateEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.voiceStateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_voiceStateEmbedColor, '#5865F2');
-        if (incomingFormDataPayloadObject.log_roleUpdateLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.roleUpdateLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateLogChannelId);
-        if (incomingFormDataPayloadObject.log_roleUpdateEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.roleUpdateEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_roleUpdateEmbedColor, '#ffffff');
-        if (incomingFormDataPayloadObject.log_banKickLogChannelId !== undefined) guildConfigDocumentToUpdateObject.serverLogs.banKickLogChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickLogChannelId);
-        if (incomingFormDataPayloadObject.log_banKickEmbedColor !== undefined) guildConfigDocumentToUpdateObject.serverLogs.banKickEmbedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.log_banKickEmbedColor, '#992d22');
-
-        // =====================================================================
-        // 🔟 نظام التحذيرات (Warnings System)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.warnings) guildConfigDocumentToUpdateObject.warnings = { presetReasons: {} };
-
-        if (incomingFormDataPayloadObject.warn_maxWarnings !== undefined) {
-            const parsedMaxWarningsInt = parseInt(incomingFormDataPayloadObject.warn_maxWarnings);
-            if (!isNaN(parsedMaxWarningsInt) && parsedMaxWarningsInt > 0) guildConfigDocumentToUpdateObject.warnings.maxWarnings = parsedMaxWarningsInt;
+        // 🌟 13. الرتب والرد التلقائي
+        config.autoRoles = cleanArray(body.autoRoles);
+        if (body.autoRespondersData) {
+            try { config.autoResponders = JSON.parse(body.autoRespondersData); } catch(e){}
         }
 
-        if (incomingFormDataPayloadObject.warn_autoAction !== undefined) {
-            const requestedActionString = String(incomingFormDataPayloadObject.warn_autoAction).toLowerCase().trim();
-            if (['timeout', 'kick', 'ban'].includes(requestedActionString)) {
-                guildConfigDocumentToUpdateObject.warnings.autoAction = requestedActionString;
-            }
+        // 🌟 14. الاقتصاد واللفلات
+        if (!config.economy) config.economy = {};
+        config.economy.enabled = (body.eco_enabled === 'on');
+        config.economy.dailyMin = parseInt(body.eco_dailyMin) || 1000;
+        config.economy.dailyMax = parseInt(body.eco_dailyMax) || 5000;
+        config.economy.tax = parseInt(body.eco_tax) || 5;
+
+        if (!config.leveling) config.leveling = {};
+        config.leveling.enabled = (body.lvl_enabled === 'on');
+        config.leveling.levelUpChannelId = cleanString(body.lvl_levelUpChannelId);
+        config.leveling.levelUpMessage = cleanString(body.lvl_levelUpMessage, 'مبروك {user}! وصلت لفل **{level}** 🚀');
+        if (body.lvl_roleRewardsData) {
+            try { config.leveling.roleRewards = JSON.parse(body.lvl_roleRewardsData); } catch(e){}
         }
 
-        // أسباب التحذيرات بالعربي والإنجليزي
-        if (!guildConfigDocumentToUpdateObject.warnings.presetReasons) guildConfigDocumentToUpdateObject.warnings.presetReasons = {};
-        if (incomingFormDataPayloadObject.warn_presetReasons_ar !== undefined) {
-            guildConfigDocumentToUpdateObject.warnings.presetReasons.ar = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.warn_presetReasons_ar);
-        }
-        if (incomingFormDataPayloadObject.warn_presetReasons_en !== undefined) {
-            guildConfigDocumentToUpdateObject.warnings.presetReasons.en = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.warn_presetReasons_en);
-        }
+        // 🤖 15. نظام الذكاء الاصطناعي (AI System)
+        if (!config.aiSystem) config.aiSystem = {};
+        config.aiSystem.enabled = (body.ai_enabled === 'on');
+        config.aiSystem.chatChannelId = cleanString(body.ai_chatChannelId);
+        config.aiSystem.autoModToxicity = (body.ai_autoModToxicity === 'on');
 
-        // =====================================================================
-        // 🌟 11. نظام الترحيب والمغادرة (Welcome System)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.welcomeSystem) guildConfigDocumentToUpdateObject.welcomeSystem = {};
+        // حفظ كل العظمة دي
+        await config.save();
+        res.redirect(`/settings/${guildId}?success=true`);
 
-        guildConfigDocumentToUpdateObject.welcomeSystem.enabled = (incomingFormDataPayloadObject.wel_enabled === 'on' || incomingFormDataPayloadObject.wel_enabled === 'true');
-        if (incomingFormDataPayloadObject.wel_channelId !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.channelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_channelId);
-        if (incomingFormDataPayloadObject.wel_messageText !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.messageText = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_messageText, 'مرحباً بك {user} في سيرفر {server}!');
-        if (incomingFormDataPayloadObject.wel_embedColor !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.embedColor = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_embedColor, '#3ba55d');
-        if (incomingFormDataPayloadObject.wel_imageUrl !== undefined) guildConfigDocumentToUpdateObject.welcomeSystem.imageUrl = parseAndSanitizeStringInput(incomingFormDataPayloadObject.wel_imageUrl);
-
-        // =====================================================================
-        // 🌟 12. الرتب والرد التلقائي (Auto-Roles & Responders)
-        // =====================================================================
-        if (incomingFormDataPayloadObject.autoRoles !== undefined) {
-            guildConfigDocumentToUpdateObject.autoRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.autoRoles);
-        }
-
-        if (incomingFormDataPayloadObject.autoRespondersData !== undefined && incomingFormDataPayloadObject.autoRespondersData !== '') {
-            try {
-                const parsedRespondersArray = JSON.parse(incomingFormDataPayloadObject.autoRespondersData);
-                if (Array.isArray(parsedRespondersArray)) guildConfigDocumentToUpdateObject.autoResponders = parsedRespondersArray;
-            } catch (jsonParsingError) {}
-        }
-
-        // =====================================================================
-        // 🌟 13. نظام الحماية ومكافحة الغزو (Protection & Anti-Nuke)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.protection) guildConfigDocumentToUpdateObject.protection = {};
-
-        guildConfigDocumentToUpdateObject.protection.antiLinkEnabled = (incomingFormDataPayloadObject.prot_antiLinkEnabled === 'on' || incomingFormDataPayloadObject.prot_antiLinkEnabled === 'true');
-        if (incomingFormDataPayloadObject.prot_antiLinkAllowedRoles !== undefined) guildConfigDocumentToUpdateObject.protection.antiLinkAllowedRoles = parseAndSanitizeArrayInput(incomingFormDataPayloadObject.prot_antiLinkAllowedRoles);
-        
-        guildConfigDocumentToUpdateObject.protection.antiSpamEnabled = (incomingFormDataPayloadObject.prot_antiSpamEnabled === 'on' || incomingFormDataPayloadObject.prot_antiSpamEnabled === 'true');
-        if (incomingFormDataPayloadObject.prot_antiSpamAction !== undefined) guildConfigDocumentToUpdateObject.protection.antiSpamAction = parseAndSanitizeStringInput(incomingFormDataPayloadObject.prot_antiSpamAction, 'mute');
-
-        guildConfigDocumentToUpdateObject.protection.antiNukeEnabled = (incomingFormDataPayloadObject.prot_antiNukeEnabled === 'on' || incomingFormDataPayloadObject.prot_antiNukeEnabled === 'true');
-        
-        if (incomingFormDataPayloadObject.prot_maxChannelDeletesPerMinute !== undefined) {
-            const parsedChannelDeletes = parseInt(incomingFormDataPayloadObject.prot_maxChannelDeletesPerMinute);
-            if (!isNaN(parsedChannelDeletes) && parsedChannelDeletes > 0) guildConfigDocumentToUpdateObject.protection.maxChannelDeletesPerMinute = parsedChannelDeletes;
-        }
-        if (incomingFormDataPayloadObject.prot_maxBanPerMinute !== undefined) {
-            const parsedBanLimit = parseInt(incomingFormDataPayloadObject.prot_maxBanPerMinute);
-            if (!isNaN(parsedBanLimit) && parsedBanLimit > 0) guildConfigDocumentToUpdateObject.protection.maxBanPerMinute = parsedBanLimit;
-        }
-
-        // =====================================================================
-        // 🌟 14. الاقتصاد والألعاب (Economy & Games)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.economy) guildConfigDocumentToUpdateObject.economy = {};
-
-        guildConfigDocumentToUpdateObject.economy.enabled = (incomingFormDataPayloadObject.eco_enabled === 'on' || incomingFormDataPayloadObject.eco_enabled === 'true');
-        
-        if (incomingFormDataPayloadObject.eco_dailyMin !== undefined) {
-            const parsedDailyMin = parseInt(incomingFormDataPayloadObject.eco_dailyMin);
-            if (!isNaN(parsedDailyMin)) guildConfigDocumentToUpdateObject.economy.dailyMin = parsedDailyMin;
-        }
-        if (incomingFormDataPayloadObject.eco_dailyMax !== undefined) {
-            const parsedDailyMax = parseInt(incomingFormDataPayloadObject.eco_dailyMax);
-            if (!isNaN(parsedDailyMax)) guildConfigDocumentToUpdateObject.economy.dailyMax = parsedDailyMax;
-        }
-        if (incomingFormDataPayloadObject.eco_transferTaxPercentage !== undefined) {
-            const parsedTax = parseInt(incomingFormDataPayloadObject.eco_transferTaxPercentage);
-            if (!isNaN(parsedTax)) guildConfigDocumentToUpdateObject.economy.transferTaxPercentage = parsedTax;
-        }
-        guildConfigDocumentToUpdateObject.economy.gamesEnabled = (incomingFormDataPayloadObject.eco_gamesEnabled === 'on' || incomingFormDataPayloadObject.eco_gamesEnabled === 'true');
-
-        // =====================================================================
-        // 🌟 15. نظام المستويات والرتب (Leveling & Role Rewards)
-        // =====================================================================
-        if (!guildConfigDocumentToUpdateObject.leveling) guildConfigDocumentToUpdateObject.leveling = {};
-
-        guildConfigDocumentToUpdateObject.leveling.enabled = (incomingFormDataPayloadObject.lvl_enabled === 'on' || incomingFormDataPayloadObject.lvl_enabled === 'true');
-        if (incomingFormDataPayloadObject.lvl_levelUpChannelId !== undefined) guildConfigDocumentToUpdateObject.leveling.levelUpChannelId = parseAndSanitizeStringInput(incomingFormDataPayloadObject.lvl_levelUpChannelId);
-        if (incomingFormDataPayloadObject.lvl_levelUpMessage !== undefined) guildConfigDocumentToUpdateObject.leveling.levelUpMessage = parseAndSanitizeStringInput(incomingFormDataPayloadObject.lvl_levelUpMessage, 'مبروك {user}! وصلت للمستوى **{level}** 🚀');
-
-        if (incomingFormDataPayloadObject.lvl_roleRewardsData !== undefined && incomingFormDataPayloadObject.lvl_roleRewardsData !== '') {
-            try {
-                const parsedRewardsArray = JSON.parse(incomingFormDataPayloadObject.lvl_roleRewardsData);
-                if (Array.isArray(parsedRewardsArray)) guildConfigDocumentToUpdateObject.leveling.roleRewards = parsedRewardsArray;
-            } catch (jsonParsingError) {}
-        }
-
-        // =====================================================================
-        // 🚀 حفظ المستند العملاق النهائي
-        // =====================================================================
-        await guildConfigDocumentToUpdateObject.save();
-        console.log(`[DASHBOARD LOG] ✅ Successfully saved massive payload (15 Sections) for Guild ID: ${targetGuildDiscordIdString}`);
-        response.redirect(`/settings/${targetGuildDiscordIdString}?success=true`);
-
-    } catch (databaseSaveCriticalExceptionError) {
-        console.error('[DASHBOARD CRITICAL ERROR] Failed to save settings to MongoDB:', databaseSaveCriticalExceptionError);
-        response.redirect(`/settings/${targetGuildDiscordIdString}?error=true`);
+    } catch (err) {
+        console.error('[CRITICAL DB ERROR]', err);
+        res.redirect(`/settings/${guildId}?error=true`);
     }
 });
 
 // =========================================================================================================
-// 🚀 8. تهيئة وتشغيل خادم الويب
+// 🚀 7. التشغيل
 // =========================================================================================================
 
-module.exports = (discordClientObject) => {
-    
-    app.locals.client = discordClientObject;
-    const DASHBOARD_NETWORK_PORT_NUMBER = process.env.PORT || 8080;
-
-    app.listen(DASHBOARD_NETWORK_PORT_NUMBER, () => {
-        console.log('\n====================================================');
-        console.log(`[DASHBOARD SYSTEM BOOT] 🌐 Ultimate Enterprise Web Dashboard is ONLINE`);
-        console.log(`[DASHBOARD SYSTEM BOOT] 📡 Express Server is actively listening on PORT: ${DASHBOARD_NETWORK_PORT_NUMBER}`);
-        console.log('====================================================\n');
+module.exports = (client) => {
+    app.locals.client = client;
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+        console.log(`\n[DASHBOARD V3] 🌐 The Ultimate Enterprise Dashboard is running on PORT: ${PORT}\n`);
     });
 };
