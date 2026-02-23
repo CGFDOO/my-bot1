@@ -36,24 +36,63 @@
             box-shadow: 0 10px 40px -10px rgba(0,0,0,0.6); 
         }
         
-        .input-glow:focus { box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.3); border-color: #5865F2; outline: none; }
+        .input-glow:focus { 
+            box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.3); 
+            border-color: #5865F2; 
+            outline: none; 
+        }
         
         /* تأثيرات الأقسام لتظهر بنعومة */
         .settings-section { display: none; animation: fadeIn 0.4s ease forwards; }
         .settings-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 🛠️ أزرار التفعيل (Toggles) السحرية والمضمونة 100% */
-        .toggle-checkbox:checked { right: 0; border-color: #10B981; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #10B981; }
-        .toggle-checkbox { right: auto; left: 0; z-index: 1; border-color: #374151; transition: all 0.3s ease; }
-        .toggle-label { background-color: #374151; border-radius: 9999px; transition: all 0.3s ease; }
-        .toggle-checkbox:checked { transform: translateX(100%); }
+        /* ========================================================================= */
+        /* 🛠️ الإصلاح الجذري للزراير الدائرية (Toggles) لتناسب اتجاه اليمين لليسار */
+        /* ========================================================================= */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 54px;
+            height: 28px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #374151;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            right: 4px; /* البداية من اليمين */
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #10B981; /* لون أخضر عند التفعيل */
+        }
+        input:checked + .slider:before {
+            transform: translateX(-26px); /* تحرك لليسار بقيمة سالبة لمنع الخروج عن الإطار */
+        }
     </style>
 </head>
 
 <% 
+    // =========================================================================
     // 🧠 استخراج بيانات السيرفر
+    // =========================================================================
     let textChannels = []; let voiceChannels = []; let categories = []; let serverRoles = [];
     let guildName = "Unknown Server"; let guildIconUrl = "https://cdn.discordapp.com/embed/avatars/0.png";
 
@@ -81,53 +120,67 @@
         <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-2 custom-scrollbar" id="sidebar-nav">
             
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 px-2">الأساسيات والذكاء</div>
+            
             <button onclick="switchSection('general')" class="nav-btn active-nav w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all bg-brand text-white font-bold" data-target="general">
                 <span class="text-lg">⚙️</span> <span>الإعدادات العامة والألوان</span>
             </button>
+            
             <button onclick="switchSection('ai_system')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-amber-400 hover:bg-dark-700 font-bold" data-target="ai_system">
                 <span class="text-lg">✨</span> <span>الذكاء الاصطناعي (AI)</span>
             </button>
+            
             <button onclick="switchSection('live_embed')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="live_embed">
                 <span class="text-lg">🎨</span> <span>صانع الإيمبد الفوري</span>
             </button>
 
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-8 px-2">التذاكر والوساطة</div>
+            
             <button onclick="switchSection('middleman')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="middleman">
                 <span class="text-lg">⚖️</span> <span>نظام الوساطة (المعزول)</span>
             </button>
+            
             <button onclick="switchSection('custom_panels')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="custom_panels">
                 <span class="text-lg">🎫</span> <span>البانلات الديناميكية</span>
             </button>
+            
             <button onclick="switchSection('ticket_controls')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="ticket_controls">
                 <span class="text-lg">🛠️</span> <span>التحكم الداخلي للتكت</span>
             </button>
 
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-8 px-2">الإدارة والعقوبات</div>
+            
             <button onclick="switchSection('warnings')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-orange-400 hover:bg-dark-700 font-bold" data-target="warnings">
                 <span class="text-lg">⚠️</span> <span>نظام التحذيرات وبانل الإدارة</span>
             </button>
+            
             <button onclick="switchSection('commands')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="commands">
                 <span class="text-lg">⌨️</span> <span>تخصيص الأوامر (العقوبات)</span>
             </button>
+            
             <button onclick="switchSection('logs')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="logs">
                 <span class="text-lg">📝</span> <span>السجلات الدقيقة والألوان</span>
             </button>
+            
             <button onclick="switchSection('roles')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="roles">
                 <span class="text-lg">👑</span> <span>الرتب والصلاحيات العليا</span>
             </button>
+            
             <button onclick="switchSection('ratings')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="ratings">
                 <span class="text-lg">⭐</span> <span>التقييمات المزدوجة</span>
             </button>
 
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-8 px-2">الحماية والتفاعل</div>
+            
             <button onclick="switchSection('protection')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="protection">
                 <span class="text-lg">🛡️</span> <span>الحماية والـ Anti-Nuke</span>
             </button>
+            
             <button onclick="switchSection('welcome')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="welcome">
                 <span class="text-lg">👋</span> <span>الترحيب والمغادرة</span>
             </button>
+            
             <button onclick="switchSection('economy')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="economy">
-                <span class="text-lg">💰</span> <span>الاقتصاد واللفلات والرتب التلقائية</span>
+                <span class="text-lg">💰</span> <span>الاقتصاد واللفلات التلقائية</span>
             </button>
 
         </nav>
@@ -242,9 +295,9 @@
                                 <h3 class="text-xl font-bold text-white mb-1">🤖 تفعيل نظام الذكاء الاصطناعي بالمحادثات</h3>
                                 <p class="text-sm text-slate-400">يجعل البوت يرد على الرسائل في الروم المخصصة كأنه إنسان حقيقي.</p>
                             </div>
-                            <label class="relative inline-block w-16 h-8 cursor-pointer">
-                                <input type="checkbox" name="ai_enabled" id="ai_enabled" class="toggle-checkbox absolute block w-8 h-8 rounded-full bg-white border-4 appearance-none cursor-pointer" <%= config.aiSystem?.enabled !== false ? 'checked' : '' %>>
-                                <label for="ai_enabled" class="toggle-label block overflow-hidden h-8 rounded-full cursor-pointer"></label>
+                            <label class="switch">
+                                <input type="checkbox" name="ai_enabled" id="ai_enabled" <%= config.aiSystem?.enabled !== false ? 'checked' : '' %>>
+                                <span class="slider"></span>
                             </label>
                         </div>
 
@@ -253,9 +306,9 @@
                                 <h3 class="text-lg font-bold text-brand-light">السماح للعضو باختيار الشخصية (Hybrid Mode)</h3>
                                 <p class="text-xs text-slate-400 mt-1">إذا تم التفعيل، يمكن للعضو كتابة أمر لاختيار التحدث مع الولد أو البنت، وإذا تم الإغلاق سيعتمد على الإعدادات أدناه فقط.</p>
                             </div>
-                            <label class="relative inline-block w-14 h-7 cursor-pointer">
-                                <input type="checkbox" name="ai_allowUserChoice" id="ai_allowUserChoice" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer" <%= config.aiSystem?.allowUserChoice !== false ? 'checked' : '' %>>
-                                <label for="ai_allowUserChoice" class="toggle-label block overflow-hidden h-7 rounded-full cursor-pointer"></label>
+                            <label class="switch">
+                                <input type="checkbox" name="ai_allowUserChoice" id="ai_allowUserChoice" <%= config.aiSystem?.allowUserChoice !== false ? 'checked' : '' %>>
+                                <span class="slider"></span>
                             </label>
                         </div>
 
@@ -264,14 +317,12 @@
                                 <h4 class="text-blue-400 font-bold mb-4 text-lg border-b border-dark-600 pb-2">👦 إعدادات شخصية الولد</h4>
                                 <label class="block text-sm font-bold text-slate-300 mb-2">اسم البوت</label>
                                 <input type="text" name="ai_defaultBoyName" value="<%= config.aiSystem?.defaultBoyName || 'زيزو' %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white input-glow font-bold mb-4">
-                                <p class="text-xs text-slate-400">سيتقمص البوت هذا الاسم عندما يتم اختياره كولد.</p>
                             </div>
                             
                             <div class="bg-dark-900/50 p-5 rounded-2xl border border-dark-700">
                                 <h4 class="text-pink-400 font-bold mb-4 text-lg border-b border-dark-600 pb-2">👧 إعدادات شخصية البنت</h4>
                                 <label class="block text-sm font-bold text-slate-300 mb-2">اسم البوت</label>
                                 <input type="text" name="ai_defaultGirlName" value="<%= config.aiSystem?.defaultGirlName || 'سوسو' %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white input-glow font-bold mb-4">
-                                <p class="text-xs text-slate-400">سيتقمص البوت هذا الاسم عندما يتم اختياره كبنت.</p>
                             </div>
                         </div>
 
@@ -332,8 +383,7 @@
                     </div>
                 </div>
 
-                ```
-<div id="section-middleman" class="settings-section max-w-5xl mx-auto">
+                <div id="section-middleman" class="settings-section max-w-5xl mx-auto">
                     <div class="mb-8 border-b border-dark-700 pb-4">
                         <h2 class="text-4xl font-black text-white mb-2">نظام الوساطة المعزول ⚖️</h2>
                         <p class="text-slate-400">بانل منفصل كلياً لطلب الوسطاء، يعتمد على أمر <code class="text-brand bg-dark-800 px-2 py-1 rounded">!done</code> للتقييم.</p>
@@ -344,9 +394,9 @@
                             <div>
                                 <h3 class="text-xl font-bold text-white mb-1">تفعيل نظام الوساطة</h3>
                             </div>
-                            <label class="relative inline-block w-16 h-8 cursor-pointer">
-                                <input type="checkbox" name="mm_enabled" id="mm_enabled" class="toggle-checkbox absolute block w-8 h-8 rounded-full bg-white border-4 appearance-none cursor-pointer" <%= config.middlemanSystem?.enabled ? 'checked' : '' %>>
-                                <label for="mm_enabled" class="toggle-label block overflow-hidden h-8 rounded-full cursor-pointer"></label>
+                            <label class="switch">
+                                <input type="checkbox" name="mm_enabled" id="mm_enabled" <%= config.middlemanSystem?.enabled ? 'checked' : '' %>>
+                                <span class="slider"></span>
                             </label>
                         </div>
 
@@ -426,19 +476,20 @@
                                 <label class="block text-sm font-bold text-slate-300 mb-2">وصف الإيمبد الداخلي (يدعم {user})</label>
                                 <textarea name="mm_insideTicketDescription" rows="2" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3 px-4 text-white input-glow resize-y"><%= config.middlemanSystem?.insideTicketDescription || 'أهلاً بك {user}، يرجى انتظار الوسيط.' %></textarea>
                             </div>
-                            <div class="md:col-span-2 bg-dark-800 p-4 rounded-xl border border-dark-600">
-                                <label class="block text-sm font-bold text-amber-400 mb-2">🎨 لون إيمبد إجابات النافذة المخصص (المربعات)</label>
+                            
+                            <div class="md:col-span-2 bg-dark-800 p-4 rounded-xl border border-dark-600 mt-2">
+                                <label class="block text-sm font-bold text-amber-400 mb-2">🎨 لون إيمبد إجابات النافذة المخصص (المربعات - Code Blocks)</label>
                                 <div class="flex items-center space-x-3 space-x-reverse">
                                     <input type="color" id="mm_modalAnswersColor_picker" value="<%= config.middlemanSystem?.modalAnswersEmbedColor || '#f2a658' %>" class="w-14 h-12 rounded-xl cursor-pointer bg-dark-900 border border-dark-700 p-1" onchange="document.getElementById('mm_modalAnswersEmbedColor').value = this.value">
                                     <input type="text" id="mm_modalAnswersEmbedColor" name="mm_modalAnswersEmbedColor" value="<%= config.middlemanSystem?.modalAnswersEmbedColor || '#f2a658' %>" class="flex-1 bg-dark-900 border border-dark-700 rounded-xl py-3 px-4 text-white input-glow font-mono uppercase text-center" oninput="document.getElementById('mm_modalAnswersColor_picker').value = this.value">
                                 </div>
-                                <p class="text-xs text-slate-400 mt-2">هذا هو لون الإيمبد المنفصل الذي ستُعرض بداخله إجابات العميل في (Code Blocks).</p>
+                                <p class="text-xs text-slate-400 mt-2">هذا هو لون الإيمبد المنفصل الذي ستُعرض بداخله إجابات العميل في التذكرة.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="section-custom_panels" class="settings-section max-w-5xl mx-auto">
+<div id="section-custom_panels" class="settings-section max-w-5xl mx-auto">
                     <div class="mb-8 border-b border-dark-700 pb-4">
                         <h2 class="text-4xl font-black text-white mb-2">البانلات الديناميكية 🎫</h2>
                         <p class="text-slate-400">اصنع بانلات تذاكر لا نهائية، مع تحكم كامل بالزراير وألوان إيمبد الإجابات.</p>
@@ -464,26 +515,26 @@
 
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-indigo-500">
                         
-                        <div class="flex flex-col md:flex-row items-center justify-between p-6 bg-dark-900/80 rounded-2xl border border-indigo-500/30 mb-8 shadow-inner">
+                        <div class="flex flex-col md:flex-row items-center justify-between p-6 bg-dark-900/80 rounded-2xl border border-indigo-500/30 mb-8 shadow-inner gap-4">
                             <div>
                                 <h3 class="text-xl font-bold text-white mb-1">🔒 الإغلاق بخطوتين (Two-Step Close)</h3>
                                 <p class="text-sm text-slate-400">عند الضغط على Close، لا تُحذف التذكرة، بل تظهر أزرار (Reopen / Delete / Delete With Reason) للإداري.</p>
                             </div>
-                            <label class="relative inline-block w-16 h-8 cursor-pointer mt-4 md:mt-0">
-                                <input type="checkbox" name="tc_twoStepClose" id="tc_twoStepClose" class="toggle-checkbox absolute block w-8 h-8 rounded-full bg-white border-4 appearance-none cursor-pointer" <%= config.ticketControls?.twoStepClose !== false ? 'checked' : '' %>>
-                                <label for="tc_twoStepClose" class="toggle-label block overflow-hidden h-8 rounded-full cursor-pointer"></label>
+                            <label class="switch">
+                                <input type="checkbox" name="tc_twoStepClose" id="tc_twoStepClose" <%= config.ticketControls?.twoStepClose !== false ? 'checked' : '' %>>
+                                <span class="slider"></span>
                             </label>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             <div class="bg-dark-900/50 p-6 rounded-2xl border border-dark-700 relative overflow-hidden">
                                 <div class="absolute top-0 right-0 bg-brand text-xs font-bold px-3 py-1 rounded-bl-xl text-white">Counter 🔢</div>
-                                <label class="block text-sm font-bold text-white mb-3 mt-2">رقم التكت القادم</label>
-                                <input type="number" name="tc_ticketCounter" value="<%= config.ticketControls?.ticketCounter || 1 %>" min="1" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-4 px-4 text-brand-light font-mono text-3xl text-center font-black">
+                                <label class="block text-sm font-bold text-white mb-3 mt-2">رقم التكت القادم (لإكمال العد القديم)</label>
+                                <input type="number" name="tc_ticketCounter" value="<%= config.ticketControls?.ticketCounter || 1 %>" min="1" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-4 px-4 text-brand-light font-mono text-3xl text-center font-black outline-none focus:border-brand">
                             </div>
                             <div class="bg-dark-900/50 p-6 rounded-2xl border border-dark-700 relative">
                                 <label class="block text-sm font-bold text-white mb-3">روم الترانسكريبت (حفظ الرسائل)</label>
-                                <select name="tc_transcriptChannelId" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3.5 px-4 text-white input-glow cursor-pointer font-bold">
+                                <select name="tc_transcriptChannelId" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-4 px-4 text-white input-glow cursor-pointer font-bold">
                                     <option value="">-- اختر الروم --</option>
                                     <% textChannels.forEach(ch => { %> <option value="<%= ch.id %>" <%= config.ticketControls?.transcriptChannelId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option> <% }) %>
                                 </select>
@@ -497,9 +548,9 @@
                                     <h3 class="text-lg font-bold text-white">إخفاء التذكرة عند الاستلام</h3>
                                     <p class="text-xs text-slate-400 mt-1">يخفي التكت عن باقي طاقم الإدارة.</p>
                                 </div>
-                                <label class="relative inline-block w-14 h-7 cursor-pointer">
-                                    <input type="checkbox" name="tc_hideTicketOnClaim" id="tc_hideTicketOnClaim" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer" <%= config.ticketControls?.hideTicketOnClaim ? 'checked' : '' %>>
-                                    <label for="tc_hideTicketOnClaim" class="toggle-label block overflow-hidden h-7 rounded-full cursor-pointer"></label>
+                                <label class="switch">
+                                    <input type="checkbox" name="tc_hideTicketOnClaim" id="tc_hideTicketOnClaim" <%= config.ticketControls?.hideTicketOnClaim ? 'checked' : '' %>>
+                                    <span class="slider"></span>
                                 </label>
                             </div>
                             
@@ -508,9 +559,9 @@
                                     <h3 class="text-lg font-bold text-white">منع الإداريين الآخرين من الكتابة (Read-Only)</h3>
                                     <p class="text-xs text-slate-400 mt-1">يسمح للإدارة برؤية التكت ولكن يمنعهم من الكتابة فيه.</p>
                                 </div>
-                                <label class="relative inline-block w-14 h-7 cursor-pointer">
-                                    <input type="checkbox" name="tc_readOnlyStaffOnClaim" id="tc_readOnlyStaffOnClaim" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer" <%= config.ticketControls?.readOnlyStaffOnClaim ? 'checked' : '' %>>
-                                    <label for="tc_readOnlyStaffOnClaim" class="toggle-label block overflow-hidden h-7 rounded-full cursor-pointer"></label>
+                                <label class="switch">
+                                    <input type="checkbox" name="tc_readOnlyStaffOnClaim" id="tc_readOnlyStaffOnClaim" <%= config.ticketControls?.readOnlyStaffOnClaim ? 'checked' : '' %>>
+                                    <span class="slider"></span>
                                 </label>
                             </div>
                         </div>
@@ -591,7 +642,7 @@
                                 <select name="role_highAdminRoles" multiple class="w-full h-32 bg-dark-800 border border-dark-600 rounded-xl py-2 px-3 text-white input-glow custom-scrollbar">
                                     <% serverRoles.forEach(role => { %> <option value="<%= role.id %>" <%= (config.roles?.highAdminRoles || []).includes(role.id) ? 'selected' : '' %>><%= role.name %></option> <% }) %>
                                 </select>
-                                <p class="text-[10px] text-slate-500 mt-2">مطلوبة للموافقة في أمر Approve.</p>
+                                <p class="text-[10px] text-slate-500 mt-2">مطلوبة للموافقة في أمر Approve ولتخطي بعض القيود.</p>
                             </div>
                             <div class="bg-dark-900/50 p-5 rounded-xl border border-dark-700">
                                 <label class="block text-sm font-bold text-blue-400 mb-3">رتب منشن التريد</label>
@@ -612,61 +663,80 @@
                 <div id="section-commands" class="settings-section max-w-5xl mx-auto">
                     <div class="mb-8 border-b border-dark-700 pb-4">
                         <h2 class="text-4xl font-black text-white mb-2">تخصيص الأوامر والعقوبات ⌨️</h2>
-                        <p class="text-slate-400">تغيير اسم أي أمر وتحديد الرتب المسموح لها باستخدامه.</p>
+                        <p class="text-slate-400">تغيير اسم أي أمر وتحديد الرتب المسموح لها باستخدامه بحرية تامة.</p>
                     </div>
 
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-cyan-500">
                         
-                        <h3 class="text-2xl font-bold text-red-400 mb-6">🚨 أوامر العقوبات وفك العقوبات</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                        <h3 class="text-2xl font-bold text-red-400 mb-6">🚨 أوامر العقوبات (الأساسية والعكسية)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                            
                             <div class="bg-dark-900/50 p-4 rounded-xl border border-red-500/30">
-                                <div class="grid grid-cols-2 gap-2 mb-2">
-                                    <div><label class="block text-[10px] text-slate-400">أمر الباند</label><input type="text" name="cmd_banCmd" value="<%= config.commands?.banCmd || 'ban' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm"></div>
-                                    <div><label class="block text-[10px] text-slate-400">أمر فك الباند</label><input type="text" name="cmd_unbanCmd" value="<%= config.commands?.unbanCmd || 'unban' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm"></div>
-                                </div>
-                                <label class="block text-xs font-bold text-slate-300 mt-3 mb-1">الرتب المسموحة:</label>
-                                <select name="role_banAllowed" multiple class="w-full h-20 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('ban') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر الباند</label>
+                                <input type="text" name="cmd_banCmd" value="<%= config.commands?.banCmd || 'ban' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك الباند</label>
+                                <input type="text" name="cmd_unbanCmd" value="<%= config.commands?.unbanCmd || 'unban' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_banAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.ban || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
                             
                             <div class="bg-dark-900/50 p-4 rounded-xl border border-orange-500/30">
-                                <div class="grid grid-cols-2 gap-2 mb-2">
-                                    <div><label class="block text-[10px] text-slate-400">أمر التايم</label><input type="text" name="cmd_timeoutCmd" value="<%= config.commands?.timeoutCmd || 'timeout' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm"></div>
-                                    <div><label class="block text-[10px] text-slate-400">أمر فك التايم</label><input type="text" name="cmd_untimeoutCmd" value="<%= config.commands?.untimeoutCmd || 'untimeout' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm"></div>
-                                </div>
-                                <label class="block text-xs font-bold text-slate-300 mt-3 mb-1">الرتب المسموحة:</label>
-                                <select name="role_timeoutAllowed" multiple class="w-full h-20 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('timeout') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر التايم أوت</label>
+                                <input type="text" name="cmd_timeoutCmd" value="<%= config.commands?.timeoutCmd || 'timeout' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك التايم</label>
+                                <input type="text" name="cmd_untimeoutCmd" value="<%= config.commands?.untimeoutCmd || 'untimeout' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_timeoutAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.timeout || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
 
                             <div class="bg-dark-900/50 p-4 rounded-xl border border-yellow-500/30">
-                                <div class="grid grid-cols-2 gap-2 mb-2">
-                                    <div><label class="block text-[10px] text-slate-400">أمر التحذير</label><input type="text" name="cmd_warnCmd" value="<%= config.commands?.warnCmd || 'warn' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm"></div>
-                                    <div><label class="block text-[10px] text-slate-400">أمر فك التحذير</label><input type="text" name="cmd_unwarnCmd" value="<%= config.commands?.unwarnCmd || 'unwarn' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm"></div>
-                                </div>
-                                <label class="block text-xs font-bold text-slate-300 mt-3 mb-1">الرتب المسموحة:</label>
-                                <select name="role_warnAllowed" multiple class="w-full h-20 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('warn') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر التحذير</label>
+                                <input type="text" name="cmd_warnCmd" value="<%= config.commands?.warnCmd || 'warn' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك التحذير</label>
+                                <input type="text" name="cmd_unwarnCmd" value="<%= config.commands?.unwarnCmd || 'unwarn' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_warnAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.warn || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                            </div>
+
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-slate-500/30">
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر الميوت (الكتابي)</label>
+                                <input type="text" name="cmd_muteCmd" value="<%= config.commands?.muteCmd || 'mute' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك الميوت</label>
+                                <input type="text" name="cmd_unmuteCmd" value="<%= config.commands?.unmuteCmd || 'unmute' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_muteAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.mute || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
                         </div>
 
                         <hr class="border-dark-700 my-8">
-                        <h3 class="text-2xl font-bold text-brand-light mb-6">🛠️ الأوامر الإدارية والضريبة</h3>
+                        <h3 class="text-2xl font-bold text-brand-light mb-6">🛠️ الأوامر الإدارية العامة والضريبة</h3>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                            <div class="bg-dark-900/50 p-4 rounded-xl border border-emerald-500/30">
-                                <label class="block text-xs font-bold text-emerald-400 mb-1">أمر الضريبة (Tax)</label>
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-emerald-500/30">
+                                <label class="block text-xs font-bold text-emerald-400 mb-1">الضريبة (Tax)</label>
                                 <input type="text" name="cmd_taxCmd" value="<%= config.commands?.taxCmd || 'tax' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
-                                <select name="role_taxAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('tax') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <select name="role_taxAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.tax || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
-                            
-                            <div class="bg-dark-900/50 p-4 rounded-xl border border-dark-700">
-                                <label class="block text-xs font-bold text-slate-300 mb-1">أمر مسح (Clear)</label>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-dark-700">
+                                <label class="block text-xs font-bold text-slate-300 mb-1">مسح (Clear)</label>
                                 <input type="text" name="cmd_clearCmd" value="<%= config.commands?.clearCmd || 'clear' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
-                                <select name="role_clearAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('clear') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <select name="role_clearAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.clear || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
-
-                            <div class="bg-dark-900/50 p-4 rounded-xl border border-dark-700">
-                                <label class="block text-xs font-bold text-slate-300 mb-1">أمر استدعاء (Come)</label>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-dark-700">
+                                <label class="block text-xs font-bold text-slate-300 mb-1">استدعاء (Come)</label>
                                 <input type="text" name="cmd_comeCmd" value="<%= config.commands?.comeCmd || 'come' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
-                                <select name="role_comeAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('come') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <select name="role_comeAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.come || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                            </div>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-blue-500/30">
+                                <label class="block text-xs font-bold text-blue-400 mb-1">سحب (Move)</label>
+                                <input type="text" name="cmd_moveCmd" value="<%= config.commands?.moveCmd || 'move' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_moveAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.move || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                            </div>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-dark-700">
+                                <label class="block text-[10px] text-slate-300 mb-1">قفل الروم (Lock/Unlock)</label>
+                                <input type="text" name="cmd_lockCmd" value="<%= config.commands?.lockCmd || 'lock' %>" class="w-full bg-dark-800 rounded p-1.5 text-white font-mono text-[10px] mb-1">
+                                <input type="text" name="cmd_unlockCmd" value="<%= config.commands?.unlockCmd || 'unlock' %>" class="w-full bg-dark-800 rounded p-1.5 text-white font-mono text-[10px] mb-1">
+                                <select name="role_lockAllowed" multiple class="w-full h-12 bg-dark-800 border border-dark-600 rounded p-1 text-[10px] text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.lock || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
                         </div>
 
@@ -675,17 +745,17 @@
                             <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
                                 <label class="block text-xs font-bold text-white mb-1">أمر Trade</label>
                                 <input type="text" name="cmd_tradeCmd" value="<%= config.commands?.tradeCmd || 'trade' %>" class="w-full bg-dark-900 rounded p-2 text-white font-mono text-sm mb-2">
-                                <select name="role_tradeAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('trade') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <select name="role_tradeAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.trade || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
                             <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
                                 <label class="block text-xs font-bold text-white mb-1">أمر Approve</label>
                                 <input type="text" name="cmd_approveCmd" value="<%= config.commands?.approveCmd || 'approve' %>" class="w-full bg-dark-900 rounded p-2 text-white font-mono text-sm mb-2">
-                                <select name="role_approveAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('approve') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <select name="role_approveAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.approve || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
                             <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
                                 <label class="block text-xs font-bold text-white mb-1">أمر Done</label>
                                 <input type="text" name="cmd_doneCmd" value="<%= config.commands?.doneCmd || 'done' %>" class="w-full bg-dark-900 rounded p-2 text-white font-mono text-sm mb-2">
-                                <select name="role_doneAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.get('done') || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
+                                <select name="role_doneAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar"><% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.done || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %></select>
                             </div>
                         </div>
                     </div>
@@ -694,15 +764,15 @@
 <div id="section-logs" class="settings-section max-w-5xl mx-auto">
                     <div class="mb-8 border-b border-dark-700 pb-4">
                         <h2 class="text-4xl font-black text-white mb-2">سجلات السيرفر الدقيقة 📝</h2>
-                        <p class="text-slate-400">حدد روم ولون إيمبد لكل حركة بتحصل في السيرفر (الريأكتات، الثريدات، الحذف، الخ).</p>
+                        <p class="text-slate-400">حدد روم ولون إيمبد لكل حركة (شاملة العقوبات وفك العقوبات).</p>
                     </div>
 
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-teal-500">
                         
-                        <h3 class="text-xl font-bold text-red-400 mb-6 flex items-center">😈 اللوجات الأمنية (الريأكتات والرومات)</h3>
+                        <h3 class="text-xl font-bold text-red-400 mb-6 flex items-center">😈 اللوجات الأمنية والريأكتات</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                             <div class="bg-dark-900/50 p-4 rounded-xl border border-red-500/30">
-                                <label class="block text-xs font-bold text-red-400 mb-2">لوج الريأكت (للتصبيع وغيره)</label>
+                                <label class="block text-xs font-bold text-red-400 mb-2">لوج التفاعلات (الريأكتات)</label>
                                 <select name="log_reactionLogId" class="w-full bg-dark-800 rounded-lg p-2 text-white text-xs mb-2"><option value="">-- معطل --</option><% textChannels.forEach(ch => { %><option value="<%= ch.id %>" <%= config.serverLogs?.reactionLogId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option><% }) %></select>
                                 <input type="color" name="log_reactionColor" value="<%= config.serverLogs?.reactionColor || '#e74c3c' %>" class="w-full h-8 rounded cursor-pointer bg-dark-800 border border-dark-600 p-1">
                             </div>
@@ -720,16 +790,47 @@
 
                         <hr class="border-dark-700 my-6">
                         
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <h3 class="text-xl font-bold text-blue-400 mb-6 flex items-center">🛡️ لوجات العقوبات (إعطاء وفك)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-[11px] text-red-500 mb-1">لوج الباند والطرد</label>
+                                <select name="log_banKickLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.banKickLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_banColor" value="<%= config.serverLogs?.banColor || '#992d22' %>" class="w-full h-6 rounded mb-2" title="لون الباند">
+                                
+                                <label class="block text-[11px] text-emerald-500 mb-1 mt-2 border-t border-dark-700 pt-2">لوج فك الباند (Unban)</label>
+                                <select name="log_unbanLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.unbanLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_unbanColor" value="<%= config.serverLogs?.unbanColor || '#2ecc71' %>" class="w-full h-6 rounded" title="لون فك الباند">
+                            </div>
+
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-[11px] text-orange-500 mb-1">لوج التايم أوت (Timeout)</label>
+                                <select name="log_timeoutLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.timeoutLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_timeoutColor" value="<%= config.serverLogs?.timeoutColor || '#e67e22' %>" class="w-full h-6 rounded mb-2" title="لون التايم">
+                                
+                                <label class="block text-[11px] text-emerald-500 mb-1 mt-2 border-t border-dark-700 pt-2">لوج فك التايم (Untimeout)</label>
+                                <select name="log_untimeoutLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.untimeoutLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_untimeoutColor" value="<%= config.serverLogs?.untimeoutColor || '#2ecc71' %>" class="w-full h-6 rounded" title="لون فك التايم">
+                            </div>
+
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-[11px] text-yellow-400 mb-1">لوج التحذيرات (Warn)</label>
+                                <select name="log_warningsLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.warningsLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_warnColor" value="<%= config.serverLogs?.warnColor || '#f1c40f' %>" class="w-full h-6 rounded mb-2" title="لون التحذير">
+                                
+                                <label class="block text-[11px] text-emerald-500 mb-1 mt-2 border-t border-dark-700 pt-2">لوج فك التحذير (Unwarn)</label>
+                                <select name="log_unwarningsLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.unwarningsLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_unwarnColor" value="<%= config.serverLogs?.unwarnColor || '#2ecc71' %>" class="w-full h-6 rounded" title="لون فك التحذير">
+                            </div>
+                        </div>
+
+                        <hr class="border-dark-700 my-6">
+
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-slate-400 block mb-1">حذف الرسائل</label><select name="log_messageDeleteLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.messageDeleteLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_msgDelColor" value="<%= config.serverLogs?.msgDelColor || '#ed4245' %>" class="w-full h-6 rounded"></div>
                             <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-slate-400 block mb-1">تعديل الرسائل</label><select name="log_messageEditLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.messageEditLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_msgEditColor" value="<%= config.serverLogs?.msgEditColor || '#fee75c' %>" class="w-full h-6 rounded"></div>
                             <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-amber-500 block mb-1">حذف صور فقط</label><select name="log_imageDeleteLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.imageDeleteLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_imgDelColor" value="<%= config.serverLogs?.imgDelColor || '#e67e22' %>" class="w-full h-6 rounded"></div>
                             <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-slate-400 block mb-1">إعطاء/سحب رتب</label><select name="log_roleGiveTakeLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.roleGiveTakeLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_roleColor" value="<%= config.serverLogs?.roleColor || '#9b59b6' %>" class="w-full h-6 rounded"></div>
-                            
-                            <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-slate-400 block mb-1">دخول/خروج أعضاء</label><select name="log_memberJoinLeaveLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.memberJoinLeaveLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><div class="flex space-x-1 space-x-reverse"><input type="color" name="log_joinColor" value="<%= config.serverLogs?.joinColor || '#3ba55d' %>" class="w-1/2 h-6 rounded" title="لون الدخول"><input type="color" name="log_leaveColor" value="<%= config.serverLogs?.leaveColor || '#ed4245' %>" class="w-1/2 h-6 rounded" title="لون الخروج"></div></div>
-                            <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-slate-400 block mb-1">حالة الفويس</label><select name="log_voiceStateLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.voiceStateLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_voiceColor" value="<%= config.serverLogs?.voiceColor || '#5865F2' %>" class="w-full h-6 rounded"></div>
-                            <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-red-500 block mb-1">لوج الباند والطرد</label><select name="log_banKickLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.banKickLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_banColor" value="<%= config.serverLogs?.banColor || '#992d22' %>" class="w-full h-6 rounded"></div>
-                            <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-yellow-400 block mb-1">لوج التحذير / فك التحذير</label><select name="log_warningsLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- التحذير -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.warningsLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><select name="log_unwarningsLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- فك التحذير -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.unwarningsLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><div class="flex space-x-1 space-x-reverse"><input type="color" name="log_warnColor" value="<%= config.serverLogs?.warnColor || '#f1c40f' %>" class="w-1/2 h-6 rounded" title="لون التحذير"><input type="color" name="log_unwarnColor" value="<%= config.serverLogs?.unwarnColor || '#2ecc71' %>" class="w-1/2 h-6 rounded" title="لون فك التحذير"></div></div>
+                            <div class="bg-dark-800 p-3 rounded-lg border border-dark-600"><label class="text-[10px] text-slate-400 block mb-1">دخول/خروج</label><select name="log_memberJoinLeaveLogId" class="w-full bg-dark-900 text-xs text-white rounded p-1 mb-1"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.memberJoinLeaveLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><div class="flex space-x-1 space-x-reverse"><input type="color" name="log_joinColor" value="<%= config.serverLogs?.joinColor || '#3ba55d' %>" class="w-1/2 h-6 rounded"><input type="color" name="log_leaveColor" value="<%= config.serverLogs?.leaveColor || '#ed4245' %>" class="w-1/2 h-6 rounded"></div></div>
                         </div>
                     </div>
                 </div>
@@ -737,15 +838,19 @@
                 <div id="section-warnings" class="settings-section max-w-5xl mx-auto">
                     <div class="mb-8 border-b border-dark-700 pb-4">
                         <h2 class="text-4xl font-black text-white mb-2">التحذيرات وبانل الإدارة ⚠️</h2>
-                        <p class="text-slate-400">بانل تحكم الإدارة (كما في الصورة)، وأسباب التحذيرات الديناميكية.</p>
+                        <p class="text-slate-400">بانل تحكم الإدارة، وأسباب التحذيرات الديناميكية.</p>
                     </div>
 
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-orange-500">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                            <div><label class="block text-sm font-bold text-slate-300 mb-2">أقصى عدد للتحذيرات</label><input type="number" name="warn_maxWarnings" value="<%= config.warnings?.maxWarnings || 3 %>" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3 px-4 text-white text-center font-bold text-2xl"></div>
                             <div>
-                                <label class="block text-sm font-bold text-slate-300 mb-2">العقوبة التلقائية</label>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">أقصى عدد للتحذيرات</label>
+                                <input type="number" name="warn_maxWarnings" value="<%= config.warnings?.maxWarnings || 3 %>" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3 px-4 text-white text-center font-bold text-2xl">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">العقوبة التلقائية (بعد بلوغ الحد)</label>
                                 <select name="warn_autoAction" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3.5 px-4 text-white font-bold cursor-pointer">
+                                    <option value="none" <%= config.warnings?.autoAction === 'none' ? 'selected' : '' %>>❌ معطل (بدون عقوبة تلقائية)</option>
                                     <option value="timeout" <%= config.warnings?.autoAction === 'timeout' ? 'selected' : '' %>>⏳ إسكات (Timeout)</option>
                                     <option value="kick" <%= config.warnings?.autoAction === 'kick' ? 'selected' : '' %>>👢 طرد (Kick)</option>
                                     <option value="ban" <%= config.warnings?.autoAction === 'ban' ? 'selected' : '' %>>🔨 حظر (Ban)</option>
@@ -754,7 +859,7 @@
                         </div>
 
                         <div class="bg-dark-900/80 p-6 rounded-2xl border border-red-500/30 mb-8 shadow-inner">
-                            <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">🔴 بانل تحكم التحذيرات (للإدارة)</h3>
+                            <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">🔴 بانل تحكم التحذيرات (يُرسل للإدارة)</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                 <div><label class="text-xs text-slate-400 block mb-1">روم إرسال البانل</label><select name="warn_panelChannelId" class="w-full bg-dark-800 border border-dark-600 rounded p-2 text-white text-sm"><option value="">-- اختر الروم --</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.warnings?.panelChannelId===c.id?'selected':''}>💬 ${c.name}</option>`).join('') %></select></div>
                                 <div><label class="text-xs text-slate-400 block mb-1">لون البانل</label><input type="color" name="warn_panelColor" value="<%= config.warnings?.panelColor || '#ed4245' %>" class="w-full h-10 rounded cursor-pointer bg-dark-800 border border-dark-600 p-1"></div>
@@ -780,11 +885,43 @@
                     </div>
                 </div>
 
-                <div id="section-protection" class="settings-section max-w-5xl mx-auto"><h2 class="text-3xl font-black text-white mb-6">الحماية والـ Anti-Nuke 🛡️</h2><div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-red-600"><div class="flex justify-between items-center bg-dark-900/50 p-4 rounded-xl mb-4"><span class="font-bold">منع الروابط (Anti-Link)</span><label class="relative inline-block w-12 h-6 cursor-pointer"><input type="checkbox" name="prot_antiLinkEnabled" class="toggle-checkbox absolute w-6 h-6 rounded-full bg-white border-2 cursor-pointer" <%= config.protection?.antiLinkEnabled ? 'checked' : '' %>><label class="toggle-label block h-6 rounded-full cursor-pointer"></label></label></div><div class="flex justify-between items-center bg-dark-900/50 p-4 rounded-xl mb-4"><span class="font-bold">منع السبام (Anti-Spam)</span><label class="relative inline-block w-12 h-6 cursor-pointer"><input type="checkbox" name="prot_antiSpamEnabled" class="toggle-checkbox absolute w-6 h-6 rounded-full bg-white border-2 cursor-pointer" <%= config.protection?.antiSpamEnabled ? 'checked' : '' %>><label class="toggle-label block h-6 rounded-full cursor-pointer"></label></label></div><div class="flex justify-between items-center bg-red-900/20 border border-red-500/30 p-4 rounded-xl"><span class="font-bold text-red-400">مكافحة تخريب السيرفر (Anti-Nuke)</span><label class="relative inline-block w-12 h-6 cursor-pointer"><input type="checkbox" name="prot_antiNukeEnabled" class="toggle-checkbox absolute w-6 h-6 rounded-full bg-white border-2 cursor-pointer" <%= config.protection?.antiNukeEnabled ? 'checked' : '' %>><label class="toggle-label block h-6 rounded-full cursor-pointer"></label></label></div></div></div>
+                <div id="section-protection" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-black text-white mb-6">الحماية والـ Anti-Nuke 🛡️</h2>
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-red-600">
+                        <div class="flex justify-between items-center bg-dark-900/50 p-4 rounded-xl mb-4"><span class="font-bold">منع الروابط (Anti-Link)</span><label class="switch"><input type="checkbox" name="prot_antiLinkEnabled" <%= config.protection?.antiLinkEnabled ? 'checked' : '' %>><span class="slider"></span></label></div>
+                        <div class="flex justify-between items-center bg-dark-900/50 p-4 rounded-xl mb-4"><span class="font-bold">منع السبام (Anti-Spam)</span><label class="switch"><input type="checkbox" name="prot_antiSpamEnabled" <%= config.protection?.antiSpamEnabled ? 'checked' : '' %>><span class="slider"></span></label></div>
+                        <div class="flex justify-between items-center bg-red-900/20 border border-red-500/30 p-4 rounded-xl"><span class="font-bold text-red-400">مكافحة تخريب السيرفر (Anti-Nuke)</span><label class="switch"><input type="checkbox" name="prot_antiNukeEnabled" <%= config.protection?.antiNukeEnabled ? 'checked' : '' %>><span class="slider"></span></label></div>
+                    </div>
+                </div>
 
-                <div id="section-welcome" class="settings-section max-w-5xl mx-auto"><h2 class="text-3xl font-black text-white mb-6">الترحيب والمغادرة 👋</h2><div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-pink-500"><div class="flex justify-between items-center mb-6"><span class="font-bold text-xl">تفعيل نظام الترحيب بالصور</span><label class="relative inline-block w-14 h-7 cursor-pointer"><input type="checkbox" name="wel_enabled" class="toggle-checkbox absolute w-7 h-7 rounded-full bg-white border-2 cursor-pointer" <%= config.welcomeSystem?.enabled ? 'checked' : '' %>><label class="toggle-label block h-7 rounded-full cursor-pointer"></label></label></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><select name="wel_channelId" class="w-full bg-dark-900 rounded-xl p-3 text-white"><option value="">- روم الترحيب -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.welcomeSystem?.channelId===c.id?'selected':''}>💬 ${c.name}</option>`).join('') %></select><div class="flex items-center space-x-2 space-x-reverse"><input type="color" name="wel_avatarBorderHex" value="<%= config.welcomeSystem?.avatarBorderHex || '#ffffff' %>" class="w-12 h-12 rounded-xl bg-dark-900 p-1"><input type="text" name="wel_backgroundUrl" value="<%= config.welcomeSystem?.backgroundUrl || '' %>" placeholder="رابط صورة الخلفية" dir="ltr" class="flex-1 bg-dark-900 rounded-xl p-3 text-white text-left font-mono"></div></div></div></div>
+                <div id="section-welcome" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-black text-white mb-6">الترحيب والمغادرة 👋</h2>
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-pink-500">
+                        <div class="flex justify-between items-center mb-6"><span class="font-bold text-xl">تفعيل نظام الترحيب بالصور</span><label class="switch"><input type="checkbox" name="wel_enabled" <%= config.welcomeSystem?.enabled ? 'checked' : '' %>><span class="slider"></span></label></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <select name="wel_channelId" class="w-full bg-dark-900 rounded-xl p-3 text-white"><option value="">- روم الترحيب -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.welcomeSystem?.channelId===c.id?'selected':''}>💬 ${c.name}</option>`).join('') %></select>
+                            <input type="text" name="wel_backgroundUrl" value="<%= config.welcomeSystem?.backgroundUrl || '' %>" placeholder="رابط صورة الخلفية (يُفضل 1024x300)" dir="ltr" class="w-full bg-dark-900 rounded-xl p-3 text-white text-left font-mono">
+                        </div>
+                        <div class="flex items-center space-x-4 space-x-reverse bg-dark-900/50 p-4 rounded-xl border border-dark-700">
+                            <label class="text-xs font-bold text-slate-400">لون إطار الصورة (Avatar Border):</label>
+                            <input type="color" name="wel_avatarBorderHex" value="<%= config.welcomeSystem?.avatarBorderHex || '#ffffff' %>" class="w-12 h-12 rounded-xl bg-dark-900 p-1 cursor-pointer">
+                            <label class="text-xs font-bold text-slate-400 mr-6">لون النص (Message Text):</label>
+                            <input type="color" name="wel_textColorHex" value="<%= config.welcomeSystem?.textColorHex || '#ffffff' %>" class="w-12 h-12 rounded-xl bg-dark-900 p-1 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
 
-                <div id="section-economy" class="settings-section max-w-5xl mx-auto"><h2 class="text-3xl font-black text-white mb-6">الاقتصاد واللفلات 💰</h2><div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-green-500"><div class="flex justify-between items-center bg-dark-900/50 p-4 rounded-xl mb-6"><span class="font-bold text-emerald-400">تفعيل الاقتصاد والضريبة</span><label class="relative inline-block w-12 h-6 cursor-pointer"><input type="checkbox" name="eco_enabled" class="toggle-checkbox absolute w-6 h-6 rounded-full bg-white border-2 cursor-pointer" <%= config.economy?.enabled !== false ? 'checked' : '' %>><label class="toggle-label block h-6 rounded-full cursor-pointer"></label></label></div><div class="bg-dark-900/50 p-4 rounded-xl border border-dark-700 w-1/2 mb-8"><label class="block text-xs font-bold text-slate-400 mb-2">نسبة ضريبة أمر (Tax) %</label><input type="number" name="eco_taxPercentage" value="<%= config.economy?.taxPercentage || 5 %>" class="w-full bg-dark-800 rounded p-2 text-white font-bold text-center"></div><h3 class="text-xl font-bold mb-4">جوائز اللفلات (Leveling)</h3><button type="button" onclick="addLevelRewardUI()" class="px-4 py-2 bg-blue-600 text-white rounded font-bold mb-4">➕ إضافة جائزة رتبة</button><input type="hidden" name="lvl_roleRewardsData" id="lvl_roleRewardsData" value="<%= JSON.stringify(config.leveling?.roleRewards || []) %>"><div id="level-rewards-container" class="space-y-3"></div></div></div>
+                <div id="section-economy" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-black text-white mb-6">الاقتصاد والضريبة 💰</h2>
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-green-500">
+                        <div class="flex justify-between items-center bg-dark-900/50 p-4 rounded-xl mb-6"><span class="font-bold text-emerald-400">تفعيل الاقتصاد والضريبة</span><label class="switch"><input type="checkbox" name="eco_enabled" <%= config.economy?.enabled !== false ? 'checked' : '' %>><span class="slider"></span></label></div>
+                        <div class="bg-dark-900/50 p-4 rounded-xl border border-dark-700 w-1/2 mb-8">
+                            <label class="block text-xs font-bold text-slate-400 mb-2">نسبة ضريبة أمر (Tax) المئوية %</label>
+                            <input type="number" name="eco_taxPercentage" value="<%= config.economy?.taxPercentage || 5 %>" class="w-full bg-dark-800 rounded p-3 text-white font-bold text-center text-xl">
+                            <p class="text-[10px] text-slate-500 mt-2 text-center">مثال: لو 5، بوت البروبوت بياخد 5% ضريبة تحويل.</p>
+                        </div>
+                    </div>
+                </div>
 
             </form>
         </div>
@@ -838,7 +975,6 @@
         // ==========================================================
         let panelsArray = JSON.parse(document.getElementById('ticketPanelsData').value || '[]');
         let mmFields = JSON.parse(document.getElementById('mm_modalFieldsData').value || '[]');
-        let roleRewards = JSON.parse(document.getElementById('lvl_roleRewardsData').value || '[]');
         
         let warnAr = <%- JSON.stringify(config.warnings?.presetReasonsAr || ['سب وشتم']) %>;
         let warnEn = <%- JSON.stringify(config.warnings?.presetReasonsEn || ['Swearing']) %>;
@@ -879,16 +1015,6 @@
             });
         }
         function addMmFieldUI() { mmFields.push({label:'سؤال جديد', placeholder:'اكتب هنا...', style:'Short'}); renderMmFields(); }
-
-        // --- محرك جوائز اللفلات ---
-        const sRolesHTML = `<%- serverRoles.map(r=>`<option value="${r.id}">${r.name}</option>`).join('') %>`;
-        function renderLvlRewards() {
-            const c = document.getElementById('level-rewards-container'); c.innerHTML='';
-            roleRewards.forEach((r, i) => {
-                c.innerHTML += `<div class="flex items-center space-x-3 space-x-reverse bg-dark-800 p-3 rounded-xl border border-dark-600"><span class="text-white font-bold text-sm">لفل:</span><input type="number" class="w-20 bg-dark-900 rounded-lg p-2 text-brand-light font-bold text-center" value="${r.levelRequired}" onchange="roleRewards[${i}].levelRequired=parseInt(this.value)"><span class="text-white font-bold text-sm">الرتبة:</span><select class="flex-1 bg-dark-900 rounded-lg p-2 text-white text-sm" onchange="roleRewards[${i}].roleId=this.value"><option value="">-- الرتبة --</option>${sRolesHTML.replace(`value="${r.roleId}"`,`value="${r.roleId}" selected`)}</select><button type="button" onclick="roleRewards.splice(${i},1); renderLvlRewards();" class="bg-red-500/20 text-red-500 px-3 py-2 rounded-lg hover:bg-red-500 hover:text-white">🗑️</button></div>`;
-            });
-        }
-        function addLevelRewardUI() { roleRewards.push({levelRequired: 5, roleId: ''}); renderLvlRewards(); }
 
         // --- محرك البانلات المتعددة العملاق ---
         const catsHTML = `<%- categories.map(cat=>`<option value="${cat.id}">${cat.name}</option>`).join('') %>`;
@@ -959,7 +1085,7 @@
         function addNewPanelUI() { panelsArray.push({panelId:'pnl_'+Math.random().toString(36).substr(2,7), panelTitle:'بانل جديد', panelColor:'#5865F2', buttons:[]}); renderAllPanels(); }
 
         // ==========================================================
-        // 🔄 دالة الحفظ السحرية (تجمع كل الداتا قبل الإرسال) 
+        // 🔄 دالة الحفظ السحرية (تجمع كل الداتا قبل الإرسال لمنع المسح) 
         // ==========================================================
         function syncAllDataBeforeSave() {
             // نقل البيانات من المحركات إلى الحقول المخفية قبل الـ Submit بكسر من الثانية
@@ -967,9 +1093,8 @@
             document.getElementById('hidden_warn_en').value = warnEn.join('\n');
             document.getElementById('mm_modalFieldsData').value = JSON.stringify(mmFields);
             document.getElementById('ticketPanelsData').value = JSON.stringify(panelsArray);
-            document.getElementById('lvl_roleRewardsData').value = JSON.stringify(roleRewards);
             
-            // تحويل الزرار لتأكيد الإرسال
+            // تحويل الزرار لتأكيد الإرسال والأنميشن
             const saveBtn = document.querySelector('button[type="submit"]');
             saveBtn.innerHTML = '<span class="mr-3 ml-2 text-3xl animate-spin">⏳</span> جاري الحفظ وتحديث الديسكورد...';
             saveBtn.classList.replace('bg-emerald-500', 'bg-emerald-700');
@@ -978,13 +1103,30 @@
             return true; 
         }
 
+        // --- محرك الترجمة الديناميكي للداشبورد ---
+        const systemLang = document.querySelector('select[name="language"]');
+        function applyDashboardLanguage() {
+            if(systemLang.value === 'en') {
+                document.documentElement.setAttribute('dir', 'ltr');
+                document.documentElement.setAttribute('lang', 'en');
+                document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+            } else {
+                document.documentElement.setAttribute('dir', 'rtl');
+                document.documentElement.setAttribute('lang', 'ar');
+                document.body.style.fontFamily = "'Tajawal', sans-serif";
+            }
+        }
+        if(systemLang) {
+            systemLang.addEventListener('change', applyDashboardLanguage);
+            applyDashboardLanguage();
+        }
+
         // تشغيل الرندر أول ما الصفحة تفتح
         window.onload = () => { 
             renderWarns('ar'); 
             renderWarns('en'); 
             renderMmFields(); 
             renderAllPanels(); 
-            renderLvlRewards();
         };
     </script>
 </body>
