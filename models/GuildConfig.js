@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const guildConfigSchema = new mongoose.Schema({
     
-    // 1️⃣ الإعدادات العامة والألوان
     guildId: { type: String, required: true, unique: true },
     prefix: { type: String, default: '!' },
     language: { type: String, default: 'ar' },
+    
     embedSetup: {
         successColor: { type: String, default: '#3ba55d' },
         errorColor: { type: String, default: '#ed4245' },
@@ -15,58 +15,19 @@ const guildConfigSchema = new mongoose.Schema({
         thumbnailUrl: { type: String, default: null }
     },
 
-    // 2️⃣ البانلات الديناميكية (بدون JSON - مجهزة لإجابات النوافذ في Code Blocks)
-    ticketPanels: [{
-        panelId: String,
-        channelId: String,
-        categoryId: String,
-        panelTitle: String,
-        panelDescription: String,
-        panelColor: String,
-        imageUrl: String,
-        buttons: [{
-            id: String,
-            label: String,
-            buttonStyle: { type: String, default: 'Primary' },
-            isMiddleman: { type: Boolean, default: false },
-            requireModal: Boolean,
-            modalTitle: String,
-            modalFields: [{ label: String, placeholder: String, style: String }],
-            insideEmbedTitle: String,
-            insideEmbedDesc: String,
-            insideEmbedColor: { type: String, default: '#2b2d31' },
-            modalAnswersEmbedColor: { type: String, default: '#2b2d31' } // لون مخصص لإيمبد الإجابات
-        }]
-    }],
+    ticketPanels: { type: Array, default: [] },
 
-    // 3️⃣ تحكم التذاكر (الخطوتين والقراءة/الإخفاء)
     ticketControls: {
         ticketCounter: { type: Number, default: 1 }, 
-        twoStepClose: { type: Boolean, default: true }, // تفعيل القفل على خطوتين
+        twoStepClose: { type: Boolean, default: true }, 
         transcriptChannelId: String,
         ticketLogChannelId: String,
         hideTicketOnClaim: { type: Boolean, default: false },
         readOnlyStaffOnClaim: { type: Boolean, default: false }
     },
 
-    // 4️⃣ نظام الوساطة المعزول
-    middlemanSystem: {
-        enabled: { type: Boolean, default: false },
-        categoryId: String,
-        panelChannelId: String,
-        panelTitle: { type: String, default: 'تذكرة وساطة آمنة' },
-        panelDescription: String,
-        panelColor: { type: String, default: '#f2a658' },
-        buttonLabel: { type: String, default: 'طلب وسيط' },
-        modalTitle: String,
-        modalFields: [{ label: String, placeholder: String, style: String }],
-        insideTicketTitle: String,
-        insideTicketDescription: String,
-        insideTicketColor: { type: String, default: '#f2a658' },
-        modalAnswersEmbedColor: { type: String, default: '#f2a658' } // لون إيمبد إجابات الوساطة
-    },
+    middlemanSystem: { type: Object, default: {} },
 
-    // 5️⃣ التقييمات المزدوجة البيسك
     ratings: {
         middlemanLogChannelId: String,
         staffLogChannelId: String,
@@ -74,33 +35,39 @@ const guildConfigSchema = new mongoose.Schema({
         staffEmbedColor: { type: String, default: '#3ba55d' }
     },
 
-    // 6️⃣ الرتب والصلاحيات
     roles: {
         adminRoleId: String,
-        highAdminRoles: [String],
+        highAdminRoles: { type: Array, default: [] },
         middlemanRoleId: String,
-        tradePingRoleIds: [String],
-        tradeApproveRoleIds: [String]
+        tradePingRoleIds: { type: Array, default: [] },
+        tradeApproveRoleIds: { type: Array, default: [] }
     },
 
-    // 7️⃣ الأوامر الكاملة (الأساسية والعقوبات والضريبة)
+    // ترسانة الأوامر الجديدة
     commands: {
         clearCmd: { type: String, default: 'clear' },
         comeCmd: { type: String, default: 'come' },
-        taxCmd: { type: String, default: 'tax' }, // أمر الضريبة
+        taxCmd: { type: String, default: 'tax' },
         banCmd: { type: String, default: 'ban' },
-        unbanCmd: { type: String, default: 'unban' }, // فك الباند
+        unbanCmd: { type: String, default: 'unban' }, 
         timeoutCmd: { type: String, default: 'timeout' },
-        untimeoutCmd: { type: String, default: 'untimeout' }, // فك التايم
+        untimeoutCmd: { type: String, default: 'untimeout' }, 
         warnCmd: { type: String, default: 'warn' },
-        unwarnCmd: { type: String, default: 'unwarn' }, // فك التحذير
+        unwarnCmd: { type: String, default: 'unwarn' }, 
+        muteCmd: { type: String, default: 'mute' }, // الميوت الكتابي
+        unmuteCmd: { type: String, default: 'unmute' },
+        moveCmd: { type: String, default: 'move' }, // سحب للفويس
+        lockCmd: { type: String, default: 'lock' }, // قفل الروم
+        unlockCmd: { type: String, default: 'unlock' },
+        hideCmd: { type: String, default: 'hide' }, // إخفاء الروم
+        showCmd: { type: String, default: 'show' },
         tradeCmd: { type: String, default: 'trade' },
         doneCmd: { type: String, default: 'done' }, 
         approveCmd: { type: String, default: 'approve' },
-        allowedRoles: { type: Map, of: [String], default: {} } // تخزين رتب كل أمر
+        allowedRoles: { type: Object, default: {} } // لتخزين الصلاحيات
     },
 
-    // 8️⃣ السجلات المرعبة (كل حاجة بلون وروم)
+    // السجلات شاملة كل التفاصيل
     serverLogs: {
         messageDeleteLogId: String, msgDelColor: { type: String, default: '#ed4245' },
         messageEditLogId: String, msgEditColor: { type: String, default: '#fee75c' },
@@ -108,41 +75,26 @@ const guildConfigSchema = new mongoose.Schema({
         memberJoinLeaveLogId: String, joinColor: { type: String, default: '#3ba55d' }, leaveColor: { type: String, default: '#ed4245' },
         voiceStateLogId: String, voiceColor: { type: String, default: '#5865F2' },
         roleGiveTakeLogId: String, roleColor: { type: String, default: '#9b59b6' },
-        channelCreateDeleteLogId: String, channelColor: { type: String, default: '#1abc9c' }, // لوج الرومات
-        threadCreateDeleteLogId: String, threadColor: { type: String, default: '#34495e' }, // لوج الثريدات
-        reactionLogId: String, reactionColor: { type: String, default: '#e74c3c' }, // لوج الريأكت (للتصبيع وغيره)
+        channelCreateDeleteLogId: String, channelColor: { type: String, default: '#1abc9c' }, 
+        threadCreateDeleteLogId: String, threadColor: { type: String, default: '#34495e' }, 
+        reactionLogId: String, reactionColor: { type: String, default: '#e74c3c' }, 
         banKickLogId: String, banColor: { type: String, default: '#992d22' },
+        unbanLogId: String, unbanColor: { type: String, default: '#2ecc71' }, // لوج فك الباند
+        timeoutLogId: String, timeoutColor: { type: String, default: '#e67e22' }, // لوج التايم
+        untimeoutLogId: String, untimeoutColor: { type: String, default: '#2ecc71' }, // لوج فك التايم
         warningsLogId: String, warnColor: { type: String, default: '#f1c40f' },
-        unwarningsLogId: String, unwarnColor: { type: String, default: '#2ecc71' } // لوج فك التحذير
+        unwarningsLogId: String, unwarnColor: { type: String, default: '#2ecc71' } 
     },
 
-    // 9️⃣ التحذيرات وبانل الإدارة
-    warnings: {
-        maxWarnings: { type: Number, default: 3 },
-        autoAction: { type: String, default: 'timeout' },
-        presetReasonsAr: { type: [String], default: ['سب وشتم'] },
-        presetReasonsEn: { type: [String], default: ['Swearing'] },
-        // بانل التحذيرات (كما في الصورة)
-        panelChannelId: String,
-        panelTitle: { type: String, default: 'لوحة تحكم التحذير' },
-        panelDescription: { type: String, default: 'استخدم الأزرار أدناه لإدارة تحذيرات الأعضاء.' },
-        panelColor: { type: String, default: '#ed4245' }
-    },
-
-    // 🔟 الترحيب، الحماية، والاقتصاد
-    welcomeSystem: { enabled: { type: Boolean, default: false }, channelId: String, messageText: String, backgroundUrl: String, avatarBorderHex: { type: String, default: '#ffffff' } },
-    protection: { antiLinkEnabled: Boolean, antiLinkAllowedRoles: [String], antiSpamEnabled: Boolean, antiSpamAction: String, antiNukeEnabled: Boolean, maxChannelDeletes: Number, maxBan: Number },
-    economy: { enabled: { type: Boolean, default: true }, taxPercentage: { type: Number, default: 5 } }, // نسبة الضريبة لأمر Tax
-    leveling: { enabled: { type: Boolean, default: true }, levelUpChannelId: String, levelUpMessage: String, roleRewards: [{ levelRequired: Number, roleId: String }] },
-
-    // 🤖 الذكاء الاصطناعي (Hybrid)
-    aiSystem: {
-        enabled: { type: Boolean, default: true },
-        chatChannelId: String,
-        allowUserChoice: { type: Boolean, default: true }, // السماح للعضو باختيار الشخصية والنوع بأمر
-        defaultBoyName: { type: String, default: 'زيزو' },
-        defaultGirlName: { type: String, default: 'سوسو' }
-    }
+    warnings: { type: Object, default: {} },
+    welcomeSystem: { type: Object, default: {} },
+    protection: { type: Object, default: {} },
+    economy: { type: Object, default: {} },
+    leveling: { type: Object, default: {} },
+    autoRoles: { type: Array, default: [] },
+    autoResponders: { type: Array, default: [] },
+    
+    aiSystem: { type: Object, default: {} }
 });
 
 module.exports = mongoose.model('GuildConfig', guildConfigSchema);
