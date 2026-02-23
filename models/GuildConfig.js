@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const guildConfigSchema = new mongoose.Schema({
     
-    // 1️⃣ الإعدادات العامة والتصميم
+    // 1️⃣ الإعدادات العامة والألوان
     guildId: { type: String, required: true, unique: true },
     prefix: { type: String, default: '!' },
     language: { type: String, default: 'ar' },
@@ -10,12 +10,12 @@ const guildConfigSchema = new mongoose.Schema({
         successColor: { type: String, default: '#3ba55d' },
         errorColor: { type: String, default: '#ed4245' },
         primaryColor: { type: String, default: '#5865F2' },
-        footerText: { type: String, default: 'Enterprise System © 2024' },
+        footerText: { type: String, default: 'Enterprise System ©' },
         footerIconUrl: { type: String, default: null },
         thumbnailUrl: { type: String, default: null }
     },
 
-    // 2️⃣ البانلات المتعددة والزراير الديناميكية (صورة 1000064875 - 1000064877)
+    // 2️⃣ البانلات الديناميكية (بدون JSON - مجهزة لإجابات النوافذ في Code Blocks)
     ticketPanels: [{
         panelId: String,
         channelId: String,
@@ -24,126 +24,124 @@ const guildConfigSchema = new mongoose.Schema({
         panelDescription: String,
         panelColor: String,
         imageUrl: String,
-        maxOpenTickets: { type: Number, default: 1 },
         buttons: [{
             id: String,
             label: String,
-            buttonStyle: { type: String, default: 'Primary' }, // أزرق، أحمر، رمادي، أخضر
-            emoji: String,
+            buttonStyle: { type: String, default: 'Primary' },
+            isMiddleman: { type: Boolean, default: false },
             requireModal: Boolean,
-            isMiddleman: { type: Boolean, default: false }, // زرار وساطة (يستخدم أمر done)
             modalTitle: String,
-            modalFields: [{ label: String, placeholder: String, style: String, required: Boolean }], // سيتم برمجتها كزراير خضراء وحمراء في الواجهة
+            modalFields: [{ label: String, placeholder: String, style: String }],
             insideEmbedTitle: String,
             insideEmbedDesc: String,
-            insideEmbedColor: String
+            insideEmbedColor: { type: String, default: '#2b2d31' },
+            modalAnswersEmbedColor: { type: String, default: '#2b2d31' } // لون مخصص لإيمبد الإجابات
         }]
     }],
 
-    // 3️⃣ تحكم التذاكر والترانسكريبت (صورة 1000064861 و 1000064886)
+    // 3️⃣ تحكم التذاكر (الخطوتين والقراءة/الإخفاء)
     ticketControls: {
         ticketCounter: { type: Number, default: 1 }, 
-        controlPanelColor: { type: String, default: '#2b2d31' }, 
+        twoStepClose: { type: Boolean, default: true }, // تفعيل القفل على خطوتين
         transcriptChannelId: String,
         ticketLogChannelId: String,
         hideTicketOnClaim: { type: Boolean, default: false },
         readOnlyStaffOnClaim: { type: Boolean, default: false }
     },
 
-    // 4️⃣ التقييمات المزدوجة (صورة 1000064865)
+    // 4️⃣ نظام الوساطة المعزول
+    middlemanSystem: {
+        enabled: { type: Boolean, default: false },
+        categoryId: String,
+        panelChannelId: String,
+        panelTitle: { type: String, default: 'تذكرة وساطة آمنة' },
+        panelDescription: String,
+        panelColor: { type: String, default: '#f2a658' },
+        buttonLabel: { type: String, default: 'طلب وسيط' },
+        modalTitle: String,
+        modalFields: [{ label: String, placeholder: String, style: String }],
+        insideTicketTitle: String,
+        insideTicketDescription: String,
+        insideTicketColor: { type: String, default: '#f2a658' },
+        modalAnswersEmbedColor: { type: String, default: '#f2a658' } // لون إيمبد إجابات الوساطة
+    },
+
+    // 5️⃣ التقييمات المزدوجة البيسك
     ratings: {
         middlemanLogChannelId: String,
         staffLogChannelId: String,
         middlemanEmbedColor: { type: String, default: '#f2a658' },
-        staffEmbedColor: { type: String, default: '#3ba55d' },
-        customReviewOptions: { type: [String], default: ['تعامل ممتاز 🚀', 'سريع ومضمون 👑'] },
-        allowCustomText: { type: Boolean, default: true }
+        staffEmbedColor: { type: String, default: '#3ba55d' }
     },
 
-    // 5️⃣ الرتب والصلاحيات (صورة 1000064861 و 1000064952)
+    // 6️⃣ الرتب والصلاحيات
     roles: {
-        adminRoleId: String,         // Staff Role
-        highAdminRoleId: String,     // High Staff (Admin) للموافقة
-        middlemanRoleId: String,     // رتبة الوساطة
-        tradePingRoleIds: [String]   // رتب المنشن
+        adminRoleId: String,
+        highAdminRoles: [String],
+        middlemanRoleId: String,
+        tradePingRoleIds: [String],
+        tradeApproveRoleIds: [String]
     },
 
-    // 6️⃣ تخصيص الأوامر (صورة 1000064863)
+    // 7️⃣ الأوامر الكاملة (الأساسية والعقوبات والضريبة)
     commands: {
         clearCmd: { type: String, default: 'clear' },
-        clearAllowedRoles: [String],
+        comeCmd: { type: String, default: 'come' },
+        taxCmd: { type: String, default: 'tax' }, // أمر الضريبة
         banCmd: { type: String, default: 'ban' },
-        banAllowedRoles: [String],
+        unbanCmd: { type: String, default: 'unban' }, // فك الباند
         timeoutCmd: { type: String, default: 'timeout' },
-        timeoutAllowedRoles: [String],
-        comeCmd: { type: String, default: 'come' },       // أمر سحب الإدارة
-        comeAllowedRoles: [String],
-        doneCmd: { type: String, default: 'done' },       // أمر إغلاق التكت (وساطة)
-        doneAllowedRoles: [String], 
-        tradeCmd: { type: String, default: 'trade' },     // أمر إضافة تفاصيل التريد
-        tradeAllowedRoles: [String], 
-        approveCmd: { type: String, default: 'approve' }, // أمر طلب الموافقة العليا
-        approveAllowedRoles: [String]
+        untimeoutCmd: { type: String, default: 'untimeout' }, // فك التايم
+        warnCmd: { type: String, default: 'warn' },
+        unwarnCmd: { type: String, default: 'unwarn' }, // فك التحذير
+        tradeCmd: { type: String, default: 'trade' },
+        doneCmd: { type: String, default: 'done' }, 
+        approveCmd: { type: String, default: 'approve' },
+        allowedRoles: { type: Map, of: [String], default: {} } // تخزين رتب كل أمر
     },
 
-    // 7️⃣ السجلات بدقة متناهية (صورة 1000064878 و 1000064879 و 1000064864)
+    // 8️⃣ السجلات المرعبة (كل حاجة بلون وروم)
     serverLogs: {
-        messageDeleteLogId: String,
-        messageEditLogId: String,
-        imageDeleteLogId: String,       // لوج حذف الصور فقط
-        memberJoinLeaveLogId: String,
-        voiceStateLogId: String,
-        roleGiveTakeLogId: String,      // لوج إعطاء/سحب الرتب
-        roleCreateDeleteLogId: String,  // لوج إنشاء/حذف الرتب
-        banKickLogId: String,
-        suggestionsLogId: String,
-        warningsLogId: String
+        messageDeleteLogId: String, msgDelColor: { type: String, default: '#ed4245' },
+        messageEditLogId: String, msgEditColor: { type: String, default: '#fee75c' },
+        imageDeleteLogId: String, imgDelColor: { type: String, default: '#e67e22' },
+        memberJoinLeaveLogId: String, joinColor: { type: String, default: '#3ba55d' }, leaveColor: { type: String, default: '#ed4245' },
+        voiceStateLogId: String, voiceColor: { type: String, default: '#5865F2' },
+        roleGiveTakeLogId: String, roleColor: { type: String, default: '#9b59b6' },
+        channelCreateDeleteLogId: String, channelColor: { type: String, default: '#1abc9c' }, // لوج الرومات
+        threadCreateDeleteLogId: String, threadColor: { type: String, default: '#34495e' }, // لوج الثريدات
+        reactionLogId: String, reactionColor: { type: String, default: '#e74c3c' }, // لوج الريأكت (للتصبيع وغيره)
+        banKickLogId: String, banColor: { type: String, default: '#992d22' },
+        warningsLogId: String, warnColor: { type: String, default: '#f1c40f' },
+        unwarningsLogId: String, unwarnColor: { type: String, default: '#2ecc71' } // لوج فك التحذير
     },
 
-    // 8️⃣ نظام التحذيرات المتقدم والقوانين (كما طلبت)
+    // 9️⃣ التحذيرات وبانل الإدارة
     warnings: {
         maxWarnings: { type: Number, default: 3 },
         autoAction: { type: String, default: 'timeout' },
-        presetReasonsAr: { type: [String], default: ['سب وشتم', 'نشر روابط', 'إزعاج الإدارة'] },
-        presetReasonsEn: { type: [String], default: ['Swearing', 'Posting Links', 'Spam'] },
-        // القوانين التي تظهر مع التحذير ليختار منها الإداري لغة الإرسال للعضو
-        serverRulesAr: { type: String, default: 'الرجاء الالتزام بقوانين السيرفر وعدم المخالفة.' },
-        serverRulesEn: { type: String, default: 'Please follow the server rules and avoid breaking them.' }
+        presetReasonsAr: { type: [String], default: ['سب وشتم'] },
+        presetReasonsEn: { type: [String], default: ['Swearing'] },
+        // بانل التحذيرات (كما في الصورة)
+        panelChannelId: String,
+        panelTitle: { type: String, default: 'لوحة تحكم التحذير' },
+        panelDescription: { type: String, default: 'استخدم الأزرار أدناه لإدارة تحذيرات الأعضاء.' },
+        panelColor: { type: String, default: '#ed4245' }
     },
 
-    // 🌟 9. الترحيب الملكي (صورة 1000064881 و 1000064882)
-    welcomeSystem: {
-        enabled: { type: Boolean, default: false },
-        channelId: String,
-        messageText: { type: String, default: 'مرحباً بك {user} في سيرفر {server}. أنت العضو رقم {memberCount}!' },
-        backgroundUrl: String,
-        avatarBorderHex: { type: String, default: '#ffffff' } // لون إطار الصورة
-    },
-
-    // 🌟 10. الحماية (Anti-Nuke/Spam) (صورة 1000064872)
-    protection: {
-        antiLinkEnabled: { type: Boolean, default: false },
-        antiLinkAllowedRoles: [String],
-        antiSpamEnabled: { type: Boolean, default: false },
-        antiSpamAction: { type: String, default: 'mute' },
-        antiNukeEnabled: { type: Boolean, default: false },
-        maxChannelDeletesPerMinute: { type: Number, default: 3 },
-        maxBanPerMinute: { type: Number, default: 3 }
-    },
-
-    // 🌟 11. الرتب والرد التلقائي
-    autoRoles: [String],
-    autoResponders: [{ triggerWord: String, replyMessage: String, exactMatch: Boolean }],
-
-    // 🌟 12. الاقتصاد واللفلات
-    economy: { enabled: { type: Boolean, default: true }, dailyMin: Number, dailyMax: Number, tax: Number },
+    // 🔟 الترحيب، الحماية، والاقتصاد
+    welcomeSystem: { enabled: { type: Boolean, default: false }, channelId: String, messageText: String, backgroundUrl: String, avatarBorderHex: { type: String, default: '#ffffff' } },
+    protection: { antiLinkEnabled: Boolean, antiLinkAllowedRoles: [String], antiSpamEnabled: Boolean, antiSpamAction: String, antiNukeEnabled: Boolean, maxChannelDeletes: Number, maxBan: Number },
+    economy: { enabled: { type: Boolean, default: true }, taxPercentage: { type: Number, default: 5 } }, // نسبة الضريبة لأمر Tax
     leveling: { enabled: { type: Boolean, default: true }, levelUpChannelId: String, levelUpMessage: String, roleRewards: [{ levelRequired: Number, roleId: String }] },
 
-    // 🤖 13. نظام الذكاء الاصطناعي (مفاجأة النظام)
+    // 🤖 الذكاء الاصطناعي (Hybrid)
     aiSystem: {
         enabled: { type: Boolean, default: true },
         chatChannelId: String,
-        autoModToxicity: { type: Boolean, default: false }
+        allowUserChoice: { type: Boolean, default: true }, // السماح للعضو باختيار الشخصية والنوع بأمر
+        defaultBoyName: { type: String, default: 'زيزو' },
+        defaultGirlName: { type: String, default: 'سوسو' }
     }
 });
 
