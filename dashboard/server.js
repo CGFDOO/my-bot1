@@ -3,24 +3,68 @@ const app = express();
 const path = require('path');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-
-// ⚠️ استدعاء ملف الداتابيز (تأكد من المسار حسب مجلداتك)
+const passport = require('passport');
+const DiscordStrategy = require('passport-discord').Strategy;
 const GuildSettings = require('../models/GuildSettings'); 
 
 module.exports = (client) => {
     // ==========================================
-    // 1. الإعدادات الأساسية للسيرفر (Middlewares)
+    // 1. الإعدادات الأساسية 
     // ==========================================
-    app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' })); // limit عشان لو الداتا كتير
+    app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
     app.use(bodyParser.json({ limit: '50mb' }));
     app.set('view engine', 'ejs');
-    
-    // مسارات ملفات التصميم (CSS, JS, Images)
     app.set('views', path.join(__dirname, '../views'));
     app.use(express.static(path.join(__dirname, '../public')));
 
     // ==========================================
-    // 2. مسار عرض صفحة الإعدادات (GET)
+    // 2. نظام تسجيل الدخول (Discord OAuth2)
+    // ==========================================
+    app.use(session({
+        secret: 'imprator-secret-key',
+        resave: false,
+        saveUninitialized: false
+    }));
+    app.use(passport.initialize());
+    app.use(passport.session());
+
+    passport.serializeUser((user, done) => done(null, user));
+    passport.deserializeUser((obj, done) => done(null, obj));
+
+    if (process.env.CLIENT_ID && process.env.CLIENT_SECRET && process.env.CALLBACK_URL) {
+        passport.use(new DiscordStrategy({
+            clientID: process.env.CLIENT_ID,
+            clientSecret: process.env.CLIENT_SECRET,
+            callbackURL: process.env.CALLBACK_URL,
+            scope: ['identify', 'guilds']
+        }, function(accessToken, refreshToken, profile, done) {
+            process.nextTick(() => done(null, profile));
+        }));
+    }
+
+    // ==========================================
+    // 3. مسارات تسجيل الدخول (Auth Routes)
+    // ==========================================
+    // الصفحة الرئيسية
+    app.get('/', (req, res) => {
+        res.render('index', { user: req.user }); // هيفتح ملف index.ejs
+    });
+
+    app.get('/login', passport.authenticate('discord'));
+
+    // المسار اللي كان ناقص وحليناه!
+    app.get('/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
+        res.redirect('/dashboard'); // هيوديك لصفحة اختيار السيرفرات
+    });
+
+    // صفحة اختيار السيرفر
+    app.get('/dashboard', (req, res) => {
+        if (!req.isAuthenticated()) return res.redirect('/login');
+        res.render('dashboard', { user: req.user, bot: client }); 
+    });
+
+    // ==========================================
+    // 4. مسار عرض صفحة الإعدادات (GET Settings)
     // ==========================================
     app.get('/settings/:guildId', async (req, res) => {
         try {
@@ -29,55 +73,41 @@ module.exports = (client) => {
             
             if (!guild) return res.send('❌ البوت غير موجود في هذا السيرفر! قم بدعوته أولاً.');
 
-            // جلب الإعدادات من MongoDB
             let config = await GuildSettings.findOne({ guildId: guildId });
-            if (!config) config = {}; // لو السيرفر جديد
+            if (!config) config = {}; 
 
-            // إرسال الداتا لصفحة الـ EJS عشان تعرضها
             res.render('settings', {
                 bot: client,
                 guild: guild,
                 guildId: guildId,
                 config: config,
-                success: req.query.success === 'true' // إشعار الحفظ
+                success: req.query.success === 'true' 
             });
         } catch (error) {
-            console.error("❌ خطأ في تحميل صفحة الداشبورد:", error);
-            res.status(500).send("حدث خطأ داخلي في السيرفر.");
+            console.error("❌ خطأ:", error);
+            res.status(500).send("حدث خطأ.");
         }
     });
 
     // ==========================================
-    // 3. مسار حفظ البيانات (POST) - الوحش الكامل 🐉
+    // 5. مسار حفظ البيانات الدبابة (POST Save)
     // ==========================================
     app.post('/settings/:guildId/save', async (req, res) => {
         try {
             const guildId = req.params.guildId;
             const body = req.body;
 
-            // 🛠️ دوال مساعدة لفك ضغط الـ JSON وترتيب المصفوفات
             const parseJSON = (data, fallback) => {
                 try { return data ? JSON.parse(data) : fallback; } 
                 catch (e) { return fallback; }
             };
             const getArray = (val) => [].concat(val || []).filter(Boolean);
 
-            // فك ضغط الأنظمة المعقدة اللي جاية من الداشبورد
-            const ticketPanels = parseJSON(body.ticketPanelsData, []);
-            const mmModalFields = parseJSON(body.mm_modalFieldsData, []);
-            const roleRewards = parseJSON(body.lvl_roleRewardsData, []);
-            const autoResponders = parseJSON(body.autoRespondersData, []);
-            const autoLine = parseJSON(body.autoLineData, { trigger: 'خط', imageUrl: '', deleteTrigger: false });
-            const warnReasonsAr = parseJSON(body.warn_reasonsDataAr, []);
-            const warnReasonsEn = parseJSON(body.warn_reasonsDataEn, []);
-
-            // 📦 تجميع كل الإعدادات في أوبجكت واحد ضخم
             const updatedConfig = {
                 prefix: body.prefix || '!',
                 language: body.language || 'ar',
                 slashCommandsEnabled: body.slashCommandsEnabled === 'on',
                 botOwnerId: body.botOwnerId || '',
-
                 embedSetup: {
                     primaryColor: body.emb_primaryColor || '#5865F2',
                     successColor: body.emb_successColor || '#3ba55d',
@@ -86,7 +116,6 @@ module.exports = (client) => {
                     footerIconUrl: body.emb_footerIconUrl,
                     thumbnailUrl: body.emb_thumbnailUrl
                 },
-
                 aiSystem: {
                     enabled: body.ai_enabled === 'on',
                     allowUserChoice: body.ai_allowUserChoice === 'on',
@@ -94,9 +123,7 @@ module.exports = (client) => {
                     defaultGirlName: body.ai_defaultGirlName,
                     chatChannelId: body.ai_chatChannelId
                 },
-
-                ticketPanels: ticketPanels, // البانلات اللي برمجناها
-
+                ticketPanels: parseJSON(body.ticketPanelsData, []), 
                 middlemanSystem: {
                     enabled: body.mm_enabled === 'on',
                     categoryId: body.mm_categoryId,
@@ -106,13 +133,12 @@ module.exports = (client) => {
                     panelDescription: body.mm_panelDescription,
                     buttonLabel: body.mm_buttonLabel,
                     modalTitle: body.mm_modalTitle,
-                    modalFields: mmModalFields,
+                    modalFields: parseJSON(body.mm_modalFieldsData, []),
                     insideTicketTitle: body.mm_insideTicketTitle,
                     insideTicketColor: body.mm_insideTicketColor,
                     insideTicketDescription: body.mm_insideTicketDescription,
                     modalAnswersEmbedColor: body.mm_modalAnswersEmbedColor
                 },
-
                 ticketControls: {
                     twoStepClose: body.tc_twoStepClose === 'on',
                     ticketCounter: parseInt(body.tc_ticketCounter) || 1,
@@ -121,7 +147,6 @@ module.exports = (client) => {
                     hideTicketOnClaim: body.tc_hideTicketOnClaim === 'on',
                     readOnlyStaffOnClaim: body.tc_readOnlyStaffOnClaim === 'on'
                 },
-
                 warnings: {
                     maxWarnings: parseInt(body.warn_maxWarnings) || 3,
                     autoAction: body.warn_autoAction,
@@ -129,10 +154,9 @@ module.exports = (client) => {
                     panelColor: body.warn_panelColor,
                     panelTitle: body.warn_panelTitle,
                     panelDescription: body.warn_panelDescription,
-                    reasonsDataAr: warnReasonsAr,
-                    reasonsDataEn: warnReasonsEn
+                    reasonsDataAr: parseJSON(body.warn_reasonsDataAr, []),
+                    reasonsDataEn: parseJSON(body.warn_reasonsDataEn, [])
                 },
-
                 roles: {
                     adminRoleId: body.role_adminRoleId,
                     middlemanRoleId: body.role_middlemanRoleId,
@@ -140,25 +164,21 @@ module.exports = (client) => {
                     tradePingRoleIds: getArray(body.role_tradePingRoleIds),
                     tradeApproveRoleIds: getArray(body.role_tradeApproveRoleIds)
                 },
-
                 protection: {
                     antiLinkEnabled: body.prot_antiLinkEnabled === 'on',
                     antiSpamEnabled: body.prot_antiSpamEnabled === 'on',
                     antiNukeEnabled: body.prot_antiNukeEnabled === 'on'
                 },
-
-                autoResponders: autoResponders,
-                autoLine: autoLine
+                autoResponders: parseJSON(body.autoRespondersData, []),
+                autoLine: parseJSON(body.autoLineData, { trigger: 'خط', imageUrl: '', deleteTrigger: false })
             };
 
-            // 💾 الحفظ النهائي في قاعدة بيانات MongoDB
             await GuildSettings.findOneAndUpdate(
                 { guildId: guildId }, 
                 { $set: updatedConfig }, 
-                { upsert: true, new: true } // upsert بتعمل ملف جديد لو السيرفر مش متسجل
+                { upsert: true, new: true } 
             );
 
-            // إرجاع العميل للصفحة مع إشعار النجاح 🟢
             res.redirect(`/settings/${guildId}?success=true`);
 
         } catch (error) {
@@ -168,12 +188,10 @@ module.exports = (client) => {
     });
 
     // ==========================================
-    // 4. تشغيل السيرفر وحل مشكلة Railway 🚀
+    // 6. تشغيل السيرفر (حل Railway)
     // ==========================================
-    // ⚠️ السطرين دول هما اللي بيمنعوا الشاشة السودة بتاعت Railway!
     const PORT = process.env.PORT || 8080; 
-    
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`\n✅ [WEB DASHBOARD] الداشبورد تعمل بنجاح وتستقبل الطلبات على بورت: ${PORT}\n`);
+        console.log(`\n✅ [WEB DASHBOARD] الداشبورد تعمل بنجاح على بورت: ${PORT}\n`);
     });
 };
