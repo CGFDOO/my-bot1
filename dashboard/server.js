@@ -361,7 +361,9 @@ app.post('/settings/:guildId/save', checkAuth, async (req, res) => {
 module.exports = (client) => {
     app.locals.client = client;
     const PORT = process.env.PORT || 8080;
-    app.listen(PORT, () => {
-        console.log(`\n[DASHBOARD V7 SERVER] 🌐 Online and Ready on PORT: ${PORT}\n`);
+    
+    // ضفنا '0.0.0.0' هنا عشان Railway يفتح الباب للداشبورد!
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n[DASHBOARD V7 SERVER] 🔵 Online and Ready on PORT: ${PORT}\n`);
     });
 };
