@@ -1,217 +1,179 @@
-// =========================================================================
-// 🌟 الأساسيات والمكاتب (Dependencies)
-// =========================================================================
-require('dotenv').config(); // جلب المتغيرات السرية (التوكن وقاعدة البيانات)
-const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
-const mongoose = require('mongoose');
-const fs = require('fs');
+const express = require('express');
+const app = express();
 const path = require('path');
+const bodyParser = require('body-parser');
+const session = require('express-session');
 
-console.clear();
-console.log(`\n====================================================`);
-console.log(`🚀 جاري تشغيل إمبراطورية البوت... يرجى الانتظار`);
-console.log(`====================================================\n`);
+// ⚠️ استدعاء ملف الداتابيز (تأكد من المسار حسب مجلداتك)
+const GuildSettings = require('../models/GuildSettings'); 
 
-// =========================================================================
-// 🤖 إعدادات الكلاينت (Client Setup & Intents)
-// =========================================================================
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent, // مهم جداً عشان البوت يقرأ رسائل الأعضاء (كلمة "خط" وغيرها)
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessageReactions,
-    ],
-    partials: [
-        Partials.Message, 
-        Partials.Channel, 
-        Partials.GuildMember, 
-        Partials.User, 
-        Partials.Reaction
-    ],
-});
-
-// إنشاء كوليكشن لحفظ الأوامر في الذاكرة
-client.commands = new Collection();
-client.aliases = new Collection();
-
-// =========================================================================
-// 🗄️ الاتصال بقاعدة البيانات (MongoDB Connection)
-// =========================================================================
-if (!process.env.MONGO_URI) {
-    console.log(`🔴 [DATABASE ERROR] لم يتم العثور على رابط MONGO_URI في المتغيرات!`);
-} else {
-    mongoose.connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    }).then(() => {
-        console.log(`🟢 [DATABASE] تم الاتصال بقاعدة بيانات MongoDB بنجاح!`);
-    }).catch((err) => {
-        console.log(`🔴 [DATABASE] فشل الاتصال بقاعدة البيانات:`);
-        console.error(err);
-    });
-
-    // مراقبة حالة قاعدة البيانات
-    mongoose.connection.on('disconnected', () => {
-        console.log(`⚠️ [DATABASE] انقطع الاتصال بقاعدة البيانات!`);
-    });
-    mongoose.connection.on('reconnected', () => {
-        console.log(`🟢 [DATABASE] تم إعادة الاتصال بقاعدة البيانات!`);
-    });
-}
-
-// =========================================================================
-// 📂 نظام الهاندلر الإضافي (Extra Handlers System)
-// =========================================================================
-const handlersPath = path.join(__dirname, 'handlers');
-if (fs.existsSync(handlersPath)) {
-    const handlerFiles = fs.readdirSync(handlersPath).filter(file => file.endsWith('.js'));
-    for (const file of handlerFiles) {
-        try {
-            require(path.join(handlersPath, file))(client);
-        } catch (error) {
-            console.log(`🔴 [HANDLER ERROR] فشل تحميل الهاندلر: ${file}`);
-            console.error(error);
-        }
-    }
-    console.log(`✅ [HANDLERS] تم تحميل أنظمة الهاندلر الإضافية.`);
-}
-
-// =========================================================================
-// ⌨️ نظام التشغيل التلقائي للأوامر (Command Handler)
-// =========================================================================
-const commandsPath = path.join(__dirname, 'commands');
-let cmdCount = 0;
-
-if (fs.existsSync(commandsPath)) {
-    const commandFilesOrFolders = fs.readdirSync(commandsPath);
+module.exports = (client) => {
+    // ==========================================
+    // 1. الإعدادات الأساسية للسيرفر (Middlewares)
+    // ==========================================
+    app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' })); // limit عشان لو الداتا كتير
+    app.use(bodyParser.json({ limit: '50mb' }));
+    app.set('view engine', 'ejs');
     
-    for (const item of commandFilesOrFolders) {
-        const itemPath = path.join(commandsPath, item);
-        
-        // لو كان مجلد (عشان لو مقسم الأوامر: admin, general, الخ)
-        if (fs.statSync(itemPath).isDirectory()) {
-            const commandFiles = fs.readdirSync(itemPath).filter(file => file.endsWith('.js'));
-            for (const file of commandFiles) {
-                try {
-                    const command = require(path.join(itemPath, file));
-                    if (command.name) {
-                        client.commands.set(command.name, command);
-                        cmdCount++;
-                        if (command.aliases && Array.isArray(command.aliases)) {
-                            command.aliases.forEach(alias => client.aliases.set(alias, command.name));
-                        }
-                    }
-                } catch (err) {
-                    console.log(`🔴 [COMMAND ERROR] فشل تحميل الأمر: ${file}`);
-                }
-            }
-        } 
-        // لو كان ملف .js مباشر
-        else if (item.endsWith('.js')) {
-            try {
-                const command = require(itemPath);
-                if (command.name) {
-                    client.commands.set(command.name, command);
-                    cmdCount++;
-                    if (command.aliases && Array.isArray(command.aliases)) {
-                        command.aliases.forEach(alias => client.aliases.set(alias, command.name));
-                    }
-                }
-            } catch (err) {
-                console.log(`🔴 [COMMAND ERROR] فشل تحميل الأمر: ${item}`);
-            }
-        }
-    }
-    console.log(`✅ [COMMANDS] تم تحميل ${cmdCount} أمر بنجاح.`);
-} else {
-    console.log(`⚠️ [COMMANDS] لم يتم العثور على مجلد commands!`);
-}
+    // مسارات ملفات التصميم (CSS, JS, Images)
+    app.set('views', path.join(__dirname, '../views'));
+    app.use(express.static(path.join(__dirname, '../public')));
 
-// =========================================================================
-// 📡 نظام التشغيل التلقائي للأحداث (Event Handler)
-// =========================================================================
-const eventsPath = path.join(__dirname, 'events');
-let eventCount = 0;
-
-if (fs.existsSync(eventsPath)) {
-    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
-
-    for (const file of eventFiles) {
+    // ==========================================
+    // 2. مسار عرض صفحة الإعدادات (GET)
+    // ==========================================
+    app.get('/settings/:guildId', async (req, res) => {
         try {
-            const filePath = path.join(eventsPath, file);
-            const event = require(filePath);
+            const guildId = req.params.guildId;
+            const guild = client.guilds.cache.get(guildId);
             
-            if (event.name) {
-                if (event.once) {
-                    client.once(event.name, (...args) => event.execute(...args, client));
-                } else {
-                    client.on(event.name, (...args) => event.execute(...args, client));
-                }
-                eventCount++;
-            }
-        } catch (err) {
-            console.log(`🔴 [EVENT ERROR] فشل تحميل الحدث: ${file}`);
+            if (!guild) return res.send('❌ البوت غير موجود في هذا السيرفر! قم بدعوته أولاً.');
+
+            // جلب الإعدادات من MongoDB
+            let config = await GuildSettings.findOne({ guildId: guildId });
+            if (!config) config = {}; // لو السيرفر جديد
+
+            // إرسال الداتا لصفحة الـ EJS عشان تعرضها
+            res.render('settings', {
+                bot: client,
+                guild: guild,
+                guildId: guildId,
+                config: config,
+                success: req.query.success === 'true' // إشعار الحفظ
+            });
+        } catch (error) {
+            console.error("❌ خطأ في تحميل صفحة الداشبورد:", error);
+            res.status(500).send("حدث خطأ داخلي في السيرفر.");
         }
-    }
-    console.log(`✅ [EVENTS] تم تحميل ${eventCount} حدث (Events) بنجاح.`);
-} else {
-    console.log(`⚠️ [EVENTS] لم يتم العثور على مجلد events!`);
-}
-
-// =========================================================================
-// 🌐 ربط الداشبورد بالبوت (Dashboard Integration)
-// =========================================================================
-try {
-    // ⚠️ السطر ده هو اللي كان عامل الشاشة السودة! دلوقتي اتعدل للمسار الصح بناءً على صورتك ⚠️
-    const dashboardPath = path.join(__dirname, 'dashboard', 'server.js');
-    
-    if (fs.existsSync(dashboardPath)) {
-        const dashboard = require(dashboardPath); 
-        // تشغيل الداشبورد وتمرير الكلاينت ليها عشان تقرأ الرومات
-        dashboard(client);
-        console.log(`✅ [WEB DASHBOARD] تم العثور على ملف الداشبورد وجاري تشغيله...`);
-    } else {
-        console.log(`🔴 [WEB DASHBOARD] لم يتم العثور على ملف: ./dashboard/server.js`);
-    }
-} catch (error) {
-    console.log(`🔴 [WEB DASHBOARD ERROR] حدث خطأ أثناء محاولة تشغيل الداشبورد!`);
-    console.error(error);
-}
-
-// =========================================================================
-// 🛡️ نظام الحماية من انهيار البوت (Anti-Crash System)
-// =========================================================================
-process.on('unhandledRejection', (reason, p) => {
-    console.log('\n[ANTI-CRASH] 🔴 خطأ غير معالج (Unhandled Rejection):');
-    console.log(reason);
-});
-
-process.on('uncaughtException', (err, origin) => {
-    console.log('\n[ANTI-CRASH] 🔴 خطأ غير متوقع (Uncaught Exception):');
-    console.log(err);
-});
-
-process.on('uncaughtExceptionMonitor', (err, origin) => {
-    console.log('\n[ANTI-CRASH] 🔴 خطأ مراقب (Uncaught Exception Monitor):');
-    console.log(err);
-});
-
-// =========================================================================
-// 🔑 تسجيل الدخول (Discord Login)
-// =========================================================================
-if (!process.env.TOKEN) {
-    console.log(`🔴 [SYSTEM ERROR] لم يتم العثور على توكن البوت (TOKEN) في المتغيرات!`);
-} else {
-    client.login(process.env.TOKEN).then(() => {
-        console.log(`\n====================================================`);
-        console.log(`🚀 [SYSTEM ONLINE] البوت ${client.user.tag} متصل الآن بالديسكورد!`);
-        console.log(`====================================================\n`);
-    }).catch((err) => {
-        console.log(`🔴 [SYSTEM ERROR] فشل تسجيل الدخول، تأكد من صحة التوكن الخاص بالبوت!`);
-        console.error(err);
     });
-}
+
+    // ==========================================
+    // 3. مسار حفظ البيانات (POST) - الوحش الكامل 🐉
+    // ==========================================
+    app.post('/settings/:guildId/save', async (req, res) => {
+        try {
+            const guildId = req.params.guildId;
+            const body = req.body;
+
+            // 🛠️ دوال مساعدة لفك ضغط الـ JSON وترتيب المصفوفات
+            const parseJSON = (data, fallback) => {
+                try { return data ? JSON.parse(data) : fallback; } 
+                catch (e) { return fallback; }
+            };
+            const getArray = (val) => [].concat(val || []).filter(Boolean);
+
+            // فك ضغط الأنظمة المعقدة اللي جاية من الداشبورد
+            const ticketPanels = parseJSON(body.ticketPanelsData, []);
+            const mmModalFields = parseJSON(body.mm_modalFieldsData, []);
+            const roleRewards = parseJSON(body.lvl_roleRewardsData, []);
+            const autoResponders = parseJSON(body.autoRespondersData, []);
+            const autoLine = parseJSON(body.autoLineData, { trigger: 'خط', imageUrl: '', deleteTrigger: false });
+            const warnReasonsAr = parseJSON(body.warn_reasonsDataAr, []);
+            const warnReasonsEn = parseJSON(body.warn_reasonsDataEn, []);
+
+            // 📦 تجميع كل الإعدادات في أوبجكت واحد ضخم
+            const updatedConfig = {
+                prefix: body.prefix || '!',
+                language: body.language || 'ar',
+                slashCommandsEnabled: body.slashCommandsEnabled === 'on',
+                botOwnerId: body.botOwnerId || '',
+
+                embedSetup: {
+                    primaryColor: body.emb_primaryColor || '#5865F2',
+                    successColor: body.emb_successColor || '#3ba55d',
+                    errorColor: body.emb_errorColor || '#ed4245',
+                    footerText: body.emb_footerText || 'System Control',
+                    footerIconUrl: body.emb_footerIconUrl,
+                    thumbnailUrl: body.emb_thumbnailUrl
+                },
+
+                aiSystem: {
+                    enabled: body.ai_enabled === 'on',
+                    allowUserChoice: body.ai_allowUserChoice === 'on',
+                    defaultBoyName: body.ai_defaultBoyName,
+                    defaultGirlName: body.ai_defaultGirlName,
+                    chatChannelId: body.ai_chatChannelId
+                },
+
+                ticketPanels: ticketPanels, // البانلات اللي برمجناها
+
+                middlemanSystem: {
+                    enabled: body.mm_enabled === 'on',
+                    categoryId: body.mm_categoryId,
+                    panelChannelId: body.mm_panelChannelId,
+                    panelTitle: body.mm_panelTitle,
+                    panelColor: body.mm_panelColor,
+                    panelDescription: body.mm_panelDescription,
+                    buttonLabel: body.mm_buttonLabel,
+                    modalTitle: body.mm_modalTitle,
+                    modalFields: mmModalFields,
+                    insideTicketTitle: body.mm_insideTicketTitle,
+                    insideTicketColor: body.mm_insideTicketColor,
+                    insideTicketDescription: body.mm_insideTicketDescription,
+                    modalAnswersEmbedColor: body.mm_modalAnswersEmbedColor
+                },
+
+                ticketControls: {
+                    twoStepClose: body.tc_twoStepClose === 'on',
+                    ticketCounter: parseInt(body.tc_ticketCounter) || 1,
+                    transcriptChannelId: body.tc_transcriptChannelId,
+                    ticketLogChannelId: body.tc_ticketLogChannelId,
+                    hideTicketOnClaim: body.tc_hideTicketOnClaim === 'on',
+                    readOnlyStaffOnClaim: body.tc_readOnlyStaffOnClaim === 'on'
+                },
+
+                warnings: {
+                    maxWarnings: parseInt(body.warn_maxWarnings) || 3,
+                    autoAction: body.warn_autoAction,
+                    panelChannelId: body.warn_panelChannelId,
+                    panelColor: body.warn_panelColor,
+                    panelTitle: body.warn_panelTitle,
+                    panelDescription: body.warn_panelDescription,
+                    reasonsDataAr: warnReasonsAr,
+                    reasonsDataEn: warnReasonsEn
+                },
+
+                roles: {
+                    adminRoleId: body.role_adminRoleId,
+                    middlemanRoleId: body.role_middlemanRoleId,
+                    highAdminRoles: getArray(body.role_highAdminRoles),
+                    tradePingRoleIds: getArray(body.role_tradePingRoleIds),
+                    tradeApproveRoleIds: getArray(body.role_tradeApproveRoleIds)
+                },
+
+                protection: {
+                    antiLinkEnabled: body.prot_antiLinkEnabled === 'on',
+                    antiSpamEnabled: body.prot_antiSpamEnabled === 'on',
+                    antiNukeEnabled: body.prot_antiNukeEnabled === 'on'
+                },
+
+                autoResponders: autoResponders,
+                autoLine: autoLine
+            };
+
+            // 💾 الحفظ النهائي في قاعدة بيانات MongoDB
+            await GuildSettings.findOneAndUpdate(
+                { guildId: guildId }, 
+                { $set: updatedConfig }, 
+                { upsert: true, new: true } // upsert بتعمل ملف جديد لو السيرفر مش متسجل
+            );
+
+            // إرجاع العميل للصفحة مع إشعار النجاح 🟢
+            res.redirect(`/settings/${guildId}?success=true`);
+
+        } catch (error) {
+            console.error("❌ خطأ أثناء حفظ إعدادات الداشبورد:", error);
+            res.status(500).send("حدث خطأ أثناء حفظ الإعدادات في قاعدة البيانات.");
+        }
+    });
+
+    // ==========================================
+    // 4. تشغيل السيرفر وحل مشكلة Railway 🚀
+    // ==========================================
+    // ⚠️ السطرين دول هما اللي بيمنعوا الشاشة السودة بتاعت Railway!
+    const PORT = process.env.PORT || 8080; 
+    
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n✅ [WEB DASHBOARD] الداشبورد تعمل بنجاح وتستقبل الطلبات على بورت: ${PORT}\n`);
+    });
+};
