@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MNC Ultimate Control | إعدادات الإمبراطورية</title>
+    <title>Ultimate Bot Control | إعدادات النظام</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
@@ -16,17 +16,8 @@
                         sans: ['Tajawal', 'sans-serif'] 
                     },
                     colors: { 
-                        brand: { 
-                            DEFAULT: '#5865F2', 
-                            dark: '#4752C4', 
-                            light: '#7289DA' 
-                        }, 
-                        dark: { 
-                            900: '#0b0f19', 
-                            800: '#151b2b', 
-                            700: '#1f2937', 
-                            600: '#334155' 
-                        } 
+                        brand: { DEFAULT: '#5865F2', dark: '#4752C4', light: '#7289DA' }, 
+                        dark: { 900: '#0b0f19', 800: '#151b2b', 700: '#1f2937', 600: '#334155' } 
                     }
                 }
             }
@@ -41,23 +32,10 @@
             scroll-behavior: smooth; 
         }
         
-        ::-webkit-scrollbar { 
-            width: 8px; 
-            height: 8px; 
-        }
-        
-        ::-webkit-scrollbar-track { 
-            background: #0b0f19; 
-        }
-        
-        ::-webkit-scrollbar-thumb { 
-            background: #1f2937; 
-            border-radius: 10px; 
-        }
-        
-        ::-webkit-scrollbar-thumb:hover { 
-            background: #5865F2; 
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5865F2; }
         
         .glass-card { 
             background: rgba(21, 27, 43, 0.8); 
@@ -72,62 +50,17 @@
             outline: none; 
         }
         
-        .settings-section { 
-            display: none; 
-            animation: fadeIn 0.4s ease forwards; 
-        }
-        
-        .settings-section.active { 
-            display: block; 
-        }
-        
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(15px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
+        .settings-section { display: none; animation: fadeIn 0.4s ease forwards; }
+        .settings-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* أزرار التفعيل (Toggles) */
-        .switch { 
-            position: relative; 
-            display: inline-block; 
-            width: 54px; 
-            height: 28px; 
-        }
-        
-        .switch input { 
-            opacity: 0; 
-            width: 0; 
-            height: 0; 
-        }
-        
-        .slider { 
-            position: absolute; 
-            cursor: pointer; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            background-color: #374151; 
-            transition: .4s; 
-            border-radius: 34px; 
-        }
-        
-        .slider:before { 
-            position: absolute; 
-            content: ""; 
-            height: 20px; 
-            width: 20px; 
-            right: 4px; 
-            bottom: 4px; 
-            background-color: white; 
-            transition: .4s; 
-            border-radius: 50%; 
-        }
-        
-        input:checked + .slider { 
-            background-color: #10B981; 
-        }
-        
-        input:checked + .slider:before { 
-            transform: translateX(-26px); 
-        }
+        /* 🛠️ إصلاح أزرار التفعيل (Toggles) للغة العربية */
+        .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; right: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #10B981; }
+        input:checked + .slider:before { transform: translateX(-26px); }
     </style>
 </head>
 
@@ -158,7 +91,7 @@
     <aside class="w-72 flex-shrink-0 border-l border-dark-700 bg-dark-800 flex flex-col z-20 shadow-[5px_0_20px_rgba(0,0,0,0.5)]">
         <div class="h-24 flex flex-col items-center justify-center border-b border-dark-700 bg-dark-900/60 relative overflow-hidden">
             <h1 class="text-2xl font-black text-white tracking-wider relative z-10">
-                MNC <span class="text-brand">CONTROL</span>
+                SYSTEM <span class="text-brand">CONTROL</span>
             </h1>
         </div>
         
@@ -167,84 +100,58 @@
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 px-2">الأساسيات والذكاء</div>
             
             <button onclick="switchSection('general')" class="nav-btn active-nav w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all bg-brand text-white font-bold" data-target="general">
-                <span class="text-lg">⚙️</span> 
-                <span>الإعدادات العامة والألوان</span>
+                <span class="text-lg">⚙️</span> <span>الإعدادات العامة والألوان</span>
             </button>
-            
             <button onclick="switchSection('ai_system')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-amber-400 hover:bg-dark-700 font-bold" data-target="ai_system">
-                <span class="text-lg">✨</span> 
-                <span>الذكاء الاصطناعي (AI)</span>
+                <span class="text-lg">✨</span> <span>الذكاء الاصطناعي (AI)</span>
             </button>
-            
             <button onclick="switchSection('live_embed')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="live_embed">
-                <span class="text-lg">🎨</span> 
-                <span>صانع الإيمبد الفوري</span>
+                <span class="text-lg">🎨</span> <span>صانع الإيمبد الفوري</span>
             </button>
 
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-8 px-2">التذاكر والوساطة</div>
             
             <button onclick="switchSection('middleman')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="middleman">
-                <span class="text-lg">⚖️</span> 
-                <span>نظام الوساطة (المعزول)</span>
+                <span class="text-lg">⚖️</span> <span>نظام الوساطة (المعزول)</span>
             </button>
-            
             <button onclick="switchSection('custom_panels')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="custom_panels">
-                <span class="text-lg">🎫</span> 
-                <span>البانلات الديناميكية</span>
+                <span class="text-lg">🎫</span> <span>البانلات الديناميكية</span>
             </button>
-            
             <button onclick="switchSection('ticket_controls')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="ticket_controls">
-                <span class="text-lg">🛠️</span> 
-                <span>التحكم الداخلي للتكت</span>
+                <span class="text-lg">🛠️</span> <span>التحكم الداخلي للتكت</span>
             </button>
 
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-8 px-2">الإدارة والعقوبات</div>
             
             <button onclick="switchSection('warnings')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-orange-400 hover:bg-dark-700 font-bold" data-target="warnings">
-                <span class="text-lg">⚠️</span> 
-                <span>نظام التحذيرات والإدارة</span>
+                <span class="text-lg">⚠️</span> <span>نظام التحذيرات والإدارة</span>
             </button>
-            
             <button onclick="switchSection('commands')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="commands">
-                <span class="text-lg">⌨️</span> 
-                <span>تخصيص الأوامر</span>
+                <span class="text-lg">⌨️</span> <span>تخصيص الأوامر</span>
             </button>
-            
             <button onclick="switchSection('logs')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="logs">
-                <span class="text-lg">📝</span> 
-                <span>السجلات الدقيقة والألوان</span>
+                <span class="text-lg">📝</span> <span>السجلات الدقيقة والألوان</span>
             </button>
-            
             <button onclick="switchSection('roles')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="roles">
-                <span class="text-lg">👑</span> 
-                <span>الرتب والصلاحيات العليا</span>
+                <span class="text-lg">👑</span> <span>الرتب والصلاحيات العليا</span>
             </button>
-            
             <button onclick="switchSection('ratings')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="ratings">
-                <span class="text-lg">⭐</span> 
-                <span>التقييمات المزدوجة</span>
+                <span class="text-lg">⭐</span> <span>التقييمات المزدوجة</span>
             </button>
 
             <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-8 px-2">الحماية والتفاعل</div>
             
             <button onclick="switchSection('protection')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="protection">
-                <span class="text-lg">🛡️</span> 
-                <span>الحماية والـ Anti-Nuke</span>
+                <span class="text-lg">🛡️</span> <span>الحماية والـ Anti-Nuke</span>
             </button>
-            
             <button onclick="switchSection('welcome')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="welcome">
-                <span class="text-lg">👋</span> 
-                <span>الترحيب والمغادرة</span>
+                <span class="text-lg">👋</span> <span>الترحيب والمغادرة</span>
             </button>
-            
             <button onclick="switchSection('economy')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="economy">
-                <span class="text-lg">💰</span> 
-                <span>الاقتصاد والضريبة</span>
+                <span class="text-lg">💰</span> <span>الاقتصاد والضريبة</span>
             </button>
-            
             <button onclick="switchSection('leveling')" class="nav-btn w-full flex items-center space-x-3 space-x-reverse px-4 py-3.5 rounded-xl transition-all text-slate-400 hover:bg-dark-700 hover:text-white font-bold" data-target="leveling">
-                <span class="text-lg">📈</span> 
-                <span>نظام اللفلات (Leveling)</span>
+                <span class="text-lg">📈</span> <span>نظام اللفلات (Leveling)</span>
             </button>
 
         </nav>
@@ -343,7 +250,7 @@
                 <div id="section-ai_system" class="settings-section max-w-5xl mx-auto">
                     <h2 class="text-4xl font-black text-amber-400 mb-6 border-b border-dark-700 pb-4">الذكاء الاصطناعي المتقدم ✨</h2>
                     
-                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-amber-400">
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.1)]">
                         <div class="flex flex-col md:flex-row items-center justify-between bg-dark-900/80 p-5 rounded-2xl border border-amber-500/30 mb-8 gap-4">
                             <div>
                                 <h3 class="text-xl font-bold text-white mb-1">🤖 تفعيل نظام الذكاء الاصطناعي بالمحادثات</h3>
@@ -368,13 +275,13 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             <div class="bg-dark-900/50 p-5 rounded-2xl border border-dark-700">
                                 <h4 class="text-blue-400 font-bold mb-4">👦 إعدادات شخصية الولد</h4>
-                                <label class="block text-sm font-bold text-slate-300 mb-2">اسم البوت</label>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">اسم البوت (للولد)</label>
                                 <input type="text" name="ai_defaultBoyName" value="<%= config.aiSystem?.defaultBoyName || 'زيزو' %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white input-glow font-bold">
                             </div>
                             
                             <div class="bg-dark-900/50 p-5 rounded-2xl border border-dark-700">
                                 <h4 class="text-pink-400 font-bold mb-4">👧 إعدادات شخصية البنت</h4>
-                                <label class="block text-sm font-bold text-slate-300 mb-2">اسم البوت</label>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">اسم البوت (للبنت)</label>
                                 <input type="text" name="ai_defaultGirlName" value="<%= config.aiSystem?.defaultGirlName || 'سوسو' %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white input-glow font-bold">
                             </div>
                         </div>
@@ -511,7 +418,10 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-300 mb-2">لون الإيمبد الداخلي للتذكرة</label>
-                                <input type="color" name="mm_insideTicketColor" value="<%= config.middlemanSystem?.insideTicketColor || '#f2a658' %>" class="w-full h-12 bg-dark-900 rounded-xl p-1 cursor-pointer">
+                                <div class="flex items-center space-x-3 space-x-reverse">
+                                    <input type="color" id="mm_insideTicketColor_picker" value="<%= config.middlemanSystem?.insideTicketColor || '#f2a658' %>" class="w-14 h-12 rounded-xl bg-dark-900 p-1 cursor-pointer" onchange="document.getElementById('mm_insideTicketColor').value = this.value">
+                                    <input type="text" id="mm_insideTicketColor" name="mm_insideTicketColor" value="<%= config.middlemanSystem?.insideTicketColor || '#f2a658' %>" class="flex-1 bg-dark-900 rounded-xl py-3 px-4 text-white font-mono uppercase text-center">
+                                </div>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-bold text-slate-300 mb-2">وصف الإيمبد الداخلي (يدعم {user})</label>
@@ -519,21 +429,32 @@
                             </div>
                             <div class="md:col-span-2 bg-dark-800 p-4 rounded-xl border border-dark-600">
                                 <label class="block text-sm font-bold text-amber-400 mb-2">🎨 لون إيمبد إجابات النافذة المخصص (Code Blocks)</label>
-                                <input type="color" name="mm_modalAnswersEmbedColor" value="<%= config.middlemanSystem?.modalAnswersEmbedColor || '#f2a658' %>" class="w-full h-10 bg-dark-900 rounded p-1 cursor-pointer">
+                                <div class="flex items-center space-x-3 space-x-reverse">
+                                    <input type="color" id="mm_modalAnswersEmbedColor_picker" value="<%= config.middlemanSystem?.modalAnswersEmbedColor || '#f2a658' %>" class="w-14 h-10 rounded-xl bg-dark-900 p-1 cursor-pointer" onchange="document.getElementById('mm_modalAnswersEmbedColor').value = this.value">
+                                    <input type="text" id="mm_modalAnswersEmbedColor" name="mm_modalAnswersEmbedColor" value="<%= config.middlemanSystem?.modalAnswersEmbedColor || '#f2a658' %>" class="flex-1 bg-dark-900 rounded-xl py-2 px-4 text-white font-mono uppercase text-center">
+                                </div>
                                 <p class="text-xs text-slate-400 mt-2">الإيمبد الذي ستظهر بداخله المربعات الخاصة بإجابات العضو.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-<div id="section-ticket_controls" class="settings-section max-w-5xl mx-auto">
-                    <div class="mb-8 border-b border-dark-700 pb-4">
-                        <h2 class="text-4xl font-black text-white mb-2">التحكم الداخلي للتكت 🛠️</h2>
-                        <p class="text-slate-400">الترانسكريبت، أزرار الاستلام، ونظام إغلاق التذاكر المزدوج.</p>
+                <div id="section-custom_panels" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">البانلات الديناميكية 🎫</h2>
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-blue-500">
+                        <input type="hidden" name="ticketPanelsData" id="ticketPanelsData" value="<%= JSON.stringify(config.ticketPanels || []) %>">
+                        <div id="dynamic-panels-container" class="space-y-10">
+                            </div>
+                        <button type="button" onclick="addNewPanelUI()" class="mt-10 flex items-center justify-center w-full px-8 py-5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-2xl shadow-lg transition-all">
+                            <span class="text-3xl mr-3">➕</span> إضافة بانل تذاكر جديد
+                        </button>
                     </div>
+                </div>
 
+<div id="section-ticket_controls" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">التحكم الداخلي للتكت 🛠️</h2>
+                    
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-indigo-500">
-                        
                         <div class="flex flex-col md:flex-row items-center justify-between p-6 bg-dark-900/80 rounded-2xl border border-indigo-500/30 mb-8 shadow-inner gap-4">
                             <div>
                                 <h3 class="text-xl font-bold text-white mb-1">🔒 الإغلاق بخطوتين (Two-Step Close)</h3>
@@ -570,7 +491,7 @@
                                         <option value="<%= ch.id %>" <%= config.ticketControls?.ticketLogChannelId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option> 
                                     <% }) %>
                                 </select>
-                                <p class="text-xs text-slate-400">سيتم إرسال سجلات مفصلة لكل تذكرة (من قام بفتحها، إغلاقها، أو استلامها) إلى هذا الروم.</p>
+                                <p class="text-xs text-slate-400">سيتم إرسال سجلات مفصلة لكل تذكرة إلى هذا الروم (من قام بفتحها، إغلاقها، أو استلامها).</p>
                             </div>
                         </div>
 
@@ -601,17 +522,439 @@
                     </div>
                 </div>
 
-                <div id="section-welcome" class="settings-section max-w-5xl mx-auto">
-                    <div class="mb-8 border-b border-dark-700 pb-4">
-                        <h2 class="text-4xl font-black text-white mb-2">الترحيب والمغادرة 👋</h2>
-                        <p class="text-slate-400">تحكم كامل في رسائل الترحيب مع دعم المتغيرات الجاهزة.</p>
-                    </div>
+                <div id="section-warnings" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">التحذيرات وبانل الإدارة ⚠️</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-orange-500">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">أقصى عدد للتحذيرات</label>
+                                <input type="number" name="warn_maxWarnings" value="<%= config.warnings?.maxWarnings || 3 %>" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3 px-4 text-white text-center font-bold text-2xl">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">العقوبة التلقائية (بعد بلوغ الحد)</label>
+                                <select name="warn_autoAction" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3.5 px-4 text-white font-bold cursor-pointer">
+                                    <option value="none" <%= config.warnings?.autoAction === 'none' ? 'selected' : '' %>>❌ معطل (بدون عقوبة تلقائية)</option>
+                                    <option value="timeout" <%= config.warnings?.autoAction === 'timeout' ? 'selected' : '' %>>⏳ إسكات (Timeout)</option>
+                                    <option value="kick" <%= config.warnings?.autoAction === 'kick' ? 'selected' : '' %>>👢 طرد (Kick)</option>
+                                    <option value="ban" <%= config.warnings?.autoAction === 'ban' ? 'selected' : '' %>>🔨 حظر (Ban)</option>
+                                </select>
+                            </div>
+                        </div>
 
+                        <div class="bg-dark-900/80 p-6 rounded-2xl border border-red-500/30 mb-8 shadow-inner">
+                            <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">🔴 بانل تحكم التحذيرات (يُرسل للإدارة)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                                <div>
+                                    <label class="text-xs text-slate-400 block mb-1">روم إرسال البانل</label>
+                                    <select name="warn_panelChannelId" class="w-full bg-dark-800 border border-dark-600 rounded-xl p-3 text-white text-sm">
+                                        <option value="">-- اختر الروم --</option>
+                                        <% textChannels.forEach(ch => { %>
+                                            <option value="<%= ch.id %>" <%= config.warnings?.panelChannelId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option>
+                                        <% }) %>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-400 block mb-1">لون البانل</label>
+                                    <input type="color" name="warn_panelColor" value="<%= config.warnings?.panelColor || '#ed4245' %>" class="w-full h-12 rounded-xl cursor-pointer bg-dark-800 border border-dark-600 p-1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-xs text-slate-400 block mb-1">عنوان البانل</label>
+                                    <input type="text" name="warn_panelTitle" value="<%= config.warnings?.panelTitle || 'لوحة تحكم التحذير' %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl p-3 text-white font-bold">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-400 block mb-1">وصف البانل</label>
+                                    <input type="text" name="warn_panelDescription" value="<%= config.warnings?.panelDescription || 'استخدم الأزرار أدناه لإدارة تحذيرات الأعضاء.' %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl p-3 text-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-dark-900/50 p-5 rounded-2xl border border-dark-700">
+                                <h4 class="text-brand-light font-bold mb-4 flex justify-between items-center">
+                                    <span>الأسباب (عربي) 🇸🇦</span> 
+                                    <button type="button" onclick="addWarnReason('ar')" class="px-3 py-1.5 bg-brand hover:bg-brand-light text-xs text-white font-bold rounded-lg transition-all">➕ إضافة سبب</button>
+                                </h4>
+                                <input type="hidden" name="warn_presetReasonsAr" id="hidden_warn_ar">
+                                <div id="warn-ar-container" class="space-y-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar pr-2"></div>
+                            </div>
+                            <div class="bg-dark-900/50 p-5 rounded-2xl border border-dark-700" dir="ltr">
+                                <h4 class="text-brand-light font-bold mb-4 flex justify-between items-center">
+                                    <span>Reasons (En) 🇺🇸</span> 
+                                    <button type="button" onclick="addWarnReason('en')" class="px-3 py-1.5 bg-brand hover:bg-brand-light text-xs text-white font-bold rounded-lg transition-all">➕ Add Reason</button>
+                                </h4>
+                                <input type="hidden" name="warn_presetReasonsEn" id="hidden_warn_en">
+                                <div id="warn-en-container" class="space-y-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar pl-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-commands" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">تخصيص الأوامر والعقوبات ⌨️</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-cyan-500">
+                        
+                        <h3 class="text-2xl font-bold text-red-400 mb-6">🚨 أوامر العقوبات (الأساسية والعكسية)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                            
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-red-500/30">
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر الباند</label>
+                                <input type="text" name="cmd_banCmd" value="<%= config.commands?.banCmd || 'ban' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك الباند</label>
+                                <input type="text" name="cmd_unbanCmd" value="<%= config.commands?.unbanCmd || 'unban' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_banAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %>
+                                        <option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.ban || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-orange-500/30">
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر التايم أوت</label>
+                                <input type="text" name="cmd_timeoutCmd" value="<%= config.commands?.timeoutCmd || 'timeout' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك التايم</label>
+                                <input type="text" name="cmd_untimeoutCmd" value="<%= config.commands?.untimeoutCmd || 'untimeout' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_timeoutAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %>
+                                        <option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.timeout || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-yellow-500/30">
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر التحذير</label>
+                                <input type="text" name="cmd_warnCmd" value="<%= config.commands?.warnCmd || 'warn' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك التحذير</label>
+                                <input type="text" name="cmd_unwarnCmd" value="<%= config.commands?.unwarnCmd || 'unwarn' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_warnAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %>
+                                        <option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.warn || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-slate-500/30">
+                                <label class="block text-[11px] text-slate-400 mb-1">أمر الميوت (الكتابي)</label>
+                                <input type="text" name="cmd_muteCmd" value="<%= config.commands?.muteCmd || 'mute' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-[11px] text-emerald-400 mb-1">أمر فك الميوت</label>
+                                <input type="text" name="cmd_unmuteCmd" value="<%= config.commands?.unmuteCmd || 'unmute' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <label class="block text-xs font-bold text-slate-300 mt-2 mb-1">الرتب المسموحة:</label>
+                                <select name="role_muteAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %>
+                                        <option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.mute || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="border-dark-700 my-8">
+                        <h3 class="text-2xl font-bold text-brand-light mb-6">🛠️ الأوامر الإدارية العامة والضريبة</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-emerald-500/30">
+                                <label class="block text-xs font-bold text-emerald-400 mb-1">الضريبة (Tax)</label>
+                                <input type="text" name="cmd_taxCmd" value="<%= config.commands?.taxCmd || 'tax' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_taxAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.tax || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-dark-700">
+                                <label class="block text-xs font-bold text-slate-300 mb-1">مسح (Clear)</label>
+                                <input type="text" name="cmd_clearCmd" value="<%= config.commands?.clearCmd || 'clear' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_clearAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.clear || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-dark-700">
+                                <label class="block text-xs font-bold text-slate-300 mb-1">استدعاء (Come)</label>
+                                <input type="text" name="cmd_comeCmd" value="<%= config.commands?.comeCmd || 'come' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_comeAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.come || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-blue-500/30">
+                                <label class="block text-xs font-bold text-blue-400 mb-1">سحب (Move)</label>
+                                <input type="text" name="cmd_moveCmd" value="<%= config.commands?.moveCmd || 'move' %>" class="w-full bg-dark-800 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_moveAllowed" multiple class="w-full h-16 bg-dark-800 border border-dark-600 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.move || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-900/50 p-3 rounded-xl border border-dark-700">
+                                <label class="block text-[10px] text-slate-300 mb-1">قفل الروم (Lock/Unlock)</label>
+                                <input type="text" name="cmd_lockCmd" value="<%= config.commands?.lockCmd || 'lock' %>" class="w-full bg-dark-800 rounded p-1 text-white font-mono text-[10px] mb-1">
+                                <input type="text" name="cmd_unlockCmd" value="<%= config.commands?.unlockCmd || 'unlock' %>" class="w-full bg-dark-800 rounded p-1 text-white font-mono text-[10px] mb-1">
+                                <select name="role_lockAllowed" multiple class="w-full h-12 bg-dark-800 border border-dark-600 rounded p-1 text-[10px] text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.lock || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h3 class="text-xl font-bold text-amber-500 mb-4">⚖️ أوامر الوساطة العليا</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-xs font-bold text-white mb-1">أمر Trade</label>
+                                <input type="text" name="cmd_tradeCmd" value="<%= config.commands?.tradeCmd || 'trade' %>" class="w-full bg-dark-900 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_tradeAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.trade || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-xs font-bold text-white mb-1">أمر Approve</label>
+                                <input type="text" name="cmd_approveCmd" value="<%= config.commands?.approveCmd || 'approve' %>" class="w-full bg-dark-900 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_approveAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.approve || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-xs font-bold text-white mb-1">أمر Done</label>
+                                <input type="text" name="cmd_doneCmd" value="<%= config.commands?.doneCmd || 'done' %>" class="w-full bg-dark-900 rounded p-2 text-white font-mono text-sm mb-2">
+                                <select name="role_doneAllowed" multiple class="w-full h-16 bg-dark-900 border border-dark-700 rounded p-1 text-xs text-white custom-scrollbar">
+                                    <% serverRoles.forEach(r => { %><option value="<%= r.id %>" <%= (config.commands?.allowedRoles?.done || []).includes(r.id) ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-logs" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">سجلات السيرفر الدقيقة 📝</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-teal-500">
+                        <h3 class="text-xl font-bold text-red-400 mb-6 flex items-center">😈 اللوجات الأمنية والريأكتات</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-red-500/30">
+                                <label class="block text-xs font-bold text-red-400 mb-2">لوج التفاعلات (الريأكتات)</label>
+                                <select name="log_reactionLogId" class="w-full bg-dark-800 rounded-lg p-3 text-white text-sm mb-2">
+                                    <option value="">-- معطل --</option>
+                                    <% textChannels.forEach(ch => { %><option value="<%= ch.id %>" <%= config.serverLogs?.reactionLogId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option><% }) %>
+                                </select>
+                                <input type="color" name="log_reactionColor" value="<%= config.serverLogs?.reactionColor || '#e74c3c' %>" class="w-full h-10 rounded-lg cursor-pointer bg-dark-800 border border-dark-600 p-1">
+                            </div>
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-amber-500/30">
+                                <label class="block text-xs font-bold text-amber-400 mb-2">لوج الرومات (إنشاء/حذف)</label>
+                                <select name="log_channelCreateDeleteLogId" class="w-full bg-dark-800 rounded-lg p-3 text-white text-sm mb-2">
+                                    <option value="">-- معطل --</option>
+                                    <% textChannels.forEach(ch => { %><option value="<%= ch.id %>" <%= config.serverLogs?.channelCreateDeleteLogId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option><% }) %>
+                                </select>
+                                <input type="color" name="log_channelColor" value="<%= config.serverLogs?.channelColor || '#1abc9c' %>" class="w-full h-10 rounded-lg cursor-pointer bg-dark-800 border border-dark-600 p-1">
+                            </div>
+                            <div class="bg-dark-900/50 p-4 rounded-xl border border-brand/30">
+                                <label class="block text-xs font-bold text-brand-light mb-2">لوج الثريدات (Threads)</label>
+                                <select name="log_threadCreateDeleteLogId" class="w-full bg-dark-800 rounded-lg p-3 text-white text-sm mb-2">
+                                    <option value="">-- معطل --</option>
+                                    <% textChannels.forEach(ch => { %><option value="<%= ch.id %>" <%= config.serverLogs?.threadCreateDeleteLogId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option><% }) %>
+                                </select>
+                                <input type="color" name="log_threadColor" value="<%= config.serverLogs?.threadColor || '#34495e' %>" class="w-full h-10 rounded-lg cursor-pointer bg-dark-800 border border-dark-600 p-1">
+                            </div>
+                        </div>
+
+                        <hr class="border-dark-700 my-6">
+                        
+                        <h3 class="text-xl font-bold text-blue-400 mb-6 flex items-center">🛡️ لوجات العقوبات (إعطاء وفك)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-xs font-bold text-red-500 mb-1">لوج الباند والطرد</label>
+                                <select name="log_banKickLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.banKickLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_banColor" value="<%= config.serverLogs?.banColor || '#992d22' %>" class="w-full h-8 rounded-lg mb-4" title="لون الباند">
+                                
+                                <label class="block text-xs font-bold text-emerald-500 mb-1 pt-3 border-t border-dark-700">لوج فك الباند (Unban)</label>
+                                <select name="log_unbanLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.unbanLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_unbanColor" value="<%= config.serverLogs?.unbanColor || '#2ecc71' %>" class="w-full h-8 rounded-lg" title="لون فك الباند">
+                            </div>
+
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-xs font-bold text-orange-500 mb-1">لوج التايم أوت (Timeout)</label>
+                                <select name="log_timeoutLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.timeoutLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_timeoutColor" value="<%= config.serverLogs?.timeoutColor || '#e67e22' %>" class="w-full h-8 rounded-lg mb-4" title="لون التايم">
+                                
+                                <label class="block text-xs font-bold text-emerald-500 mb-1 pt-3 border-t border-dark-700">لوج فك التايم (Untimeout)</label>
+                                <select name="log_untimeoutLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.untimeoutLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_untimeoutColor" value="<%= config.serverLogs?.untimeoutColor || '#2ecc71' %>" class="w-full h-8 rounded-lg" title="لون فك التايم">
+                            </div>
+
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="block text-xs font-bold text-yellow-400 mb-1">لوج التحذيرات (Warn)</label>
+                                <select name="log_warningsLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.warningsLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_warnColor" value="<%= config.serverLogs?.warnColor || '#f1c40f' %>" class="w-full h-8 rounded-lg mb-4" title="لون التحذير">
+                                
+                                <label class="block text-xs font-bold text-emerald-500 mb-1 pt-3 border-t border-dark-700">لوج فك التحذير (Unwarn)</label>
+                                <select name="log_unwarningsLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.unwarningsLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <input type="color" name="log_unwarnColor" value="<%= config.serverLogs?.unwarnColor || '#2ecc71' %>" class="w-full h-8 rounded-lg" title="لون فك التحذير">
+                            </div>
+                        </div>
+
+                        <hr class="border-dark-700 my-6">
+
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600"><label class="text-[11px] font-bold text-slate-400 block mb-2">حذف الرسائل</label><select name="log_messageDeleteLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.messageDeleteLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_msgDelColor" value="<%= config.serverLogs?.msgDelColor || '#ed4245' %>" class="w-full h-8 rounded-lg"></div>
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600"><label class="text-[11px] font-bold text-slate-400 block mb-2">تعديل الرسائل</label><select name="log_messageEditLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.messageEditLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_msgEditColor" value="<%= config.serverLogs?.msgEditColor || '#fee75c' %>" class="w-full h-8 rounded-lg"></div>
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600"><label class="text-[11px] font-bold text-amber-500 block mb-2">حذف صور فقط</label><select name="log_imageDeleteLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.imageDeleteLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_imgDelColor" value="<%= config.serverLogs?.imgDelColor || '#e67e22' %>" class="w-full h-8 rounded-lg"></div>
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600"><label class="text-[11px] font-bold text-slate-400 block mb-2">إعطاء/سحب رتب</label><select name="log_roleGiveTakeLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.roleGiveTakeLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select><input type="color" name="log_roleColor" value="<%= config.serverLogs?.roleColor || '#9b59b6' %>" class="w-full h-8 rounded-lg"></div>
+                            <div class="bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                <label class="text-[11px] font-bold text-slate-400 block mb-2">دخول/خروج</label>
+                                <select name="log_memberJoinLeaveLogId" class="w-full bg-dark-900 text-xs text-white rounded-lg p-2 mb-2"><option value="">- معطل -</option><%- textChannels.map(c=>`<option value="${c.id}" ${config.serverLogs?.memberJoinLeaveLogId===c.id?'selected':''}>${c.name}</option>`).join('') %></select>
+                                <div class="flex space-x-2 space-x-reverse">
+                                    <input type="color" name="log_joinColor" value="<%= config.serverLogs?.joinColor || '#3ba55d' %>" class="w-1/2 h-8 rounded-lg" title="لون الدخول">
+                                    <input type="color" name="log_leaveColor" value="<%= config.serverLogs?.leaveColor || '#ed4245' %>" class="w-1/2 h-8 rounded-lg" title="لون الخروج">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-roles" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">الرتب والصلاحيات 👑</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-purple-500">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">رتبة الدعم الفني الأساسية</label>
+                                <select name="role_adminRoleId" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3.5 px-4 text-white font-bold cursor-pointer">
+                                    <option value="">-- اختر الرتبة --</option>
+                                    <% serverRoles.forEach(role => { %> 
+                                        <option value="<%= role.id %>" <%= config.roles?.adminRoleId === role.id ? 'selected' : '' %>>🛡️ <%= role.name %></option> 
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">رتبة الوسيط الأساسية</label>
+                                <select name="role_middlemanRoleId" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3.5 px-4 text-white font-bold cursor-pointer">
+                                    <option value="">-- اختر الرتبة --</option>
+                                    <% serverRoles.forEach(role => { %> 
+                                        <option value="<%= role.id %>" <%= config.roles?.middlemanRoleId === role.id ? 'selected' : '' %>>⚖️ <%= role.name %></option> 
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="border-dark-700 my-8">
+                        <h3 class="text-xl font-bold text-white mb-6">🌟 رتب الإدارة العليا والتريد (تحديد متعدد)</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-dark-900/50 p-5 rounded-xl border border-dark-700">
+                                <label class="block text-sm font-bold text-amber-400 mb-3">الإدارة العليا (High Staff)</label>
+                                <select name="role_highAdminRoles" multiple class="w-full h-32 bg-dark-800 border border-dark-600 rounded-xl py-2 px-3 text-white custom-scrollbar">
+                                    <% serverRoles.forEach(role => { %> 
+                                        <option value="<%= role.id %>" <%= (config.roles?.highAdminRoles || []).includes(role.id) ? 'selected' : '' %>><%= role.name %></option> 
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-900/50 p-5 rounded-xl border border-dark-700">
+                                <label class="block text-sm font-bold text-blue-400 mb-3">رتب منشن التريد</label>
+                                <select name="role_tradePingRoleIds" multiple class="w-full h-32 bg-dark-800 border border-dark-600 rounded-xl py-2 px-3 text-white custom-scrollbar">
+                                    <% serverRoles.forEach(role => { %> 
+                                        <option value="<%= role.id %>" <%= (config.roles?.tradePingRoleIds || []).includes(role.id) ? 'selected' : '' %>><%= role.name %></option> 
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="bg-dark-900/50 p-5 rounded-xl border border-dark-700">
+                                <label class="block text-sm font-bold text-emerald-400 mb-3">رتب الموافقة على التريد</label>
+                                <select name="role_tradeApproveRoleIds" multiple class="w-full h-32 bg-dark-800 border border-dark-600 rounded-xl py-2 px-3 text-white custom-scrollbar">
+                                    <% serverRoles.forEach(role => { %> 
+                                        <option value="<%= role.id %>" <%= (config.roles?.tradeApproveRoleIds || []).includes(role.id) ? 'selected' : '' %>><%= role.name %></option> 
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+<div id="section-ratings" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">التقييمات المزدوجة ⭐</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-yellow-500">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            
+                            <div class="bg-dark-900/50 p-6 rounded-2xl border border-dark-700">
+                                <h3 class="text-xl font-bold text-brand-light mb-6 flex items-center">🛡️ تقييمات الدعم الفني</h3>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">روم اللوج (Staff Rating)</label>
+                                <select name="rating_staffLogChannelId" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white font-bold mb-6">
+                                    <option value="">-- اختر الروم --</option>
+                                    <% textChannels.forEach(ch => { %> 
+                                        <option value="<%= ch.id %>" <%= config.ratings?.staffLogChannelId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option> 
+                                    <% }) %>
+                                </select>
+                                
+                                <label class="block text-sm font-bold text-slate-300 mb-2">لون إيمبد التقييم</label>
+                                <div class="flex items-center space-x-3 space-x-reverse">
+                                    <input type="color" id="rating_staff_color_picker" value="<%= config.ratings?.staffEmbedColor || '#3ba55d' %>" class="w-14 h-12 rounded-xl cursor-pointer bg-dark-800 border border-dark-600 p-1" onchange="document.getElementById('rating_staffEmbedColor').value = this.value">
+                                    <input type="text" id="rating_staffEmbedColor" name="rating_staffEmbedColor" value="<%= config.ratings?.staffEmbedColor || '#3ba55d' %>" class="flex-1 bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white font-mono uppercase text-center" oninput="document.getElementById('rating_staff_color_picker').value = this.value">
+                                </div>
+                            </div>
+
+                            <div class="bg-dark-900/50 p-6 rounded-2xl border border-dark-700">
+                                <h3 class="text-xl font-bold text-amber-500 mb-6 flex items-center">⚖️ تقييمات الوسطاء</h3>
+                                <label class="block text-sm font-bold text-slate-300 mb-2">روم اللوج (Middleman Rating)</label>
+                                <select name="rating_middlemanLogChannelId" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white font-bold mb-6">
+                                    <option value="">-- اختر الروم --</option>
+                                    <% textChannels.forEach(ch => { %> 
+                                        <option value="<%= ch.id %>" <%= config.ratings?.middlemanLogChannelId === ch.id ? 'selected' : '' %>>💬 <%= ch.name %></option> 
+                                    <% }) %>
+                                </select>
+                                
+                                <label class="block text-sm font-bold text-slate-300 mb-2">لون إيمبد التقييم</label>
+                                <div class="flex items-center space-x-3 space-x-reverse">
+                                    <input type="color" id="rating_mm_color_picker" value="<%= config.ratings?.middlemanEmbedColor || '#f2a658' %>" class="w-14 h-12 rounded-xl cursor-pointer bg-dark-800 border border-dark-600 p-1" onchange="document.getElementById('rating_middlemanEmbedColor').value = this.value">
+                                    <input type="text" id="rating_middlemanEmbedColor" name="rating_middlemanEmbedColor" value="<%= config.ratings?.middlemanEmbedColor || '#f2a658' %>" class="flex-1 bg-dark-800 border border-dark-600 rounded-xl py-3 px-4 text-white font-mono uppercase text-center" oninput="document.getElementById('rating_mm_color_picker').value = this.value">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-protection" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">الحماية والـ Anti-Nuke 🛡️</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-red-600">
+                        <div class="flex justify-between items-center bg-dark-900/50 p-5 rounded-2xl border border-dark-700 mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">منع نشر الروابط (Anti-Link)</h3>
+                                <p class="text-xs text-slate-400 mt-1">يمنع الأعضاء العاديين من إرسال روابط في السيرفر.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" name="prot_antiLinkEnabled" <%= config.protection?.antiLinkEnabled ? 'checked' : '' %>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-dark-900/50 p-5 rounded-2xl border border-dark-700 mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">منع التكرار والسبام (Anti-Spam)</h3>
+                                <p class="text-xs text-slate-400 mt-1">يمنع الأعضاء من إرسال رسائل متكررة بسرعة.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" name="prot_antiSpamEnabled" <%= config.protection?.antiSpamEnabled ? 'checked' : '' %>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-red-900/20 p-5 rounded-2xl border border-red-500/30">
+                            <div>
+                                <h3 class="text-lg font-bold text-red-400">نظام الحماية القصوى (Anti-Nuke)</h3>
+                                <p class="text-xs text-slate-400 mt-1">يحمي السيرفر من المسح العشوائي للرومات أو الأعضاء.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" name="prot_antiNukeEnabled" <%= config.protection?.antiNukeEnabled ? 'checked' : '' %>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-welcome" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">الترحيب والمغادرة 👋</h2>
+                    
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-pink-500">
                         <div class="flex justify-between items-center mb-8 bg-dark-900/50 p-6 rounded-2xl border border-dark-700">
                             <div>
-                                <span class="font-bold text-2xl text-white block mb-1">تفعيل نظام الترحيب</span>
-                                <span class="text-sm text-slate-400">يرسل رسالة وصورة مخصصة عند دخول أي عضو جديد.</span>
+                                <span class="font-bold text-2xl text-white block mb-1">تفعيل نظام الترحيب بالصور</span>
+                                <span class="text-sm text-slate-400">يرسل رسالة وصورة مخصصة عند دخول أي عضو جديد للسيرفر.</span>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" name="wel_enabled" <%= config.welcomeSystem?.enabled ? 'checked' : '' %>>
@@ -632,6 +975,7 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-300 mb-2">رابط صورة الخلفية (Background URL)</label>
                                 <input type="text" name="wel_backgroundUrl" value="<%= config.welcomeSystem?.backgroundUrl || '' %>" placeholder="https://..." dir="ltr" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-4 px-4 text-white text-left font-mono">
+                                <p class="text-[10px] text-slate-400 mt-2 text-right">يُفضل استخدام صورة بأبعاد 1024x300 بيكسل.</p>
                             </div>
                         </div>
 
@@ -639,32 +983,52 @@
                             <label class="block text-xl font-bold text-brand-light mb-3">📝 نص رسالة الترحيب المخصصة</label>
                             <p class="text-sm text-slate-400 mb-4 leading-relaxed">
                                 المتغيرات المتاحة للاستخدام:<br>
-                                <code class="text-amber-400 bg-dark-800 px-2 py-1 rounded inline-block mt-2 mr-1">{user}</code> لمنشن العضو.<br>
-                                <code class="text-amber-400 bg-dark-800 px-2 py-1 rounded inline-block mt-2 mr-1">{server}</code> لاسم السيرفر.<br>
+                                <code class="text-amber-400 bg-dark-800 px-2 py-1 rounded inline-block mt-2 mr-1">{user}</code> لمنشن العضو الجديد.<br>
+                                <code class="text-amber-400 bg-dark-800 px-2 py-1 rounded inline-block mt-2 mr-1">{server}</code> لاسم السيرفر الحالي.<br>
                                 <code class="text-amber-400 bg-dark-800 px-2 py-1 rounded inline-block mt-2 mr-1">{memberCount}</code> لرقم العضو (ترتيب دخوله).
                             </p>
                             <textarea name="wel_messageText" rows="5" class="w-full bg-dark-800 border border-dark-600 rounded-xl py-4 px-5 text-white font-bold resize-y text-lg" placeholder="مرحباً بك {user} في سيرفر {server}. أنت العضو رقم {memberCount} !"><%= config.welcomeSystem?.messageText || 'مرحباً بك {user} في سيرفر {server}. أنت العضو رقم {memberCount} !' %></textarea>
                         </div>
 
-                        <div class="flex items-center justify-between bg-dark-900/30 p-6 rounded-xl border border-dark-700">
-                            <div class="w-1/2 pr-2">
+                        <div class="flex items-center justify-between bg-dark-900/30 p-6 rounded-2xl border border-dark-700">
+                            <div class="w-1/2 pr-4 border-l border-dark-700">
                                 <label class="text-sm font-bold text-slate-400 block mb-3">لون إطار الصورة (Avatar Border):</label>
-                                <input type="color" name="wel_avatarBorderHex" value="<%= config.welcomeSystem?.avatarBorderHex || '#ffffff' %>" class="w-full h-12 rounded-xl bg-dark-900 p-1 cursor-pointer border border-dark-600">
+                                <input type="color" name="wel_avatarBorderHex" value="<%= config.welcomeSystem?.avatarBorderHex || '#ffffff' %>" class="w-16 h-12 rounded-xl bg-dark-900 p-1 cursor-pointer border border-dark-600">
                             </div>
-                            <div class="w-1/2 pl-2">
+                            <div class="w-1/2 pl-4">
                                 <label class="text-sm font-bold text-slate-400 block mb-3">لون النص داخل الصورة:</label>
-                                <input type="color" name="wel_textColorHex" value="<%= config.welcomeSystem?.textColorHex || '#ffffff' %>" class="w-full h-12 rounded-xl bg-dark-900 p-1 cursor-pointer border border-dark-600">
+                                <input type="color" name="wel_textColorHex" value="<%= config.welcomeSystem?.textColorHex || '#ffffff' %>" class="w-16 h-12 rounded-xl bg-dark-900 p-1 cursor-pointer border border-dark-600">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="section-leveling" class="settings-section max-w-5xl mx-auto">
-                    <div class="mb-8 border-b border-dark-700 pb-4">
-                        <h2 class="text-4xl font-black text-white mb-2">نظام اللفلات (Leveling) 📈</h2>
-                        <p class="text-slate-400">إعدادات مستوى الأعضاء، رسائل التلفيل، والجوائز التلقائية (الرتب).</p>
+                <div id="section-economy" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">الاقتصاد والضريبة 💰</h2>
+                    
+                    <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-green-500">
+                        <div class="flex justify-between items-center bg-dark-900/50 p-6 rounded-2xl border border-dark-700 mb-8">
+                            <div>
+                                <span class="font-bold text-xl text-emerald-400 block mb-1">تفعيل الاقتصاد والضريبة</span>
+                                <span class="text-sm text-slate-400">يفعل أوامر حساب الضريبة (Tax).</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" name="eco_enabled" <%= config.economy?.enabled !== false ? 'checked' : '' %>>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="bg-dark-900/50 p-6 rounded-2xl border border-dark-700 w-full md:w-1/2">
+                            <label class="block text-sm font-bold text-slate-300 mb-3">نسبة ضريبة التحويل (البرو بوت) المئوية %</label>
+                            <input type="number" name="eco_taxPercentage" value="<%= config.economy?.taxPercentage || 5 %>" class="w-full bg-dark-800 border border-dark-600 rounded-xl p-4 text-white font-bold text-center text-2xl">
+                            <p class="text-[11px] text-slate-500 mt-3 text-center">مثال: لو 5، البوت هيحسب ضريبة البروبوت 5% تلقائياً.</p>
+                        </div>
                     </div>
-
+                </div>
+                
+                <div id="section-leveling" class="settings-section max-w-5xl mx-auto">
+                    <h2 class="text-4xl font-black text-white mb-6 border-b border-dark-700 pb-4">نظام اللفلات (Leveling) 📈</h2>
+                    
                     <div class="glass-card rounded-3xl p-8 mb-8 border-t-4 border-t-blue-400">
                         <div class="flex items-center justify-between bg-dark-900/50 p-6 rounded-2xl border border-dark-700 mb-8">
                             <div>
@@ -689,17 +1053,17 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-300 mb-3">رسالة التلفيل (يدعم المتغيرات)</label>
-                                <textarea name="lvl_levelUpMessage" rows="2" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-3 px-4 text-white resize-y font-bold" placeholder="مبروك {user} وصلت للفل {level}!"><%= config.leveling?.levelUpMessage || '🎉 مبروك {user}، لقد وصلت إلى المستوى **{level}**!' %></textarea>
+                                <textarea name="lvl_levelUpMessage" rows="2" class="w-full bg-dark-900 border border-dark-700 rounded-xl py-4 px-4 text-white resize-y font-bold" placeholder="مبروك {user} وصلت للفل {level}!"><%= config.leveling?.levelUpMessage || '🎉 مبروك {user}، لقد وصلت إلى المستوى **{level}**!' %></textarea>
                             </div>
                         </div>
 
-                        <div class="bg-dark-900/80 p-8 rounded-2xl border border-blue-500/30 shadow-inner">
-                            <div class="flex justify-between items-center mb-6 border-b border-dark-700 pb-4">
+                        <div class="bg-dark-900/80 p-8 rounded-3xl border border-blue-500/30 shadow-inner">
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-dark-700 pb-4 gap-4">
                                 <div>
                                     <h3 class="text-2xl font-bold text-brand-light">🎖️ جوائز الرتب (Role Rewards)</h3>
-                                    <p class="text-xs text-slate-400 mt-2">سيحصل العضو على الرتبة المحددة تلقائياً عند وصوله للمستوى المطلوب.</p>
+                                    <p class="text-sm text-slate-400 mt-2">سيحصل العضو على الرتبة المحددة تلقائياً عند وصوله للمستوى المطلوب.</p>
                                 </div>
-                                <button type="button" onclick="addLevelRewardUI()" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-xl transition-all shadow-lg">
+                                <button type="button" onclick="addLevelRewardUI()" class="px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-xl transition-all shadow-lg whitespace-nowrap">
                                     ➕ إضافة جائزة رتبة
                                 </button>
                             </div>
@@ -711,13 +1075,13 @@
                     </div>
                 </div>
 
-                </form>
+            </form>
         </div>
     </main>
 
     <script>
         // -----------------------------------------------------------
-        // نظام التنقل بين الأقسام
+        // 1. نظام التنقل السلس بين الأقسام
         // -----------------------------------------------------------
         function switchSection(target) {
             document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
@@ -736,7 +1100,7 @@
         }
 
         // -----------------------------------------------------------
-        // ذكاء زراير التكت (منع تعارض الإخفاء مع القراءة فقط)
+        // 2. ذكاء زراير التكت (منع تعارض الإخفاء مع القراءة فقط)
         // -----------------------------------------------------------
         const hideBtn = document.getElementById('tc_hideTicketOnClaim');
         const readBtn = document.getElementById('tc_readOnlyStaffOnClaim');
@@ -763,12 +1127,58 @@
             }
             hideBtn.addEventListener('change', syncTicketToggles);
             readBtn.addEventListener('change', syncTicketToggles);
-            syncTicketToggles(); // تشغيل أولي
+            syncTicketToggles(); // تشغيل عند البدء
         }
 
         // -----------------------------------------------------------
-        // البيانات المخفية للمحركات الديناميكية
+        // 3. صانع الإيمبد الفوري (Live Embed)
         // -----------------------------------------------------------
+        async function sendLiveEmbed(guildId) {
+            const channelId = document.getElementById('live_embed_channel').value;
+            const title = document.getElementById('live_embed_title').value;
+            const description = document.getElementById('live_embed_desc').value;
+            const color = document.getElementById('live_embed_color').value;
+            const imageUrl = document.getElementById('live_embed_image').value;
+            const statusDiv = document.getElementById('live_embed_status');
+            
+            if(!channelId || (!title && !description)) { 
+                statusDiv.className = 'mb-6 p-4 rounded-xl bg-red-500/20 text-red-400 border border-red-500'; 
+                statusDiv.innerText = '❌ يرجى اختيار الروم وكتابة محتوى الإيمبد.'; 
+                statusDiv.classList.remove('hidden'); 
+                return; 
+            }
+            
+            statusDiv.className = 'mb-6 p-4 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500'; 
+            statusDiv.innerText = '⏳ جاري الإرسال للديسكورد...'; 
+            statusDiv.classList.remove('hidden');
+            
+            try {
+                const res = await fetch(`/api/send-embed/${guildId}`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ channelId, title, description, color, imageUrl }) 
+                });
+                const data = await res.json();
+                
+                if(data.success) { 
+                    statusDiv.className = 'mb-6 p-4 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500'; 
+                    statusDiv.innerText = '✅ تم الإرسال بنجاح!'; 
+                    document.getElementById('live_embed_title').value = ''; 
+                    document.getElementById('live_embed_desc').value = ''; 
+                    document.getElementById('live_embed_image').value = ''; 
+                } else { 
+                    statusDiv.className = 'mb-6 p-4 rounded-xl bg-red-500/20 text-red-400 border border-red-500'; 
+                    statusDiv.innerText = data.error || '❌ فشل الإرسال.'; 
+                }
+            } catch(e) { 
+                statusDiv.className = 'mb-6 p-4 rounded-xl bg-red-500/20 text-red-400 border border-red-500'; 
+                statusDiv.innerText = '❌ حدث خطأ في الاتصال بالبوت.'; 
+            }
+        }
+
+        // ==========================================================
+        // 🧱 المحركات الديناميكية للبيانات المعقدة (المصفوفات)
+        // ==========================================================
         let panelsArray = JSON.parse(document.getElementById('ticketPanelsData').value || '[]');
         let mmFields = JSON.parse(document.getElementById('mm_modalFieldsData').value || '[]');
         let roleRewards = JSON.parse(document.getElementById('lvl_roleRewardsData').value || '[]');
@@ -777,52 +1187,123 @@
         let warnEn = <%- JSON.stringify(config.warnings?.presetReasonsEn || ['Swearing', 'Posting Links']) %>;
 
         // -----------------------------------------------------------
-        // محرك جوائز اللفلات
+        // محرك أسباب التحذيرات الديناميكية
         // -----------------------------------------------------------
-        const sRolesHTML = `<%- serverRoles.map(r=>`<option value="${r.id}">${r.name}</option>`).join('') %>`;
+        function renderWarns(lang) {
+            const arr = lang === 'ar' ? warnAr : warnEn;
+            const container = document.getElementById(`warn-${lang}-container`);
+            container.innerHTML = '';
+            
+            arr.forEach((reason, index) => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between space-x-2 space-x-reverse bg-dark-800 p-3 rounded-lg border border-dark-600 mb-2 transition-all hover:border-brand/50">
+                        <input type="text" class="flex-1 bg-transparent text-white text-sm outline-none font-bold ${lang === 'en' ? 'text-left' : ''}" dir="${lang === 'en' ? 'ltr' : 'rtl'}" value="${reason}" onchange="${lang === 'ar' ? 'warnAr' : 'warnEn'}[${index}] = this.value">
+                        <button type="button" onclick="${lang === 'ar' ? 'warnAr' : 'warnEn'}.splice(${index}, 1); renderWarns('${lang}');" class="text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition-all">حذف 🗑️</button>
+                    </div>
+                `;
+            });
+        }
+        function addWarnReason(lang) { 
+            if(lang === 'ar') warnAr.push('سبب جديد'); 
+            else warnEn.push('New Reason'); 
+            renderWarns(lang); 
+        }
+
+        // -----------------------------------------------------------
+        // محرك أسئلة نافذة الوساطة (Middleman Modal)
+        // -----------------------------------------------------------
+        function renderMmFields() {
+            const container = document.getElementById('mm-fields-ui-container'); 
+            container.innerHTML = '';
+            
+            if(mmFields.length === 0) {
+                container.innerHTML = '<div class="text-center text-slate-500 text-sm p-4 border border-dashed border-dark-600 rounded-xl">لا توجد أسئلة حالياً.</div>';
+                return;
+            }
+
+            mmFields.forEach((field, index) => {
+                container.innerHTML += `
+                    <div class="bg-dark-800 p-6 rounded-xl border border-dark-600 mb-4 relative shadow-md">
+                        <div class="absolute top-0 right-0 bg-dark-700 text-xs px-3 py-1 rounded-bl-lg text-slate-300 font-bold">السؤال رقم ${index + 1}</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <label class="text-sm font-bold text-slate-400 mb-2 block">نص السؤال</label>
+                                <input type="text" class="w-full bg-dark-900 border border-dark-700 rounded-lg p-3 text-white text-sm font-bold focus:border-brand outline-none" value="${field.label || ''}" onchange="mmFields[${index}].label = this.value">
+                            </div>
+                            <div>
+                                <label class="text-sm font-bold text-slate-400 mb-2 block">مثال إرشادي (Placeholder)</label>
+                                <input type="text" class="w-full bg-dark-900 border border-dark-700 rounded-lg p-3 text-white text-sm focus:border-brand outline-none" placeholder="مثال للعميل..." value="${field.placeholder || ''}" onchange="mmFields[${index}].placeholder = this.value">
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mt-5 pt-4 border-t border-dark-700">
+                            <div class="flex space-x-6 space-x-reverse text-sm font-bold text-brand-light">
+                                <label class="cursor-pointer flex items-center">
+                                    <input type="radio" name="mm_style_${index}" value="Short" class="mr-2 ml-2 accent-brand w-4 h-4" ${field.style !== 'Paragraph' ? 'checked' : ''} onchange="mmFields[${index}].style = this.value"> إجابة قصيرة
+                                </label>
+                                <label class="cursor-pointer flex items-center">
+                                    <input type="radio" name="mm_style_${index}" value="Paragraph" class="mr-2 ml-2 accent-brand w-4 h-4" ${field.style === 'Paragraph' ? 'checked' : ''} onchange="mmFields[${index}].style = this.value"> إجابة طويلة (فقرة)
+                                </label>
+                            </div>
+                            <button type="button" onclick="mmFields.splice(${index}, 1); renderMmFields();" class="text-sm bg-red-600 hover:bg-red-500 text-white px-5 py-2 rounded-lg font-bold transition-all shadow-md">حذف السؤال 🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        function addMmFieldUI() { mmFields.push({ label: 'سؤال جديد', placeholder: 'اكتب إجابتك هنا...', style: 'Short' }); renderMmFields(); }
+
+        // -----------------------------------------------------------
+        // محرك جوائز نظام التلفيل (Leveling Rewards)
+        // -----------------------------------------------------------
+        const sRolesHTML = `<%- serverRoles.map(r => `<option value="${r.id}">${r.name}</option>`).join('') %>`;
         
         function renderLvlRewards() {
             const container = document.getElementById('level-rewards-container'); 
             container.innerHTML = '';
             
             if(roleRewards.length === 0){ 
-                container.innerHTML = '<div class="text-center text-slate-500 text-sm p-6 border-2 border-dashed border-dark-600 rounded-xl font-bold">لا توجد جوائز حالياً. اضغط على الزر لإضافة جائزة.</div>'; 
+                container.innerHTML = '<div class="text-center text-slate-500 text-base p-8 border-2 border-dashed border-dark-600 rounded-2xl font-bold">لم تقم بإضافة أي جوائز رتب للـ مستويات حتى الآن.</div>'; 
                 return; 
             }
             
-            roleRewards.forEach((r, i) => {
+            roleRewards.forEach((reward, index) => {
                 container.innerHTML += `
-                    <div class="flex flex-col md:flex-row items-center space-x-0 md:space-x-4 md:space-x-reverse space-y-4 md:space-y-0 bg-dark-800 p-5 rounded-xl border border-dark-600 mb-2 shadow-sm">
+                    <div class="flex flex-col md:flex-row items-center space-x-0 md:space-x-6 md:space-x-reverse space-y-4 md:space-y-0 bg-dark-800 p-6 rounded-2xl border border-dark-600 mb-3 shadow-lg hover:border-blue-500/50 transition-colors">
+                        
                         <div class="flex items-center w-full md:w-auto">
-                            <span class="text-brand-light font-bold text-sm w-32">عند الوصول لـ لفل:</span>
-                            <input type="number" class="w-24 bg-dark-900 border border-dark-600 rounded-lg py-3 px-3 text-white font-black text-center text-lg" value="${r.levelRequired}" onchange="roleRewards[${i}].levelRequired=parseInt(this.value)">
+                            <span class="text-brand-light font-black text-base w-40">عند الوصول لـ لفل:</span>
+                            <input type="number" min="1" class="w-24 bg-dark-900 border border-dark-600 rounded-xl py-3 px-3 text-white font-black text-center text-xl focus:border-brand outline-none" value="${reward.levelRequired}" onchange="roleRewards[${index}].levelRequired = parseInt(this.value)">
                         </div>
+                        
                         <div class="flex items-center w-full md:flex-1">
-                            <span class="text-slate-400 font-bold text-sm w-24">يأخذ رتبة:</span>
-                            <select class="flex-1 bg-dark-900 border border-dark-600 rounded-lg py-3 px-4 text-white font-bold" onchange="roleRewards[${i}].roleId=this.value">
-                                <option value="">-- اختر الرتبة --</option>
-                                ${sRolesHTML.replace(`value="${r.roleId}"`, `value="${r.roleId}" selected`)}
+                            <span class="text-slate-400 font-bold text-base w-24">يأخذ رتبة:</span>
+                            <select class="flex-1 bg-dark-900 border border-dark-600 rounded-xl py-3 px-4 text-white font-bold cursor-pointer focus:border-brand outline-none" onchange="roleRewards[${index}].roleId = this.value">
+                                <option value="">-- يرجى اختيار الرتبة --</option>
+                                ${sRolesHTML.replace(`value="${reward.roleId}"`, `value="${reward.roleId}" selected`)}
                             </select>
                         </div>
-                        <button type="button" onclick="roleRewards.splice(${i},1); renderLvlRewards();" class="w-full md:w-auto bg-red-500/20 text-red-500 px-6 py-3 rounded-lg font-bold hover:bg-red-500 hover:text-white transition-all">حذف 🗑️</button>
+                        
+                        <button type="button" onclick="roleRewards.splice(${index}, 1); renderLvlRewards();" class="w-full md:w-auto bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-xl font-black transition-all shadow-md">إزالة 🗑️</button>
                     </div>
                 `;
             });
         }
-        function addLevelRewardUI() { roleRewards.push({levelRequired: 5, roleId: ''}); renderLvlRewards(); }
+        function addLevelRewardUI() { roleRewards.push({ levelRequired: 5, roleId: '' }); renderLvlRewards(); }
 
         // -----------------------------------------------------------
-        // محرك البانلات المتعددة العملاق (معالجة مشكلة العناوين)
+        // محرك البانلات المتعددة العملاق (مع معالجة العناوين)
         // -----------------------------------------------------------
-        const catsHTML = `<%- categories.map(cat=>`<option value="${cat.id}">${cat.name}</option>`).join('') %>`;
-        const chsHTML = `<%- textChannels.map(ch=>`<option value="${ch.id}">${ch.name}</option>`).join('') %>`;
+        const catsHTML = `<%- categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('') %>`;
+        const chsHTML = `<%- textChannels.map(ch => `<option value="${ch.id}">${ch.name}</option>`).join('') %>`;
         
         function renderAllPanels() {
             const container = document.getElementById('dynamic-panels-container'); 
             container.innerHTML = '';
             
             if(panelsArray.length === 0) { 
-                container.innerHTML = `<div class="text-center p-12 bg-dark-900/50 rounded-2xl border-2 border-dashed border-dark-700 text-slate-500 font-bold text-lg">لا توجد بانلات تذاكر حالياً. ابدأ بإضافة بانل جديد.</div>`; 
+                container.innerHTML = `<div class="text-center p-12 bg-dark-900/50 rounded-3xl border-2 border-dashed border-dark-700 text-slate-500 font-bold text-lg">لا توجد بانلات تذاكر حالياً. ابدأ بإضافة أول بانل لك.</div>`; 
                 return; 
             }
 
@@ -831,25 +1312,26 @@
                 
                 (panel.buttons || []).forEach((btn, bIdx) => {
                     let modalHTML = '';
+                    
                     if(btn.requireModal) {
                         modalHTML += `
-                            <div class="mt-6 p-5 bg-dark-900/80 rounded-xl border border-dark-700 shadow-inner">
-                                <div class="flex justify-between items-center mb-4 border-b border-dark-600 pb-2">
-                                    <span class="text-sm font-bold text-brand-light">📝 أسئلة النافذة (الإجابات ستعرض في Code Blocks)</span>
-                                    <button type="button" onclick="if(!panelsArray[${pIdx}].buttons[${bIdx}].modalFields) panelsArray[${pIdx}].buttons[${bIdx}].modalFields=[]; panelsArray[${pIdx}].buttons[${bIdx}].modalFields.push({label:'',placeholder:'',style:'Short'}); renderAllPanels();" class="text-xs bg-brand hover:bg-brand-light text-white px-4 py-2 rounded-lg font-bold transition-all">➕ إضافة سؤال</button>
+                            <div class="mt-6 p-6 bg-dark-900/80 rounded-2xl border border-dark-700 shadow-inner">
+                                <div class="flex justify-between items-center mb-6 border-b border-dark-600 pb-4">
+                                    <span class="text-base font-bold text-brand-light">📝 أسئلة النافذة المنبثقة (ستعرض الإجابات في Code Blocks)</span>
+                                    <button type="button" onclick="if(!panelsArray[${pIdx}].buttons[${bIdx}].modalFields) panelsArray[${pIdx}].buttons[${bIdx}].modalFields=[]; panelsArray[${pIdx}].buttons[${bIdx}].modalFields.push({label:'',placeholder:'',style:'Short'}); renderAllPanels();" class="text-sm bg-brand hover:bg-brand-light text-white px-5 py-2 rounded-lg font-bold transition-all shadow-md">➕ إضافة سؤال</button>
                                 </div>
                         `;
                         
                         (btn.modalFields || []).forEach((mf, mIdx) => {
                             modalHTML += `
-                                <div class="flex flex-col md:flex-row md:space-x-3 md:space-x-reverse space-y-3 md:space-y-0 mb-3 bg-dark-800 p-3 rounded-lg border border-dark-600">
-                                    <input type="text" class="w-full md:w-1/3 bg-dark-900 border border-dark-700 text-sm text-white rounded-lg p-2.5 font-bold" placeholder="السؤال" value="${mf.label}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalFields[${mIdx}].label=this.value">
-                                    <input type="text" class="w-full md:flex-1 bg-dark-900 border border-dark-700 text-sm text-white rounded-lg p-2.5" placeholder="مثال لإرشاد العميل" value="${mf.placeholder}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalFields[${mIdx}].placeholder=this.value">
-                                    <select class="w-full md:w-auto bg-dark-900 border border-dark-700 text-sm text-white font-bold rounded-lg p-2.5" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalFields[${mIdx}].style=this.value">
-                                        <option value="Short" ${mf.style!=='Paragraph'?'selected':''}>إجابة قصيرة</option>
-                                        <option value="Paragraph" ${mf.style==='Paragraph'?'selected':''}>إجابة طويلة</option>
+                                <div class="flex flex-col md:flex-row md:space-x-4 md:space-x-reverse space-y-4 md:space-y-0 mb-4 bg-dark-800 p-4 rounded-xl border border-dark-600">
+                                    <input type="text" class="w-full md:w-1/3 bg-dark-900 border border-dark-700 text-sm text-white rounded-lg p-3 font-bold focus:border-brand outline-none" placeholder="السؤال الذي سيظهر للعميل" value="${mf.label}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalFields[${mIdx}].label=this.value">
+                                    <input type="text" class="w-full md:flex-1 bg-dark-900 border border-dark-700 text-sm text-white rounded-lg p-3 focus:border-brand outline-none" placeholder="مثال إرشادي للإجابة (اختياري)" value="${mf.placeholder}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalFields[${mIdx}].placeholder=this.value">
+                                    <select class="w-full md:w-auto bg-dark-900 border border-dark-700 text-sm text-white font-bold rounded-lg p-3 cursor-pointer outline-none" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalFields[${mIdx}].style=this.value">
+                                        <option value="Short" ${mf.style !== 'Paragraph' ? 'selected' : ''}>إجابة قصيرة</option>
+                                        <option value="Paragraph" ${mf.style === 'Paragraph' ? 'selected' : ''}>إجابة طويلة (فقرة)</option>
                                     </select>
-                                    <button type="button" onclick="panelsArray[${pIdx}].buttons[${bIdx}].modalFields.splice(${mIdx},1); renderAllPanels();" class="w-full md:w-auto bg-red-500 hover:bg-red-600 text-white px-4 rounded-lg font-bold transition-all">حذف</button>
+                                    <button type="button" onclick="panelsArray[${pIdx}].buttons[${bIdx}].modalFields.splice(${mIdx},1); renderAllPanels();" class="w-full md:w-auto bg-red-600 hover:bg-red-500 text-white px-5 rounded-lg font-bold transition-all shadow-sm">حذف</button>
                                 </div>
                             `;
                         });
@@ -857,54 +1339,57 @@
                     }
 
                     buttonsHTML += `
-                        <div class="bg-dark-800 p-6 rounded-2xl border border-dark-600 mb-6 relative shadow-lg">
-                            <button type="button" onclick="panelsArray[${pIdx}].buttons.splice(${bIdx},1); renderAllPanels();" class="absolute top-4 left-4 text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition-all">حذف الزر 🗑️</button>
-                            <h5 class="text-lg font-black text-white mb-6 border-b border-dark-700 pb-3">🔘 إعدادات الزر رقم ${bIdx + 1}</h5>
+                        <div class="bg-dark-800 p-8 rounded-3xl border border-dark-600 mb-8 relative shadow-xl">
+                            <button type="button" onclick="panelsArray[${pIdx}].buttons.splice(${bIdx},1); renderAllPanels();" class="absolute top-5 left-5 text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all">حذف هذا الزر 🗑️</button>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <h5 class="text-xl font-black text-white mb-8 border-b border-dark-700 pb-4">🔘 إعدادات الزر رقم ${bIdx + 1}</h5>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                                 <div>
-                                    <label class="text-[12px] font-bold text-slate-400 block mb-2">اسم الزر (الذي سيظهر للعميل)</label>
-                                    <input type="text" class="w-full bg-dark-900 border border-dark-700 text-base text-white font-bold rounded-xl p-3" value="${btn.label}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].label=this.value">
+                                    <label class="text-sm font-bold text-slate-400 block mb-3">اسم الزر (الذي سيظهر للعميل)</label>
+                                    <input type="text" class="w-full bg-dark-900 border border-dark-700 text-base text-white font-bold rounded-xl p-4 focus:border-brand outline-none" value="${btn.label}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].label=this.value">
                                 </div>
                                 <div>
-                                    <label class="text-[12px] font-bold text-slate-400 block mb-2">لون الزر (Discord Style)</label>
-                                    <select class="w-full bg-dark-900 border border-dark-700 text-base font-bold text-white rounded-xl p-3" onchange="panelsArray[${pIdx}].buttons[${bIdx}].buttonStyle=this.value">
-                                        <option value="Primary" ${btn.buttonStyle==='Primary'?'selected':''}>أزرق (Primary)</option>
-                                        <option value="Success" ${btn.buttonStyle==='Success'?'selected':''}>أخضر (Success)</option>
-                                        <option value="Danger" ${btn.buttonStyle==='Danger'?'selected':''}>أحمر (Danger)</option>
-                                        <option value="Secondary" ${btn.buttonStyle==='Secondary'?'selected':''}>رمادي (Secondary)</option>
+                                    <label class="text-sm font-bold text-slate-400 block mb-3">لون الزر (ستايل ديسكورد)</label>
+                                    <select class="w-full bg-dark-900 border border-dark-700 text-base font-bold text-white rounded-xl p-4 cursor-pointer outline-none" onchange="panelsArray[${pIdx}].buttons[${bIdx}].buttonStyle=this.value">
+                                        <option value="Primary" ${btn.buttonStyle === 'Primary' ? 'selected' : ''}>أزرق (Primary)</option>
+                                        <option value="Success" ${btn.buttonStyle === 'Success' ? 'selected' : ''}>أخضر (Success)</option>
+                                        <option value="Danger" ${btn.buttonStyle === 'Danger' ? 'selected' : ''}>أحمر (Danger)</option>
+                                        <option value="Secondary" ${btn.buttonStyle === 'Secondary' ? 'selected' : ''}>رمادي (Secondary)</option>
                                     </select>
                                 </div>
                             </div>
                             
-                            <div class="flex flex-wrap space-x-6 space-x-reverse text-sm font-bold bg-dark-900/50 p-4 rounded-xl border border-dark-700 mb-6 gap-y-4">
-                                <label class="text-amber-400 flex items-center cursor-pointer ml-6">
-                                    <input type="checkbox" ${btn.isMiddleman?'checked':''} onchange="panelsArray[${pIdx}].buttons[${bIdx}].isMiddleman=this.checked" class="mr-2 ml-2 w-5 h-5 accent-amber-400"> 
-                                    🤝 زر مخصص للوساطة (Middleman)
+                            <div class="flex flex-wrap items-center space-x-8 space-x-reverse text-base font-bold bg-dark-900/60 p-6 rounded-2xl border border-dark-700 mb-8 gap-y-4 shadow-inner">
+                                <label class="text-amber-400 flex items-center cursor-pointer ml-8">
+                                    <input type="checkbox" ${btn.isMiddleman ? 'checked' : ''} onchange="panelsArray[${pIdx}].buttons[${bIdx}].isMiddleman=this.checked" class="mr-3 ml-3 w-6 h-6 accent-amber-400"> 
+                                    🤝 تفعيل نظام الوساطة لهذا الزر
                                 </label>
                                 <label class="text-emerald-400 flex items-center cursor-pointer">
-                                    <input type="checkbox" ${btn.requireModal?'checked':''} onchange="panelsArray[${pIdx}].buttons[${bIdx}].requireModal=this.checked; if(this.checked && !panelsArray[${pIdx}].buttons[${bIdx}].modalFields) panelsArray[${pIdx}].buttons[${bIdx}].modalFields=[]; renderAllPanels();" class="mr-2 ml-2 w-5 h-5 accent-emerald-400"> 
-                                    📝 تفعيل نافذة منبثقة (Modal)
+                                    <input type="checkbox" ${btn.requireModal ? 'checked' : ''} onchange="panelsArray[${pIdx}].buttons[${bIdx}].requireModal=this.checked; if(this.checked && !panelsArray[${pIdx}].buttons[${bIdx}].modalFields) panelsArray[${pIdx}].buttons[${bIdx}].modalFields=[]; renderAllPanels();" class="mr-3 ml-3 w-6 h-6 accent-emerald-400"> 
+                                    📝 طلب أسئلة منبثقة (Modal) قبل فتح التذكرة
                                 </label>
                             </div>
                             
-                            <h6 class="text-sm font-bold text-brand-light mb-4 mt-6 border-t border-dark-700 pt-5">🎨 إيمبد التذكرة الداخلي للزر:</h6>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h6 class="text-lg font-black text-brand-light mb-6 mt-8 border-t border-dark-700 pt-6">🎨 إيمبد التذكرة الداخلي الخاص بهذا الزر:</h6>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
-                                    <label class="text-[11px] font-bold text-slate-400 block mb-2">عنوان الإيمبد الداخلي (Title)</label>
-                                    <input type="text" class="w-full bg-dark-900 border border-dark-700 text-sm text-white rounded-lg p-3 font-bold" placeholder="مثال: تذكرة الدعم الفني" value="${btn.insideEmbedTitle || 'تذكرة جديدة'}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].insideEmbedTitle=this.value">
+                                    <label class="text-xs font-bold text-slate-400 block mb-2">عنوان الإيمبد الداخلي (Title)</label>
+                                    <input type="text" class="w-full bg-dark-900 border border-dark-700 text-sm text-white rounded-xl p-4 font-bold focus:border-brand outline-none" placeholder="مثال: تذكرة الدعم الفني" value="${btn.insideEmbedTitle || 'تذكرة جديدة'}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].insideEmbedTitle=this.value">
                                 </div>
                                 <div>
-                                    <label class="text-[11px] font-bold text-slate-400 block mb-2">وصف الإيمبد الداخلي (Description)</label>
-                                    <input type="text" class="w-full bg-dark-900 border border-dark-700 text-sm text-white rounded-lg p-3" placeholder="أهلاً بك في التذكرة، يرجى الانتظار..." value="${btn.insideEmbedDesc || ''}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].insideEmbedDesc=this.value">
+                                    <label class="text-xs font-bold text-slate-400 block mb-2">وصف الإيمبد الداخلي (Description)</label>
+                                    <input type="text" class="w-full bg-dark-900 border border-dark-700 text-sm text-white rounded-xl p-4 focus:border-brand outline-none" placeholder="أهلاً بك في التذكرة، يرجى الانتظار..." value="${btn.insideEmbedDesc || ''}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].insideEmbedDesc=this.value">
                                 </div>
-                                <div class="md:col-span-2 bg-dark-900/30 p-4 rounded-xl border border-dark-700">
-                                    <label class="text-[12px] font-black text-amber-400 block mb-2">🎨 لون إيمبد إجابات النافذة المخصص (المربعات - Code Blocks)</label>
-                                    <div class="flex items-center space-x-4 space-x-reverse">
-                                        <input type="color" class="w-14 h-12 bg-dark-900 rounded-lg p-1 cursor-pointer border border-dark-600 shadow-inner" value="${btn.modalAnswersEmbedColor || '#2b2d31'}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalAnswersEmbedColor=this.value">
-                                        <input type="text" class="flex-1 bg-dark-900 text-sm font-mono uppercase text-center rounded-lg border border-dark-600 py-3" value="${btn.modalAnswersEmbedColor || '#2b2d31'}" readonly>
+                                
+                                <div class="md:col-span-2 bg-dark-900/40 p-6 rounded-2xl border border-dark-700 shadow-inner">
+                                    <label class="text-sm font-black text-amber-400 block mb-4">🎨 لون إيمبد إجابات النافذة المخصص (المربعات - Code Blocks)</label>
+                                    <div class="flex items-center space-x-6 space-x-reverse">
+                                        <input type="color" class="w-16 h-14 bg-dark-900 rounded-xl p-1.5 cursor-pointer border-2 border-dark-600 shadow-sm" value="${btn.modalAnswersEmbedColor || '#2b2d31'}" onchange="panelsArray[${pIdx}].buttons[${bIdx}].modalAnswersEmbedColor=this.value">
+                                        <input type="text" class="flex-1 bg-dark-900 text-lg font-mono uppercase text-center rounded-xl border border-dark-600 py-3" value="${btn.modalAnswersEmbedColor || '#2b2d31'}" readonly>
                                     </div>
-                                    <p class="text-[10px] text-slate-500 mt-2">الإيمبد الذي يُعرض بداخله إجابات العميل بشكل منفصل داخل التذكرة.</p>
+                                    <p class="text-xs text-slate-400 mt-3 font-bold">هذا هو لون الإيمبد المنفصل الذي سيتم عرض إجابات العميل بداخله بشكل منظم داخل التذكرة.</p>
                                 </div>
                             </div>
                             
@@ -914,45 +1399,45 @@
                 });
 
                 container.innerHTML += `
-                    <div class="bg-dark-900/80 border-2 border-blue-500/30 rounded-[2rem] p-8 relative shadow-2xl mb-10">
-                        <button type="button" onclick="panelsArray.splice(${pIdx},1); renderAllPanels();" class="absolute top-6 left-6 bg-red-600 hover:bg-red-500 text-white px-5 py-3 rounded-xl text-sm font-black shadow-lg transition-all transform hover:scale-105">حذف البانل بالكامل 🗑️</button>
+                    <div class="bg-dark-900/80 border-2 border-blue-500/40 rounded-[2.5rem] p-10 relative shadow-[0_10px_40px_rgba(0,0,0,0.5)] mb-12">
+                        <button type="button" onclick="panelsArray.splice(${pIdx},1); renderAllPanels();" class="absolute top-8 left-8 bg-red-600 hover:bg-red-500 text-white px-6 py-3.5 rounded-xl text-base font-black shadow-lg transition-all transform hover:scale-105 border border-red-400">حذف البانل بالكامل 🗑️</button>
                         
-                        <div class="flex items-center space-x-5 space-x-reverse mb-8 border-b border-dark-700 pb-6">
-                            <input type="color" class="w-16 h-16 rounded-2xl bg-dark-800 p-1.5 cursor-pointer border-2 border-dark-600 shadow-inner" value="${panel.panelColor || '#5865F2'}" onchange="panelsArray[${pIdx}].panelColor=this.value" title="لون البانل الخارجي">
+                        <div class="flex items-center space-x-6 space-x-reverse mb-10 border-b-2 border-dark-700 pb-8">
+                            <input type="color" class="w-20 h-20 rounded-2xl bg-dark-800 p-2 cursor-pointer border-2 border-dark-600 shadow-inner" value="${panel.panelColor || '#5865F2'}" onchange="panelsArray[${pIdx}].panelColor=this.value" title="لون البانل الخارجي">
                             <div class="flex-1">
-                                <label class="text-[11px] font-bold text-slate-500 block mb-1">عنوان البانل الخارجي (الذي سيظهر في الروم)</label>
-                                <input type="text" class="bg-transparent text-3xl font-black text-white focus:border-b-2 focus:border-brand outline-none w-full md:w-3/4 pb-1 transition-all" placeholder="مثال: بانل الدعم الفني" value="${panel.panelTitle || ''}" onchange="panelsArray[${pIdx}].panelTitle=this.value">
+                                <label class="text-sm font-bold text-slate-400 block mb-2">عنوان البانل الخارجي (الذي سيظهر في الروم)</label>
+                                <input type="text" class="bg-transparent text-4xl font-black text-white focus:border-b-4 focus:border-brand outline-none w-full md:w-3/4 pb-2 transition-all" placeholder="مثال: لوحة الدعم الفني" value="${panel.panelTitle || ''}" onchange="panelsArray[${pIdx}].panelTitle=this.value">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                            <div class="bg-dark-800 p-5 rounded-2xl border border-dark-600 shadow-inner">
-                                <label class="text-sm font-bold text-slate-400 block mb-3">روم إرسال البانل</label>
-                                <select class="w-full bg-dark-900 text-white font-bold text-base rounded-xl p-3.5 cursor-pointer outline-none border border-dark-700 focus:border-brand" onchange="panelsArray[${pIdx}].channelId=this.value">
-                                    <option value="">-- اختر الروم --</option>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                            <div class="bg-dark-800 p-6 rounded-2xl border border-dark-600 shadow-inner">
+                                <label class="text-base font-bold text-slate-300 block mb-4">روم إرسال البانل</label>
+                                <select class="w-full bg-dark-900 text-white font-bold text-lg rounded-xl p-4 cursor-pointer outline-none border border-dark-700 focus:border-brand" onchange="panelsArray[${pIdx}].channelId=this.value">
+                                    <option value="">-- يرجى اختيار الروم --</option>
                                     ${chsHTML.replace(`value="${panel.channelId}"`, `value="${panel.channelId}" selected`)}
                                 </select>
                             </div>
                             
-                            <div class="bg-dark-800 p-5 rounded-2xl border border-dark-600 shadow-inner">
-                                <label class="text-sm font-bold text-slate-400 block mb-3">قسم فتح التذاكر (Category)</label>
-                                <select class="w-full bg-dark-900 text-white font-bold text-base rounded-xl p-3.5 cursor-pointer outline-none border border-dark-700 focus:border-brand" onchange="panelsArray[${pIdx}].categoryId=this.value">
-                                    <option value="">-- اختر القسم --</option>
+                            <div class="bg-dark-800 p-6 rounded-2xl border border-dark-600 shadow-inner">
+                                <label class="text-base font-bold text-slate-300 block mb-4">قسم فتح التذاكر (Category)</label>
+                                <select class="w-full bg-dark-900 text-white font-bold text-lg rounded-xl p-4 cursor-pointer outline-none border border-dark-700 focus:border-brand" onchange="panelsArray[${pIdx}].categoryId=this.value">
+                                    <option value="">-- يرجى اختيار القسم --</option>
                                     ${catsHTML.replace(`value="${panel.categoryId}"`, `value="${panel.categoryId}" selected`)}
                                 </select>
                             </div>
                             
-                            <div class="md:col-span-2 bg-dark-800 p-5 rounded-2xl border border-dark-600 shadow-inner">
-                                <label class="text-sm font-bold text-slate-400 block mb-3">وصف البانل الخارجي (Description)</label>
-                                <textarea class="w-full bg-dark-900 text-white text-base rounded-xl p-4 outline-none resize-y border border-dark-700 focus:border-brand leading-relaxed" rows="3" placeholder="اكتب هنا الوصف الذي سيظهر للأعضاء في الإيمبد الخارجي..." onchange="panelsArray[${pIdx}].panelDescription=this.value">${panel.panelDescription || ''}</textarea>
+                            <div class="md:col-span-2 bg-dark-800 p-6 rounded-2xl border border-dark-600 shadow-inner">
+                                <label class="text-base font-bold text-slate-300 block mb-4">وصف البانل الخارجي (Description)</label>
+                                <textarea class="w-full bg-dark-900 text-white text-lg rounded-xl p-5 outline-none resize-y border border-dark-700 focus:border-brand leading-relaxed font-bold" rows="3" placeholder="اكتب هنا الوصف الذي سيظهر للأعضاء في الإيمبد الخارجي..." onchange="panelsArray[${pIdx}].panelDescription=this.value">${panel.panelDescription || ''}</textarea>
                             </div>
                         </div>
 
-                        <div class="p-8 bg-dark-900/50 rounded-3xl border border-dark-700 shadow-inner">
-                            <h4 class="text-2xl font-black text-brand-light mb-6">🔘 أزرار البانل ونوافذها</h4>
+                        <div class="p-8 bg-dark-900/60 rounded-3xl border border-dark-700 shadow-inner">
+                            <h4 class="text-3xl font-black text-brand-light mb-8">🔘 أزرار البانل</h4>
                             ${buttonsHTML}
                             
-                            <button type="button" onclick="panelsArray[${pIdx}].buttons.push({id:'btn_'+Math.random().toString(36).substr(2,7),label:'زر جديد',buttonStyle:'Primary',requireModal:false,insideEmbedTitle:'تذكرة جديدة',modalAnswersEmbedColor:'#2b2d31'}); renderAllPanels();" class="w-full mt-6 py-5 border-2 border-dashed border-brand/60 bg-brand/10 hover:bg-brand/20 rounded-2xl text-brand-light font-black text-lg transition-all shadow-md transform hover:-translate-y-1">
+                            <button type="button" onclick="panelsArray[${pIdx}].buttons.push({id:'btn_'+Math.random().toString(36).substr(2,7),label:'زر جديد',buttonStyle:'Primary',requireModal:false,insideEmbedTitle:'تذكرة جديدة',modalAnswersEmbedColor:'#2b2d31'}); renderAllPanels();" class="w-full mt-6 py-6 border-4 border-dashed border-brand/40 bg-brand/5 hover:bg-brand/20 rounded-2xl text-brand-light font-black text-xl transition-all shadow-md transform hover:-translate-y-1">
                                 ➕ إضافة زر جديد لهذا البانل
                             </button>
                         </div>
@@ -961,7 +1446,7 @@
             });
         }
 
-        // دالة إضافة بانل جديد فارغ ومجهز بالعناوين
+        // دالة إضافة بانل جديد فارغ ומجهز بالعناوين
         function addNewPanelUI() { 
             panelsArray.push({
                 panelId: 'pnl_' + Math.random().toString(36).substr(2,7), 
@@ -977,7 +1462,7 @@
         // 🔄 دالة الحفظ السحرية (لمنع مسح الداتا المعقدة)
         // -----------------------------------------------------------
         function syncAllDataBeforeSave() {
-            // نقل كل البيانات من المصفوفات (المحركات) إلى حقول HTML مخفية قبل الإرسال فوراً
+            // نقل كل البيانات من المصفوفات (المحركات) إلى حقول HTML مخفية قبل الإرسال فوراً بكسر من الثانية
             document.getElementById('hidden_warn_ar').value = warnAr.join('\n');
             document.getElementById('hidden_warn_en').value = warnEn.join('\n');
             document.getElementById('mm_modalFieldsData').value = JSON.stringify(mmFields);
@@ -1018,7 +1503,7 @@
         // 🚀 تشغيل جميع المحركات عند تحميل الصفحة
         // -----------------------------------------------------------
         window.onload = () => { 
-            // رسم جميع الأقسام الديناميكية
+            // رسم جميع الأقسام الديناميكية والمصفوفات لتظهر للمستخدم بشكل صحيح
             renderWarns('ar'); 
             renderWarns('en'); 
             renderMmFields(); 
