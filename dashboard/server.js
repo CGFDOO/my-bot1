@@ -43,24 +43,23 @@ module.exports = (client) => {
     }
 
     // ==========================================
-    // 3. مسارات تسجيل الدخول (Auth Routes)
+    // 3. مسارات تسجيل الدخول والداشبورد (Auth Routes)
     // ==========================================
-    // الصفحة الرئيسية
     app.get('/', (req, res) => {
-        res.render('index', { user: req.user }); // هيفتح ملف index.ejs
+        res.render('index', { user: req.user }); 
     });
 
     app.get('/login', passport.authenticate('discord'));
 
-    // المسار اللي كان ناقص وحليناه!
     app.get('/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
-        res.redirect('/dashboard'); // هيوديك لصفحة اختيار السيرفرات
+        res.redirect('/dashboard'); 
     });
 
-    // صفحة اختيار السيرفر
+    // ⚠️ هنا التعديل اللي صلح إيرور الـ 500 (بنعرض السيرفرات)
     app.get('/dashboard', (req, res) => {
         if (!req.isAuthenticated()) return res.redirect('/login');
-        res.render('dashboard', { user: req.user, bot: client }); 
+        const userGuilds = req.user.guilds.filter(g => (g.permissions & 0x20) === 0x20 || (g.permissions & 0x8) === 0x8);
+        res.render('dashboard', { user: req.user, bot: client, guilds: userGuilds }); 
     });
 
     // ==========================================
@@ -183,7 +182,7 @@ module.exports = (client) => {
 
         } catch (error) {
             console.error("❌ خطأ أثناء حفظ إعدادات الداشبورد:", error);
-            res.status(500).send("حدث خطأ أثناء حفظ الإعدادات في قاعدة البيانات.");
+            res.status(500).send("حدث خطأ أثناء حفظ الإعدادات.");
         }
     });
 
