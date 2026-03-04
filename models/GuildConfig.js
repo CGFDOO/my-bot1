@@ -7,82 +7,25 @@ const guildSettingsSchema = new mongoose.Schema({
     slashCommandsEnabled: { type: Boolean, default: true },
     botOwnerId: { type: String, default: '' },
 
-    embedSetup: {
-        primaryColor: { type: String, default: '#5865F2' },
-        successColor: { type: String, default: '#3ba55d' },
-        errorColor: { type: String, default: '#ed4245' },
-        footerText: { type: String, default: 'System Control' },
-        footerIconUrl: { type: String, default: '' },
-        thumbnailUrl: { type: String, default: '' }
-    },
-
-    aiSystem: {
-        enabled: { type: Boolean, default: false },
-        allowUserChoice: { type: Boolean, default: true },
-        defaultBoyName: { type: String, default: 'مروان' },
-        defaultGirlName: { type: String, default: 'مريم' },
-        chatChannelId: { type: String, default: '' }
-    },
-
-    // مصفوفات (عشان النوافذ والردود المتعددة)
+    embedSetup: { primaryColor: String, successColor: String, errorColor: String, footerText: String, footerIconUrl: String, thumbnailUrl: String },
+    aiSystem: { enabled: Boolean, allowUserChoice: Boolean, defaultBoyName: String, defaultGirlName: String, chatChannelId: String },
+    
     ticketPanels: { type: Array, default: [] },
     autoResponders: { type: Array, default: [] },
+    autoLine: { trigger: String, imageUrl: String, deleteTrigger: Boolean },
+
+    middlemanSystem: { enabled: Boolean, categoryId: String, panelChannelId: String, panelTitle: String, panelColor: String, panelDescription: String, buttonLabel: String, modalTitle: String, modalFields: Array, insideTicketTitle: String, insideTicketColor: String, insideTicketDescription: String, modalAnswersEmbedColor: String },
+    ticketControls: { twoStepClose: Boolean, ticketCounter: Number, transcriptChannelId: String, ticketLogChannelId: String, hideTicketOnClaim: Boolean, readOnlyStaffOnClaim: Boolean },
+    warnings: { maxWarnings: Number, autoAction: String, panelChannelId: String, panelColor: String, panelTitle: String, panelDescription: String, reasonsDataAr: Array, reasonsDataEn: Array },
+    roles: { adminRoleId: String, middlemanRoleId: String, highAdminRoles: Array, tradePingRoleIds: Array, tradeApproveRoleIds: Array },
+    protection: { antiLinkEnabled: Boolean, antiSpamEnabled: Boolean, antiNukeEnabled: Boolean },
     
-    autoLine: {
-        trigger: { type: String, default: 'خط' },
-        imageUrl: { type: String, default: '' },
-        deleteTrigger: { type: Boolean, default: false }
-    },
-
-    middlemanSystem: {
-        enabled: { type: Boolean, default: false },
-        categoryId: { type: String, default: '' },
-        panelChannelId: { type: String, default: '' },
-        panelTitle: { type: String, default: 'وسيط أمن' },
-        panelColor: { type: String, default: '#ffffff' },
-        panelDescription: { type: String, default: 'اضغط هنا لطلب وسيط' },
-        buttonLabel: { type: String, default: 'طلب وسيط' },
-        modalTitle: { type: String, default: 'معلومات الوساطة' },
-        modalFields: { type: Array, default: [] },
-        insideTicketTitle: { type: String, default: 'تذكرة وسيط' },
-        insideTicketColor: { type: String, default: '#00ff00' },
-        insideTicketDescription: { type: String, default: 'يرجى انتظار الوسيط' },
-        modalAnswersEmbedColor: { type: String, default: '#ffff00' }
-    },
-
-    ticketControls: {
-        twoStepClose: { type: Boolean, default: true },
-        ticketCounter: { type: Number, default: 1 },
-        transcriptChannelId: { type: String, default: '' },
-        ticketLogChannelId: { type: String, default: '' },
-        hideTicketOnClaim: { type: Boolean, default: false },
-        readOnlyStaffOnClaim: { type: Boolean, default: false }
-    },
-
-    warnings: {
-        maxWarnings: { type: Number, default: 3 },
-        autoAction: { type: String, default: 'mute' },
-        panelChannelId: { type: String, default: '' },
-        panelColor: { type: String, default: '#ff0000' },
-        panelTitle: { type: String, default: 'نظام التحذيرات' },
-        panelDescription: { type: String, default: 'تحذيرات الأعضاء' },
-        reasonsDataAr: { type: Array, default: [] },
-        reasonsDataEn: { type: Array, default: [] }
-    },
-
-    roles: {
-        adminRoleId: { type: String, default: '' },
-        middlemanRoleId: { type: String, default: '' },
-        highAdminRoles: { type: Array, default: [] },
-        tradePingRoleIds: { type: Array, default: [] },
-        tradeApproveRoleIds: { type: Array, default: [] }
-    },
-
-    protection: {
-        antiLinkEnabled: { type: Boolean, default: false },
-        antiSpamEnabled: { type: Boolean, default: false },
-        antiNukeEnabled: { type: Boolean, default: false }
-    }
+    welcomeSystem: { welcomeEnabled: Boolean, welcomeChannelId: String, backgroundUrl: String, welcomeMessage: String, avatarBorderHex: String, textColorHex: String, leaveEnabled: Boolean, leaveChannelId: String, leaveMessage: String },
+    economy: { enabled: Boolean, taxPercentage: Number, dailyMin: Number, dailyMax: Number },
+    leveling: { enabled: Boolean, levelUpChannelId: String, levelUpMessage: String, topDailyCmd: String, topWeeklyCmd: String, topMonthlyCmd: String, topGlobalCmd: String, roleRewards: Array },
+    commands: { banCmd: String, unbanCmd: String, timeoutCmd: String, untimeoutCmd: String, warnCmd: String, unwarnCmd: String, muteCmd: String, unmuteCmd: String, taxCmd: String, clearCmd: String, comeCmd: String, moveCmd: String, lockCmd: String, unlockCmd: String, tradeCmd: String, approveCmd: String, doneCmd: String, allowedRoles: Object },
+    serverLogs: { reactionLogId: String, reactionColor: String, channelCreateDeleteLogId: String, channelColor: String, threadCreateDeleteLogId: String, threadColor: String, roleCreateDeleteLogId: String, roleCreateColor: String, banKickLogId: String, banColor: String, unbanLogId: String, unbanColor: String, timeoutLogId: String, timeoutColor: String, untimeoutLogId: String, untimeoutColor: String, warningsLogId: String, warnColor: String, unwarningsLogId: String, unwarnColor: String, messageDeleteLogId: String, msgDelColor: String, messageEditLogId: String, msgEditColor: String, imageDeleteLogId: String, imgDelColor: String, roleGiveTakeLogId: String, roleColor: String, memberJoinLeaveLogId: String, joinColor: String, leaveColor: String },
+    ratings: { staffLogChannelId: String, staffEmbedColor: String, middlemanLogChannelId: String, middlemanEmbedColor: String }
 });
 
 module.exports = mongoose.model('GuildSettings', guildSettingsSchema);
