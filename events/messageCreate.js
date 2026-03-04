@@ -6,60 +6,42 @@ module.exports = {
     async execute(message, client) {
         if (message.author.bot || !message.guild) return;
 
-        // 1. جهاز تنصت: هل البوت شاف رسالتك أصلاً؟
-        console.log(`\n💬 [DEBUG] وصلت رسالة من ${message.author.username}: ${message.content}`);
-
         try {
+            // 1. جلب الإعدادات من الداتابيز للسيرفر ده
             let config = await GuildSettings.findOne({ guildId: message.guild.id });
-            
-            // 2. جهاز تنصت: هل السيرفر ليه إعدادات؟
-            if (!config) {
-                console.log(`⚠️ [DEBUG] السيرفر ده ملوش إعدادات في الداتابيز! (البوت مش هيرد لحد ما تحفظ من الداشبورد)`);
-                // هندي للبوت بادئة افتراضية مؤقتة عشان يشتغل معاك للتجربة
-                config = { prefix: '!' }; 
-            } else {
-                console.log(`✅ [DEBUG] تم العثور على إعدادات السيرفر، البادئة هي: "${config.prefix || '!'}"`);
-            }
+            if (!config) config = { prefix: '!' }; // لو مفيش، البادئة الافتراضية !
 
-            // ==========================================
-            // نظام الخط التلقائي
-            // ==========================================
+            // 2. فحص نظام الخط التلقائي
             if (config.autoLine && config.autoLine.trigger && message.content === config.autoLine.trigger) {
-                console.log(`➖ [DEBUG] تم تفعيل أمر الخط التلقائي!`);
                 if (config.autoLine.deleteTrigger) message.delete().catch(() => {});
                 if (config.autoLine.imageUrl) message.channel.send({ content: config.autoLine.imageUrl }).catch(() => {});
                 return; 
             }
 
-            // ==========================================
-            // نظام الأوامر العادية
-            // ==========================================
-            const prefix = config.prefix || '!';
-            
-            // 3. جهاز تنصت: هل الرسالة بتبدأ بالبادئة؟
-            if (!message.content.startsWith(prefix)) {
-                console.log(`❌ [DEBUG] الرسالة لا تبدأ بالبادئة (${prefix})، تم التجاهل.`);
-                return;
+            // 3. فحص نظام الردود التلقائية (Auto Responders)
+            if (config.autoResponders && config.autoResponders.length > 0) {
+                const responder = config.autoResponders.find(r => r.word === message.content);
+                if (responder) {
+                    message.reply({ content: responder.reply }).catch(() => {});
+                    return;
+                }
             }
+
+            // 4. تشغيل الأوامر بناءً على بادئة الداشبورد
+            const prefix = config.prefix || '!';
+            if (!message.content.startsWith(prefix)) return;
 
             const args = message.content.slice(prefix.length).trim().split(/ +/);
             const commandName = args.shift().toLowerCase();
 
-            console.log(`🔍 [DEBUG] جاري البحث عن الأمر: ${commandName}`);
-
-            // 4. جهاز تنصت: هل الأمر موجود في ملفات البوت؟
             const command = client.commands.get(commandName) || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
-            
-            if (!command) {
-                console.log(`❌ [DEBUG] الأمر (${commandName}) غير موجود في ملفات البوت!`);
-                return;
-            }
+            if (!command) return;
 
-            console.log(`🚀 [DEBUG] تم العثور على الأمر، جاري التشغيل...`);
+            // تنفيذ الأمر وتمرير الـ config عشانه يحتاج ألوان الإيمبد
             await command.execute(message, args, client, config);
 
         } catch (error) {
-            console.error("🔴 [DEBUG] حدث خطأ أثناء تنفيذ الرسالة:", error);
+            console.error("🔴 [MESSAGE ERROR]:", error);
         }
     },
 };
