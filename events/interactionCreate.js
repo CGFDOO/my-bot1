@@ -13,7 +13,7 @@ const {
     PermissionFlagsBits, AttachmentBuilder 
 } = discordLibrary;
 
-const GuildConfigDatabaseModel = require('../models/GuildConfig');
+const GuildSettingDatabaseModel = require('../models/GuildConfig');
 
 module.exports = {
     name: 'interactionCreate',
