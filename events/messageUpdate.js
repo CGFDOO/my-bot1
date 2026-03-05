@@ -1,6 +1,7 @@
 const discordLibrary = require('discord.js');
 const { EmbedBuilder } = discordLibrary;
-const GuildConfigurationDatabaseModel = require('../models/GuildConfig');
+// ✅ التعديل الأول: سحب الخزنة الصح
+const GuildConfigurationDatabaseModel = require('../models/GuildSettings');
 
 module.exports = {
     name: 'messageUpdate',
@@ -18,7 +19,8 @@ module.exports = {
 
         if (!activeGuildConfig || !activeGuildConfig.serverLogs) return; 
         
-        const logChannelId = activeGuildConfig.serverLogs.messageLogChannelId;
+        // ✅ التعديل التاني: قراءة اسم الروم من الداشبورد الجديدة
+        const logChannelId = activeGuildConfig.serverLogs.messageEditLogId;
         if (!logChannelId) return;
 
         try {
@@ -27,7 +29,8 @@ module.exports = {
                 const updatedLogEmbed = new EmbedBuilder()
                     .setTitle('✏️ سجل الرسائل المعدلة (Message Edited)')
                     .setDescription(`**تم تعديل رسالة في روم:** <#${oldMessageObject.channel.id}>\n**العضو:** <@${oldMessageObject.author.id}>\n[اضغط هنا للذهاب للرسالة](${newMessageObject.url})`)
-                    .setColor(activeGuildConfig.serverLogs.messageLogEmbedColor || '#fee75c')
+                    // ✅ التعديل التالت: سحب لون الإيمبد من الداشبورد
+                    .setColor(activeGuildConfig.serverLogs.msgEditColor || '#fee75c')
                     .setTimestamp()
                     .setFooter({ text: `User ID: ${oldMessageObject.author.id}` });
                 
