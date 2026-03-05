@@ -1,6 +1,7 @@
 const discordLibrary = require('discord.js');
 const { EmbedBuilder } = discordLibrary;
-const GuildConfigurationDatabaseModel = require('../models/GuildConfig');
+// ✅ التعديل الأول: سحب الخزنة الصح
+const GuildConfigurationDatabaseModel = require('../models/GuildSettings');
 
 module.exports = {
     name: 'messageDelete',
@@ -17,8 +18,8 @@ module.exports = {
 
         if (!activeGuildConfig || !activeGuildConfig.serverLogs) return; 
         
-        // المتغيرة الموحدة للوجات الرسائل
-        const logChannelId = activeGuildConfig.serverLogs.messageLogChannelId;
+        // ✅ التعديل التاني: قراءة اسم الروم من الداشبورد الجديدة
+        const logChannelId = activeGuildConfig.serverLogs.messageDeleteLogId;
         if (!logChannelId) return;
 
         try {
@@ -27,7 +28,8 @@ module.exports = {
                 const deletedLogEmbed = new EmbedBuilder()
                     .setTitle('🗑️ سجل الحذف (Message/Image Deleted)')
                     .setDescription(`**تم الحذف في روم:** <#${deletedMessageObject.channel.id}>\n**العضو:** <@${deletedMessageObject.author.id}>`)
-                    .setColor(activeGuildConfig.serverLogs.messageLogEmbedColor || '#ed4245')
+                    // ✅ التعديل التالت: سحب لون الإيمبد من الداشبورد
+                    .setColor(activeGuildConfig.serverLogs.msgDelColor || '#ed4245')
                     .setTimestamp()
                     .setFooter({ text: `Message ID: ${deletedMessageObject.id}` });
                 
