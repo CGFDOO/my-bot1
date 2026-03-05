@@ -13,7 +13,8 @@ const {
     PermissionFlagsBits, AttachmentBuilder 
 } = discordLibrary;
 
-const GuildSettingDatabaseModel = require('../models/GuildConfig');
+// ✅ التعديل الأول: توحيد اسم الخزنة
+const GuildSettings = require('../models/GuildSettings');
 
 module.exports = {
     name: 'interactionCreate',
@@ -33,7 +34,8 @@ module.exports = {
         let activeGuildConfigurationDocument = null;
 
         try {
-            activeGuildConfigurationDocument = await GuildConfigDatabaseModel.findOne({ 
+            // ✅ التعديل التاني: قراءة الداتا من الخزنة الصح
+            activeGuildConfigurationDocument = await GuildSettings.findOne({ 
                 guildId: currentGuildDiscordIdString 
             });
         } catch (databaseFetchException) {
@@ -449,10 +451,13 @@ module.exports = {
                 await incomingInteractionObject.deferReply({ ephemeral: true });
 
                 const middlemanSystemConfigObject = activeGuildConfigurationDocument.middlemanSystem;
-                activeGuildConfigurationDocument.ticketCount += 1;
+                
+                // ✅ التعديل الثالث: توافق إعدادات التكت كاونتر لمنع كراش الـ NaN
+                activeGuildConfigurationDocument.ticketControls.ticketCounter = (activeGuildConfigurationDocument.ticketControls.ticketCounter || 0) + 1;
                 await activeGuildConfigurationDocument.save();
                 
-                const ticketSequenceNumberInt = activeGuildConfigurationDocument.ticketCount;
+                const ticketSequenceNumberInt = activeGuildConfigurationDocument.ticketControls.ticketCounter;
+                
                 const formattedTicketSequenceString = ticketSequenceNumberInt.toString().padStart(4, '0');
                 const middlemanTicketChannelNameString = `ticket-${formattedTicketSequenceString}`;
                 const interactingUserDiscordIdString = incomingInteractionObject.user.id;
@@ -552,10 +557,13 @@ module.exports = {
                 }
 
                 if (targetTicketButtonConfigObject !== null) {
-                    activeGuildConfigurationDocument.ticketCount += 1;
+                    
+                    // ✅ التعديل الرابع: توافق إعدادات التكت كاونتر لمنع كراش الـ NaN
+                    activeGuildConfigurationDocument.ticketControls.ticketCounter = (activeGuildConfigurationDocument.ticketControls.ticketCounter || 0) + 1;
                     await activeGuildConfigurationDocument.save();
                     
-                    const ticketSequenceNumberInt = activeGuildConfigurationDocument.ticketCount;
+                    const ticketSequenceNumberInt = activeGuildConfigurationDocument.ticketControls.ticketCounter;
+                    
                     const formattedTicketSequenceString = ticketSequenceNumberInt.toString().padStart(4, '0');
                     const normalTicketChannelNameString = `ticket-${formattedTicketSequenceString}`;
                     const interactingUserDiscordIdString = incomingInteractionObject.user.id;
