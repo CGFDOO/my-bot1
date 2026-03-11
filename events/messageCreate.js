@@ -1,5 +1,6 @@
 const { Events } = require('discord.js');
 const GuildSettings = require('../models/GuildSettings'); 
+const levelingEngine = require('../engines/levelingEngine'); // 👈 استدعاء محرك اللفلات
 
 module.exports = {
     name: Events.MessageCreate,
@@ -14,6 +15,12 @@ module.exports = {
 
             // بنمسح أي مسافات زايدة قبل أو بعد كلام العضو عشان البوت يقرا صح
             const userMessage = message.content.trim(); 
+
+            // ==========================================
+            // 📈 تشغيل نظام اللفلات (Leveling Engine)
+            // ==========================================
+            // شغلناه هنا عشان يحسب الـ XP للرسائل العادية قبل ما الكود يوقف بسبب البريفكس
+            await levelingEngine(message, client, config);
 
             // ==========================================
             // 🚀 نظام الخط التلقائي
