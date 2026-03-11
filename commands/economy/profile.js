@@ -9,53 +9,49 @@ module.exports = {
         const target = message.mentions.users.first() || message.author;
         if (target.bot) return;
 
-        // جلب الداتا
-        const userLevel = await Level.findOne({ guildId: message.guild.id, userId: target.id });
+        let userLevel = await Level.findOne({ guildId: message.guild.id, userId: target.id });
         const level = userLevel ? userLevel.level : 0;
-        const credits = 0; // لحد ما نعمل داتابيز الاقتصاد هنخليها 0
+        const credits = 0; // لسه هنربطها لما نعمل الاقتصاد
 
-        const canvas = createCanvas(400, 400); // مربع زي البروبوت
+        const canvas = createCanvas(400, 400); 
         const ctx = canvas.getContext('2d');
 
-        // الخلفية
-        ctx.fillStyle = '#2b2d31';
+        // 1. الخلفية
+        ctx.fillStyle = '#23272A';
         ctx.beginPath();
         ctx.roundRect(0, 0, canvas.width, canvas.height, 20);
         ctx.fill();
 
-        // الجزء العلوي (لون أزرق)
-        ctx.fillStyle = '#5865F2';
+        // 2. بانر علوي
+        ctx.fillStyle = '#1e1f22';
         ctx.beginPath();
-        ctx.roundRect(0, 0, canvas.width, 120, { tl: 20, tr: 20, bl: 0, br: 0 });
+        ctx.roundRect(0, 0, canvas.width, 140, { tl: 20, tr: 20, bl: 0, br: 0 });
         ctx.fill();
 
-        // رسم الأفاتار في النص
+        // 3. رسم الأفاتار (مربع بحواف دائرية زي برو بوت)
         const avatarUrl = target.displayAvatarURL({ extension: 'png', size: 256 });
         const avatar = await loadImage(avatarUrl);
         ctx.save();
         ctx.beginPath();
-        ctx.arc(200, 120, 60, 0, Math.PI * 2);
+        ctx.roundRect(30, 80, 120, 120, 20); 
         ctx.closePath();
         ctx.clip();
-        ctx.drawImage(avatar, 140, 60, 120, 120);
+        ctx.drawImage(avatar, 30, 80, 120, 120);
         ctx.restore();
 
-        // إطار الأفاتار
-        ctx.beginPath();
-        ctx.arc(200, 120, 60, 0, Math.PI * 2);
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = '#2b2d31';
-        ctx.stroke();
-
-        // النصوص
-        ctx.font = 'bold 30px "Segoe UI", sans-serif';
+        // 4. النصوص (الاسم، اللفل، الكريدت)
+        ctx.font = 'bold 28px Arial, sans-serif';
         ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.fillText(target.username, 200, 220);
+        const cleanName = target.username.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
+        ctx.fillText(cleanName, 170, 130);
 
-        ctx.font = 'bold 20px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#b5bac1';
-        ctx.fillText(`Level: ${level}  |  Credits: $${credits}`, 200, 260);
+        ctx.font = 'bold 22px Arial, sans-serif';
+        ctx.fillStyle = '#5865F2';
+        ctx.fillText(`LEVEL ${level}`, 170, 170);
+
+        ctx.font = 'bold 20px Arial, sans-serif';
+        ctx.fillStyle = '#f1c40f'; // لون دهبي للفلوس
+        ctx.fillText(`💳 Credits: $${credits}`, 30, 260);
 
         const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'profile.png' });
         message.reply({ files: [attachment] });
