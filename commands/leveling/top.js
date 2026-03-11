@@ -3,30 +3,34 @@ const Level = require('../../models/Level');
 
 module.exports = {
     name: 'top',
-    aliases: ['توب', 'topd', 'topw', 'topm'], // يدعم كل أشكال الأوامر
+    aliases: ['توب', 'topd', 'topw', 'topm'], 
     async execute(message, args, client, config) {
-        // بنعرف العضو كتب انهي أمر بالظبط عشان نحدد التوب (يومي ولا شهري ولا عام)
         const prefix = config.prefix || '!';
+        // معرفة الأمر الذي تم كتابته بالضبط (مثلاً: topd أو t day)
         const commandName = message.content.split(' ')[0].toLowerCase().replace(prefix, '');
 
-        let sortField = 'xp'; // الأساسي هو التوب العام
+        let sortField = 'xp'; 
         let title = '🏆 التوب العام (All Time)';
 
-        // التحقق من الداشبورد (هل العضو كتب أمر اليومي ولا الأسبوعي؟)
-        if (commandName === (config.leveling?.topDailyCmd || 'topd')) { 
+        // التحقق من الداشبورد لمعرفة نوع التوب المطلوب
+        const dailyCmds = (config.leveling?.topDailyCmd || 'topd').split(',').map(c => c.trim());
+        const weeklyCmds = (config.leveling?.topWeeklyCmd || 'topw').split(',').map(c => c.trim());
+        const monthlyCmds = (config.leveling?.topMonthlyCmd || 'topm').split(',').map(c => c.trim());
+
+        if (dailyCmds.includes(commandName)) { 
             sortField = 'dailyXp'; 
             title = '📅 التوب اليومي (Daily)'; 
         }
-        else if (commandName === (config.leveling?.topWeeklyCmd || 'topw')) { 
+        else if (weeklyCmds.includes(commandName)) { 
             sortField = 'weeklyXp'; 
             title = '📆 التوب الأسبوعي (Weekly)'; 
         }
-        else if (commandName === (config.leveling?.topMonthlyCmd || 'topm')) { 
+        else if (monthlyCmds.includes(commandName)) { 
             sortField = 'monthlyXp'; 
             title = '📊 التوب الشهري (Monthly)'; 
         }
 
-        // جلب أعلى 10 أعضاء من الداتابيز وترتيبهم من الكبير للصغير
+        // جلب أعلى 10 أعضاء من الداتابيز
         const topUsers = await Level.find({ guildId: message.guild.id })
             .sort({ [sortField]: -1 })
             .limit(10);
@@ -43,8 +47,7 @@ module.exports = {
 
         let description = '';
         topUsers.forEach((user, index) => {
-            // تجاهل الأعضاء اللي خبرتهم صفر
-            if (user[sortField] > 0) {
+            if (user[sortField] > 0) { // عشان ميجيبش الناس اللي خبرتها 0
                 description += `**#${index + 1}** | <@${user.userId}> ➔ **${user[sortField]} XP** (مستوى ${user.level})\n`;
             }
         });
