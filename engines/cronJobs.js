@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Level = require('../models/Level');
 
 module.exports = () => {
-    console.log("⏳ [CRON] تم تشغيل محرك تصفير اللفلات (التوب اليومي/الشهري).");
+    console.log("⏳ [CRON] تم تشغيل محرك تصفير اللفلات (التوب اليومي/الأسبوعي/الشهري).");
 
     // 1. تصفير التوب اليومي (كل يوم الساعة 12 منتصف الليل)
     cron.schedule('0 0 * * *', async () => {
