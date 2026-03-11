@@ -3,58 +3,38 @@ const Level = require('../../models/Level');
 
 module.exports = {
     name: 'top',
-    aliases: ['توب', 'topd', 'topw', 'topm'], 
+    aliases: ['topd', 'topw', 'topm', 'توب'],
     async execute(message, args, client, config) {
         const prefix = config.prefix || '!';
-        // معرفة الأمر الذي تم كتابته بالضبط (مثلاً: topd أو t day)
         const commandName = message.content.split(' ')[0].toLowerCase().replace(prefix, '');
 
         let sortField = 'xp'; 
-        let title = '🏆 التوب العام (All Time)';
+        let title = '🏆 | التوب العام للسيرفر';
 
-        // التحقق من الداشبورد لمعرفة نوع التوب المطلوب
-        const dailyCmds = (config.leveling?.topDailyCmd || 'topd').split(',').map(c => c.trim());
-        const weeklyCmds = (config.leveling?.topWeeklyCmd || 'topw').split(',').map(c => c.trim());
-        const monthlyCmds = (config.leveling?.topMonthlyCmd || 'topm').split(',').map(c => c.trim());
+        if (commandName === 'topd') { sortField = 'dailyXp'; title = '📅 | التوب اليومي (Daily)'; }
+        else if (commandName === 'topw') { sortField = 'weeklyXp'; title = '📆 | التوب الأسبوعي (Weekly)'; }
+        else if (commandName === 'topm') { sortField = 'monthlyXp'; title = '📊 | التوب الشهري (Monthly)'; }
 
-        if (dailyCmds.includes(commandName)) { 
-            sortField = 'dailyXp'; 
-            title = '📅 التوب اليومي (Daily)'; 
-        }
-        else if (weeklyCmds.includes(commandName)) { 
-            sortField = 'weeklyXp'; 
-            title = '📆 التوب الأسبوعي (Weekly)'; 
-        }
-        else if (monthlyCmds.includes(commandName)) { 
-            sortField = 'monthlyXp'; 
-            title = '📊 التوب الشهري (Monthly)'; 
-        }
+        // نجيب أعلى 10 من الداتابيز
+        const topUsers = await Level.find({ guildId: message.guild.id }).sort({ [sortField]: -1 }).limit(10);
 
-        // جلب أعلى 10 أعضاء من الداتابيز
-        const topUsers = await Level.find({ guildId: message.guild.id })
-            .sort({ [sortField]: -1 })
-            .limit(10);
+        if (!topUsers.length) return message.reply("❌ لا يوجد تفاعل في السيرفر حتى الآن.");
 
-        if (!topUsers || topUsers.length === 0) {
-            return message.reply("❌ لا يوجد أعضاء في القائمة بعد!");
-        }
-
-        const embedColor = config.embedSetup?.primaryColor || '#5865F2';
-        const embed = new EmbedBuilder()
-            .setTitle(title)
-            .setColor(embedColor)
-            .setThumbnail(message.guild.iconURL({ dynamic: true }));
-
-        let description = '';
+        let topText = '';
         topUsers.forEach((user, index) => {
-            if (user[sortField] > 0) { // عشان ميجيبش الناس اللي خبرتها 0
-                description += `**#${index + 1}** | <@${user.userId}> ➔ **${user[sortField]} XP** (مستوى ${user.level})\n`;
+            if (user[sortField] > 0) {
+                // شكل نسخة طبق الأصل من البروبوت
+                topText += `**#${index + 1}** | <@${user.userId}> ➔ **${user[sortField]} XP** (Level ${user.level})\n`;
             }
         });
 
-        if (description === '') description = "لا يوجد تفاعل مسجل حتى الآن.";
+        const embed = new EmbedBuilder()
+            .setAuthor({ name: title, iconURL: message.guild.iconURL({ dynamic: true }) })
+            .setColor('#5865F2')
+            .setDescription(topText || "لا يوجد تفاعل بعد.")
+            .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL({ dynamic: true }) })
+            .setTimestamp();
 
-        embed.setDescription(description);
         message.reply({ embeds: [embed] });
     }
 };
