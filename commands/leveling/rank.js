@@ -4,64 +4,77 @@ const Level = require('../../models/Level');
 
 module.exports = {
     name: 'rank',
-    aliases: ['r', 'رانك', 'level'], // الأسماء دي أساسية وهنخليها تقرا من الداشبورد برضو
-    async execute(message, args, client, config) {
+    aliases: ['r', 'رانك'],
+    async execute(message, args) {
         const target = message.mentions.users.first() || message.author;
-        if (target.bot) return message.reply("🤖 البوتات ليس لديها مستوى!");
+        if (target.bot) return message.reply("🤖 البوتات ملهاش رانك يا غالي!");
 
-        // جلب بيانات العضو
-        const userLevel = await Level.findOne({ guildId: message.guild.id, userId: target.id });
-        
-        const level = userLevel ? userLevel.level : 0;
-        const currentXp = userLevel ? userLevel.xp : 0;
-        const requiredXp = (level + 1) * (level + 1) * 100; // معادلة الـ XP للفل القادم
+        // جلب الداتا من الداتابيز (عشان الداتا متتمسحش أبداً)
+        let userLevel = await Level.findOne({ guildId: message.guild.id, userId: target.id });
+        if (!userLevel) {
+            userLevel = { level: 0, xp: 0 }; // لو لسه ملوش داتا
+        }
 
-        // 🎨 تجهيز اللوحة (Canvas) للرسم زي البروبوت
-        const canvas = createCanvas(934, 282); 
+        const currentLevel = userLevel.level;
+        const currentXp = userLevel.xp;
+        const neededXp = (currentLevel + 1) * (currentLevel + 1) * 100; // معادلة البروبوت تقريباً
+
+        // 🎨 تجهيز اللوحة (Canvas)
+        const canvas = createCanvas(900, 250);
         const ctx = canvas.getContext('2d');
 
-        // 1. رسم الخلفية (رمادي غامق ديسكورد)
-        ctx.fillStyle = '#23272A'; 
+        // 1. رسم الخلفية (تقدر تغير الكود ده وتحط صورة لو حابب)
+        ctx.fillStyle = '#2b2d31'; // لون رمادي فخم زي الديسكورد
         ctx.beginPath();
         ctx.roundRect(0, 0, canvas.width, canvas.height, 20);
         ctx.fill();
 
-        // 2. رسم شريط الـ XP الخلفي (الرمادي)
-        ctx.fillStyle = '#484B4E';
+        // 2. شريط الـ XP (الخلفية الرمادي الغامق)
+        ctx.fillStyle = '#1e1f22';
         ctx.beginPath();
-        ctx.roundRect(250, 180, 600, 30, 15);
+        ctx.roundRect(250, 160, 600, 35, 17);
         ctx.fill();
 
-        // 3. رسم شريط الـ XP الممتلئ (الأزرق)
-        const progress = Math.min(currentXp / requiredXp, 1);
-        ctx.fillStyle = config?.embedSetup?.primaryColor || '#5865F2'; // بياخد لون الإيمبد الأساسي بتاعك
+        // 3. شريط الـ XP (الممتلئ - لونه أزرق)
+        const progress = Math.min(currentXp / neededXp, 1);
+        ctx.fillStyle = '#5865F2'; 
         ctx.beginPath();
-        ctx.roundRect(250, 180, Math.max(600 * progress, 30), 30, 15);
+        ctx.roundRect(250, 160, Math.max(600 * progress, 35), 35, 17);
         ctx.fill();
 
-        // 4. كتابة النصوص
-        ctx.font = 'bold 36px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(target.username, 260, 150);
+        // 4. كتابة الاسم
+        ctx.font = 'bold 40px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(target.username, 260, 120);
 
+        // 5. كتابة اللفل
         ctx.font = 'bold 45px "Segoe UI", sans-serif';
-        ctx.fillStyle = config?.embedSetup?.primaryColor || '#5865F2';
-        ctx.fillText(`LEVEL ${level}`, 700, 100);
+        ctx.fillStyle = '#5865F2';
+        ctx.fillText(`LEVEL ${currentLevel}`, 700, 120);
 
-        ctx.font = 'bold 25px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(`${currentXp} / ${requiredXp} XP`, 680, 160);
+        // 6. كتابة الـ XP (الحالي / المطلوب)
+        ctx.font = 'bold 22px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        const xpText = `${currentXp} / ${neededXp} XP`;
+        ctx.fillText(xpText, 830 - ctx.measureText(xpText).width, 186);
 
-        // 5. رسم الأفاتار (دائري)
+        // 7. رسم الأفاتار (دائري احترافي)
         const avatarUrl = target.displayAvatarURL({ extension: 'png', size: 256 });
         const avatar = await loadImage(avatarUrl);
         ctx.save();
         ctx.beginPath();
-        ctx.arc(140, 141, 100, 0, Math.PI * 2);
+        ctx.arc(125, 125, 90, 0, Math.PI * 2);
         ctx.closePath();
         ctx.clip();
-        ctx.drawImage(avatar, 40, 41, 200, 200);
+        ctx.drawImage(avatar, 35, 35, 180, 180);
         ctx.restore();
+
+        // رسم إطار للأفاتار
+        ctx.beginPath();
+        ctx.arc(125, 125, 90, 0, Math.PI * 2);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#5865F2';
+        ctx.stroke();
 
         // إرسال الصورة
         const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'rank.png' });
