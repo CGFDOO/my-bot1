@@ -10,8 +10,8 @@ const loadDB = () => JSON.parse(fs.readFileSync(dbPath));
 const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 4));
 
 // ================= الإعدادات =================
-const ALLOWED_CHANNELS = ['حط_ايدي_الروم_هنا']; // حط أيديهات الرومات
-const ALLOWED_ROLES = ['حط_ايدي_الرتبة_هنا']; // الرتب اللي تقدر تشغل الأمر
+const ALLOWED_CHANNELS = ['1453939768885903462']; // حط أيديهات الرومات
+const ALLOWED_ROLES = ['1453946893053726830']; // الرتب اللي تقدر تشغل الأمر
 
 module.exports = (client) => {
     // ================= معالجة أزرار الشراء العالمية =================
