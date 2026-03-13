@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = (client) => {
     client.on('messageCreate', async message => {
+        // عشان البوت ميردش على نفسه
         if (message.author.bot) return;
 
         // 🔴 حط أيدي روم الضريبة هنا
@@ -36,6 +37,10 @@ module.exports = (client) => {
             return;
         }
 
+        // الإيموجيات المخصصة بتاعتك
+        const robuxEmoji = '<:Rubox:1481865668587687988>';
+        const creditEmoji = '<a:emoji_766588:1481865920258379797>';
+
         // 🟢 ضريبة الروبوكس
         if (isRobux) {
             const askFor30 = Math.ceil(amount / 0.70);
@@ -49,15 +54,15 @@ module.exports = (client) => {
                 .setAuthor({ name: 'ضريبة الروبوكس', iconURL: message.author.displayAvatarURL() })
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: '⚙️ المبلغ:', value: `**${amount.toLocaleString()}**`, inline: false },
+                    { name: `${robuxEmoji} المبلغ :`, value: `**${amount.toLocaleString()}**`, inline: false },
                     
-                    { name: '🪄 عشان يوصلك صافي من (الجيم باس 30%) تطلب:', value: `**${askFor30.toLocaleString()}**`, inline: false },
-                    { name: '📉 يوصلك صافي (بدون ضريبة):', value: `**${receive30.toLocaleString()}**`, inline: false },
-                    { name: '🔹 اضغط للنسخ (30%):', value: `\`${askFor30}\``, inline: false },
+                    { name: `${robuxEmoji} المطلوب مع الضريبة (جيم باس 30%) :`, value: `**${askFor30.toLocaleString()}**`, inline: false },
+                    { name: `${robuxEmoji} المبلغ الذي سيصل بدون ضريبه :`, value: `**${receive30.toLocaleString()}**`, inline: false },
+                    { name: `${robuxEmoji} اضغط للنسخ :`, value: `${askFor30}`, inline: false },
 
-                    { name: '🗺️ عشان يوصلك صافي من (ماب التبرع 40%) تطلب:', value: `**${askFor40.toLocaleString()}**`, inline: false },
-                    { name: '📉 يوصلك صافي (بدون ضريبة):', value: `**${receive40.toLocaleString()}**`, inline: false },
-                    { name: '🔹 اضغط للنسخ (40%):', value: `\`${askFor40}\``, inline: false }
+                    { name: `${robuxEmoji} المطلوب مع الضريبة (ماب التبرع 40%) :`, value: `**${askFor40.toLocaleString()}**`, inline: false },
+                    { name: `${robuxEmoji} المبلغ الذي سيصل بدون ضريبه :`, value: `**${receive40.toLocaleString()}**`, inline: false },
+                    { name: `${robuxEmoji} اضغط للنسخ :`, value: `${askFor40}`, inline: false }
                 )
                 .setFooter({ text: 'مدعوم من الإمبراطور بوت', iconURL: client.user.displayAvatarURL() });
 
@@ -74,10 +79,10 @@ module.exports = (client) => {
                 .setAuthor({ name: 'ضريبة الكريدت', iconURL: message.author.displayAvatarURL() })
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: '⚙️ المبلغ:', value: `**${amount.toLocaleString()}**`, inline: false },
-                    { name: '🪄 المطلوب مع الضريبة:', value: `**${askForCredit.toLocaleString()}**`, inline: false },
-                    { name: '📉 يوصلك صافي (بدون ضريبة):', value: `**${receiveCredit.toLocaleString()}**`, inline: false },
-                    { name: '🔹 اضغط للنسخ:', value: `\`${askForCredit}\``, inline: false }
+                    { name: `${creditEmoji} المبلغ :`, value: `**${amount.toLocaleString()}**`, inline: false },
+                    { name: `${creditEmoji} المطلوب مع الضريبة :`, value: `**${askForCredit.toLocaleString()}**`, inline: false },
+                    { name: `${creditEmoji} المبلغ الذي سيصل بدون ضريبه :`, value: `**${receiveCredit.toLocaleString()}**`, inline: false },
+                    { name: `${creditEmoji} اضغط للنسخ :`, value: `${askForCredit}`, inline: false }
                 )
                 .setFooter({ text: 'مدعوم من الإمبراطور بوت', iconURL: client.user.displayAvatarURL() });
 
@@ -85,4 +90,4 @@ module.exports = (client) => {
         }
     });
 };
-            
+                
