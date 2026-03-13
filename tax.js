@@ -6,7 +6,7 @@ module.exports = (client) => {
         if (message.author.bot) return;
 
         // 🔴 ضع أيدي روم الضريبة هنا
-        const taxChannelId = 'حط_أيدي_الروم_هنا';
+        const taxChannelId = '1468625417563803772';
 
         const content = message.content.toLowerCase().trim();
         const isTaxChannel = message.channel.id === taxChannelId;
