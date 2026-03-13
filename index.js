@@ -87,6 +87,8 @@ process.on('uncaughtException', (err) => console.log('🔴 [ANTI-CRASH] Uncaught
 // تشغيل ملف الضريبة
 require('./tax.js')(client);
 
+require('./roulette.js')(client);
+
 if (process.env.TOKEN) {
     client.login(process.env.TOKEN).then(() => console.log(`🚀 [SYSTEM ONLINE] البوت متصل بالديسكورد!`));
 }
