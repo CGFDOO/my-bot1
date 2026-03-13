@@ -6,7 +6,7 @@ module.exports = (client) => {
         if (message.author.bot) return;
 
         // 🔴 حط أيدي الروم بتاعت الضريبة هنا
-        const taxChannelId = '1468625417563803772';
+        const taxChannelId = 'حط_أيدي_الروم_هنا';
 
         const content = message.content.toLowerCase().trim();
         const isTaxChannel = message.channel.id === taxChannelId;
@@ -45,21 +45,30 @@ module.exports = (client) => {
 
         // 🟢 حساب ضريبة الروبوكس
         if (isRobux) {
-            // ضريبة الجيم باس (30%) 
-            const tax30 = Math.floor(amount / 0.70);
-            // ضريبة ماب التبرع (40%) 
-            const tax40 = Math.floor(amount / 0.60);
+            // عشان يوصلك المبلغ ده صافي (تطلب كام؟)
+            const askFor30 = Math.floor(amount / 0.70);
+            const askFor40 = Math.floor(amount / 0.60);
+
+            // لو حد دفع المبلغ ده (هيوصلك كام؟)
+            const receive30 = Math.floor(amount * 0.70);
+            const receive40 = Math.floor(amount * 0.60);
 
             const robuxEmbed = new EmbedBuilder()
                 .setColor('#2b2d31') // لون الديسكورد الدارك مود
                 .setAuthor({ name: 'ضريبة الروبوكس', iconURL: message.author.displayAvatarURL() })
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: '⚙️ المبلغ:', value: `**${amount.toLocaleString()}**`, inline: false },
-                    { name: '🪄 عشان يوصلك صافي من (الجيم باس 30%):', value: `**${tax30.toLocaleString()}**`, inline: false },
-                    { name: '🔹 اضغط للنسخ:', value: `${tax30}`, inline: false },
-                    { name: '🗺️ عشان يوصلك صافي من (ماب التبرع 40%):', value: `**${tax40.toLocaleString()}**`, inline: false },
-                    { name: '🔹 اضغط للنسخ:', value: `${tax40}`, inline: false }
+                    { name: '⚙️ المبلغ المكتوب:', value: `**${amount.toLocaleString()}**`, inline: false },
+                    { name: 'ــــــــــــــــــــــــــــــــــــــــــــــــ', value: '\u200B', inline: false },
+                    { name: '🛒 جيم باس (ضريبة 30%):', value: '\u200B', inline: false },
+                    { name: '🪄 عشان يوصلك صافي تطلب:', value: `**${askFor30.toLocaleString()}**`, inline: true },
+                    { name: '🔹 اضغط للنسخ:', value: `${askFor30}`, inline: true },
+                    { name: '📥 لو شخص دفع المبلغ هيوصلك:', value: `**${receive30.toLocaleString()}**`, inline: false },
+                    { name: 'ــــــــــــــــــــــــــــــــــــــــــــــــ', value: '\u200B', inline: false },
+                    { name: '🗺️ ماب التبرع (ضريبة 40%):', value: '\u200B', inline: false },
+                    { name: '🪄 عشان يوصلك صافي تطلب:', value: `**${askFor40.toLocaleString()}**`, inline: true },
+                    { name: '🔹 اضغط للنسخ:', value: `${askFor40}`, inline: true },
+                    { name: '📥 لو شخص دفع المبلغ هيوصلك:', value: `**${receive40.toLocaleString()}**`, inline: false }
                 )
                 .setFooter({ text: 'مدعوم من الإمبراطور بوت', iconURL: client.user.displayAvatarURL() });
 
@@ -68,17 +77,22 @@ module.exports = (client) => {
 
         // 🔵 حساب ضريبة الكريدت (بروبوت 5%)
         if (isCredit) {
-            // قانون ضريبة بروبوت الدقيق جداً
-            const taxCredit = Math.floor(amount * (20 / 19)) + 1;
+            // قانون ضريبة بروبوت (عشان يوصلك المبلغ صافي)
+            const askForCredit = Math.floor(amount * (20 / 19)) + 1;
+            
+            // لو حد حول المبلغ ده (هيوصلك كام بعد خصم 5%)
+            const receiveCredit = Math.floor(amount * 0.95);
 
             const creditEmbed = new EmbedBuilder()
                 .setColor('#2b2d31')
                 .setAuthor({ name: 'ضريبة الكريدت', iconURL: message.author.displayAvatarURL() })
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: '⚙️ المبلغ:', value: `**${amount.toLocaleString()}**`, inline: false },
-                    { name: '🪄 المبلغ مع الضريبة:', value: `**${taxCredit.toLocaleString()}**`, inline: false },
-                    { name: '🔹 اضغط للنسخ:', value: `${taxCredit}`, inline: false }
+                    { name: '⚙️ المبلغ المكتوب:', value: `**${amount.toLocaleString()}**`, inline: false },
+                    { name: 'ــــــــــــــــــــــــــــــــــــــــــــــــ', value: '\u200B', inline: false },
+                    { name: '🪄 عشان يوصلك صافي تطلب:', value: `**${askForCredit.toLocaleString()}**`, inline: true },
+                    { name: '🔹 اضغط للنسخ:', value: `${askForCredit}`, inline: true },
+                    { name: '📥 لو شخص حول المبلغ هيوصلك:', value: `**${receiveCredit.toLocaleString()}**`, inline: false }
                 )
                 .setFooter({ text: 'مدعوم من الإمبراطور بوت', iconURL: client.user.displayAvatarURL() });
 
