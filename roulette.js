@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 
@@ -10,88 +10,79 @@ const loadDB = () => JSON.parse(fs.readFileSync(dbPath));
 const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 4));
 
 // ================= الإعدادات =================
-const ALLOWED_CHANNELS = ['1453939768885903462']; // حط أيديهات الرومات
-const ALLOWED_ROLES = ['1453946893053726830']; // الرتب اللي تقدر تشغل الأمر
-
-const STORE_PRICES = {
-    double_kick: 350,
-    revive_friend: 250,
-    self_revive: 300,
-    nuke: 7500
-};
-
-const activeGames = new Set();
+const ALLOWED_CHANNELS = ['حط_ايدي_الروم_هنا']; // حط أيديهات الرومات
+const ALLOWED_ROLES = ['حط_ايدي_الرتبة_هنا']; // الرتب اللي تقدر تشغل الأمر
 
 module.exports = (client) => {
+    // ================= معالجة أزرار الشراء العالمية =================
+    client.on('interactionCreate', async interaction => {
+        if (!interaction.isButton()) return;
+        
+        // لو داس على زرار من زراير الشراء في المتجر
+        if (interaction.customId.startsWith('buy_')) {
+            const itemMap = {
+                'buy_double': { name: 'طرد مرتين', key: 'double_kick', price: 350 },
+                'buy_friend': { name: 'إنعاش صديق', key: 'revive_friend', price: 250 },
+                'buy_revive': { name: 'إنعاش ذاتي', key: 'self_revive', price: 300 },
+                'buy_nuke': { name: 'قنبلة نووية', key: 'nuke', price: 7500 }
+            };
+
+            const item = itemMap[interaction.customId];
+            if (!item) return;
+
+            const db = loadDB();
+            const user = db[interaction.user.id] || { points: 0, inventory: {} };
+
+            // لو معهوش فلوس
+            if (user.points < item.price) {
+                return interaction.reply({ content: `❌ نقاطك غير كافية! تحتاج **${item.price}** نقطة لشراء ${item.name}.`, ephemeral: true });
+            }
+
+            // خصم النقاط وإضافة الأداة
+            user.points -= item.price;
+            user.inventory[item.key] = (user.inventory[item.key] || 0) + 1;
+            db[interaction.user.id] = user;
+            saveDB(db);
+
+            // تحديث رسالة المتجر عشان زرار النقاط يتغير بالرقم الجديد
+            const updatedShopRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('buy_double').setLabel('طرد مرتين (350)').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('buy_friend').setLabel('إنعاش صديق (250)').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('buy_revive').setLabel('إنعاش ذاتي (300)').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('buy_nuke').setLabel('قنبلة نووية (7500)').setStyle(ButtonStyle.Secondary),
+                // زرار النقاط الجديد
+                new ButtonBuilder().setCustomId('show_points').setLabel(`💰 نقاطك: ${user.points}`).setStyle(ButtonStyle.Success).setDisabled(true)
+            );
+
+            await interaction.update({ components: [updatedShopRow] });
+            await interaction.followUp({ content: `✅ مبروك! تم شراء **${item.name}** بنجاح. رصيدك الآن: ${user.points}`, ephemeral: true });
+        }
+    });
+
     client.on('messageCreate', async message => {
         if (message.author.bot) return;
 
         const args = message.content.trim().split(/ +/);
         const command = args[0].toLowerCase();
 
-        // 🛒 نظام المتجر والنقاط
-        if (command === '!نقاطي' || command === '!متجر') {
-            const db = loadDB();
-            const user = db[message.author.id] || { points: 0, inventory: {} };
-            
-            if (command === '!نقاطي') return message.reply(`💰 نقاط الروليت الخاصة بك: **${user.points}** نقطة.`);
-
-            if (command === '!متجر') {
-                const shopEmbed = new EmbedBuilder()
-                    .setTitle('🛒 متجر الروليت')
-                    .setColor('#2b2d31')
-                    .setDescription('لشراء أداة اكتب: `!شراء <اسم_الأداة>`\nمثال: `!شراء انعاش`')
-                    .addFields(
-                        { name: '🔪 طرد مرتين (double)', value: `السعر: ${STORE_PRICES.double_kick} نقطة`, inline: false },
-                        { name: '🤝 إنعاش صديق (friend)', value: `السعر: ${STORE_PRICES.revive_friend} نقطة`, inline: false },
-                        { name: '❤️ إنعاش ذاتي (revive)', value: `السعر: ${STORE_PRICES.self_revive} نقطة`, inline: false },
-                        { name: '☢️ قنبلة نووية (nuke)', value: `السعر: ${STORE_PRICES.nuke} نقطة`, inline: false }
-                    );
-                return message.reply({ embeds: [shopEmbed] });
-            }
-        }
-
-        // أوامر الشراء
-        if (command === '!شراء') {
-            const item = args[1]?.toLowerCase();
-            const itemMap = { 'double': 'double_kick', 'friend': 'revive_friend', 'revive': 'self_revive', 'nuke': 'nuke' };
-            const db = loadDB();
-            const user = db[message.author.id] || { points: 0, inventory: {} };
-
-            if (!item || !itemMap[item]) return message.reply('❗ يرجى كتابة اسم الأداة بشكل صحيح (double, friend, revive, nuke).');
-            
-            const realItem = itemMap[item];
-            const price = STORE_PRICES[realItem];
-
-            if (user.points < price) return message.reply(`❌ نقاطك غير كافية! تحتاج **${price}** نقطة.`);
-            
-            user.points -= price;
-            user.inventory[realItem] = (user.inventory[realItem] || 0) + 1;
-            db[message.author.id] = user;
-            saveDB(db);
-
-            return message.reply(`✅ تم شراء **${item}** بنجاح!`);
-        }
-
         // ================= بدء اللعبة =================
         if (command === '!روليت' || command === '!roulette') {
             if (!ALLOWED_CHANNELS.includes(message.channel.id)) return;
             const hasRole = message.member.roles.cache.some(r => ALLOWED_ROLES.includes(r.id));
             if (!hasRole) return message.reply('❌ لا تملك الصلاحية لتشغيل هذه اللعبة.');
-            if (activeGames.has(message.channel.id)) return message.reply('⚠️ هناك لعبة روليت تعمل حالياً.');
             
-            activeGames.add(message.channel.id);
             let players = [];
             
             const joinRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('join_roulette').setLabel('دخول 🎯').setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId('leave_roulette').setLabel('خروج 🚪').setStyle(ButtonStyle.Danger)
+                new ButtonBuilder().setCustomId('leave_roulette').setLabel('خروج 🚪').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('open_shop').setLabel('🛒 المتجر').setStyle(ButtonStyle.Primary) // زرار المتجر الجديد
             );
 
             const startEmbed = new EmbedBuilder()
                 .setTitle('🎰 روليت - تسجيل الدخول')
                 .setColor('#ff0000')
-                .setDescription('ستبدأ اللعبة قريباً! اضغط دخول للمشاركة.')
+                .setDescription('ستبدأ اللعبة قريباً! اضغط دخول للمشاركة أو افتح المتجر لشراء الأدوات.')
                 .addFields({ name: 'المشاركين', value: `(0/200)` });
 
             const gameMessage = await message.channel.send({ embeds: [startEmbed], components: [joinRow] });
@@ -102,17 +93,42 @@ module.exports = (client) => {
                     if (players.includes(i.user.id)) return i.reply({ content: 'إنت مسجل بالفعل!', ephemeral: true });
                     players.push(i.user.id);
                     await i.reply({ content: 'تم تسجيل دخولك.', ephemeral: true });
-                } else if (i.customId === 'leave_roulette') {
+                } 
+                else if (i.customId === 'leave_roulette') {
                     players = players.filter(id => id !== i.user.id);
                     await i.reply({ content: 'تم سحب تسجيلك.', ephemeral: true });
                 }
-                startEmbed.setFields({ name: 'المشاركين', value: `(${players.length}/200)` });
-                await gameMessage.edit({ embeds: [startEmbed] });
+                // ================= فتح المتجر المخفي =================
+                else if (i.customId === 'open_shop') {
+                    const db = loadDB();
+                    const user = db[i.user.id] || { points: 0, inventory: {} };
+
+                    const shopEmbed = new EmbedBuilder()
+                        .setTitle('🛒 متجر الروليت')
+                        .setColor('#2b2d31')
+                        .setDescription('اختر الأداة التي تريد شراءها من الأزرار بالأسفل:')
+                        // 🔴 حط لينك الصورة بتاعتك للمتجر هنا
+                        .setImage('https://i.imgur.com/YOUR_SHOP_IMAGE_HERE.png'); 
+
+                    const shopRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('buy_double').setLabel('طرد مرتين (350)').setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder().setCustomId('buy_friend').setLabel('إنعاش صديق (250)').setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder().setCustomId('buy_revive').setLabel('إنعاش ذاتي (300)').setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder().setCustomId('buy_nuke').setLabel('قنبلة نووية (7500)').setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder().setCustomId('show_points').setLabel(`💰 نقاطك: ${user.points}`).setStyle(ButtonStyle.Success).setDisabled(true) // الزرار المقفول
+                    );
+
+                    return i.reply({ embeds: [shopEmbed], components: [shopRow], ephemeral: true });
+                }
+
+                if (i.customId !== 'open_shop') {
+                    startEmbed.setFields({ name: 'المشاركين', value: `(${players.length}/200)` });
+                    await gameMessage.edit({ embeds: [startEmbed] });
+                }
             });
 
             collector.on('end', async () => {
                 if (players.length < 2) {
-                    activeGames.delete(message.channel.id);
                     return message.channel.send('❌ تم إلغاء الروليت لعدم اكتمال العدد.');
                 }
                 await gameMessage.delete().catch(() => {});
@@ -129,7 +145,6 @@ module.exports = (client) => {
         const center = size / 2;
         const radius = size / 2 - 20;
 
-        // رسم الخلفية
         ctx.fillStyle = '#1e1f22';
         ctx.fillRect(0, 0, size, size);
 
@@ -139,7 +154,6 @@ module.exports = (client) => {
             const startAngle = i * sliceAngle;
             const endAngle = startAngle + sliceAngle;
 
-            // ألوان العجلة (أحمر غامق وأسود)
             ctx.fillStyle = i % 2 === 0 ? '#8B0000' : '#2b2d31';
             ctx.beginPath();
             ctx.moveTo(center, center);
@@ -150,7 +164,6 @@ module.exports = (client) => {
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // رسم أسماء اللاعبين
             ctx.save();
             ctx.translate(center, center);
             ctx.rotate(startAngle + sliceAngle / 2);
@@ -162,7 +175,6 @@ module.exports = (client) => {
             ctx.restore();
         }
 
-        // صورة اللاعب اللي عليه الدور في النص
         if (centerAvatarUrl) {
             try {
                 const img = await loadImage(centerAvatarUrl);
@@ -181,7 +193,6 @@ module.exports = (client) => {
             } catch(e) {}
         }
 
-        // سهم الاختيار
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.moveTo(size - 20, center - 15);
@@ -202,7 +213,6 @@ module.exports = (client) => {
             const turnIndex = Math.floor(Math.random() * alivePlayers.length);
             const turnPlayerId = alivePlayers[turnIndex];
 
-            // جلب أسماء اللاعبين للرسم
             const playersInfo = alivePlayers.map(id => {
                 const member = channel.guild.members.cache.get(id);
                 return { id, name: member ? member.displayName : 'Unknown' };
@@ -211,7 +221,6 @@ module.exports = (client) => {
             const turnMember = channel.guild.members.cache.get(turnPlayerId);
             const avatarUrl = turnMember ? turnMember.user.displayAvatarURL({ extension: 'png', size: 128 }) : null;
 
-            // رسم الصورة
             const buffer = await generateRouletteImage(playersInfo, avatarUrl);
             const attachment = new AttachmentBuilder(buffer, { name: 'roulette.png' });
 
@@ -289,19 +298,21 @@ module.exports = (client) => {
             }
         }
 
+        // إعلان الفائز
         const winnerId = alivePlayers[0];
-        db = loadDB();
-        const winnerDb = db[winnerId] || { points: 0, inventory: {} };
-        winnerDb.points += 10;
-        db[winnerId] = winnerDb;
-        saveDB(db);
+        if (winnerId) {
+            db = loadDB();
+            const winnerDb = db[winnerId] || { points: 0, inventory: {} };
+            winnerDb.points += 10;
+            db[winnerId] = winnerDb;
+            saveDB(db);
 
-        const winEmbed = new EmbedBuilder()
-            .setColor('#00ff00')
-            .setTitle('🏆 بطل الروليت!')
-            .setDescription(`الفائز هو: <@${winnerId}>\nحصل على **10** نقاط روليت!`);
-        
-        await channel.send({ embeds: [winEmbed] });
-        activeGames.delete(channel.id);
+            const winEmbed = new EmbedBuilder()
+                .setColor('#00ff00')
+                .setTitle('🏆 بطل الروليت!')
+                .setDescription(`الفائز هو: <@${winnerId}>\nحصل على **10** نقاط روليت!`);
+            
+            await channel.send({ embeds: [winEmbed] });
+        }
     }
 };
