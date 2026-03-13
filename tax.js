@@ -2,27 +2,26 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = (client) => {
     client.on('messageCreate', async message => {
-        // عشان البوت ميردش على نفسه أو على بوتات تانية
+        // تجاهل رسائل البوتات
         if (message.author.bot) return;
 
-        // 🔴 حط أيدي الروم بتاعت الضريبة هنا
+        // 🔴 ضع أيدي روم الضريبة هنا
         const taxChannelId = 'حط_أيدي_الروم_هنا';
 
         const content = message.content.toLowerCase().trim();
         const isTaxChannel = message.channel.id === taxChannelId;
 
-        // تحديد نوع الطلب: روبوكس ولا كريدت؟
+        // تحديد نوع الطلب
         const isRobux = content.startsWith('r ') || content.startsWith('!taxr ');
-        // الكريدت بيشتغل لو كتب !tax أو لو كتب الرقم علطول جوه روم الضريبة
         const isCredit = content.startsWith('!tax ') || (isTaxChannel && !isRobux);
 
-        // لو الرسالة مش أمر ضريبة ومش في روم الضريبة، نتجاهلها
+        // تجاهل الرسائل التي ليست أوامر ضريبة أو خارج الروم المخصص
         if (!isRobux && !isCredit && !isTaxChannel) return;
 
-        // استخراج الرقم من الرسالة
+        // استخراج الرقم
         let rawAmount = content.replace('!taxr', '').replace('!tax', '').replace('r', '').trim();
 
-        // دالة عشان تحول الحروف لأصفار (k, m, b)
+        // تحويل الحروف إلى أصفار
         const parseAmount = (text) => {
             let multiplier = 1;
             if (text.endsWith('k')) { multiplier = 1000; text = text.slice(0, -1); }
@@ -35,7 +34,6 @@ module.exports = (client) => {
 
         const amount = parseAmount(rawAmount);
 
-        // لو الرقم غلط أو مفيش رقم
         if (!amount || amount <= 0) {
             if (content.startsWith('!tax') || content.startsWith('r') || isTaxChannel) {
                 return message.reply({ content: '❗ **يرجى إدخال رقم صحيح**' }).catch(() => {});
@@ -43,44 +41,38 @@ module.exports = (client) => {
             return;
         }
 
-        // 🟢 حساب ضريبة الروبوكس
+        // 🟢 ضريبة الروبوكس
         if (isRobux) {
-            // عشان يوصلك المبلغ ده صافي (تطلب كام؟)
             const askFor30 = Math.floor(amount / 0.70);
             const askFor40 = Math.floor(amount / 0.60);
-
-            // لو حد دفع المبلغ ده (هيوصلك كام؟)
             const receive30 = Math.floor(amount * 0.70);
             const receive40 = Math.floor(amount * 0.60);
 
             const robuxEmbed = new EmbedBuilder()
-                .setColor('#2b2d31') // لون الديسكورد الدارك مود
+                .setColor('#2b2d31')
                 .setAuthor({ name: 'ضريبة الروبوكس', iconURL: message.author.displayAvatarURL() })
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: '⚙️ المبلغ المكتوب:', value: `**${amount.toLocaleString()}**`, inline: false },
-                    { name: 'ــــــــــــــــــــــــــــــــــــــــــــــــ', value: '\u200B', inline: false },
-                    { name: '🛒 جيم باس (ضريبة 30%):', value: '\u200B', inline: false },
-                    { name: '🪄 عشان يوصلك صافي تطلب:', value: `**${askFor30.toLocaleString()}**`, inline: true },
-                    { name: '🔹 اضغط للنسخ:', value: `${askFor30}`, inline: true },
-                    { name: '📥 لو شخص دفع المبلغ هيوصلك:', value: `**${receive30.toLocaleString()}**`, inline: false },
-                    { name: 'ــــــــــــــــــــــــــــــــــــــــــــــــ', value: '\u200B', inline: false },
-                    { name: '🗺️ ماب التبرع (ضريبة 40%):', value: '\u200B', inline: false },
-                    { name: '🪄 عشان يوصلك صافي تطلب:', value: `**${askFor40.toLocaleString()}**`, inline: true },
-                    { name: '🔹 اضغط للنسخ:', value: `${askFor40}`, inline: true },
-                    { name: '📥 لو شخص دفع المبلغ هيوصلك:', value: `**${receive40.toLocaleString()}**`, inline: false }
+                    { name: '⚙️ المبلغ:', value: `**${amount.toLocaleString()}**`, inline: false },
+                    { 
+                        name: '🛒 جيم باس (30%):', 
+                        value: `**المطلوب:** ${askFor30.toLocaleString()}\n**الصافي لك:** ${receive30.toLocaleString()}\n**للنسخ:** \`${askFor30}\``, 
+                        inline: false 
+                    },
+                    { 
+                        name: '🗺️ ماب التبرع (40%):', 
+                        value: `**المطلوب:** ${askFor40.toLocaleString()}\n**الصافي لك:** ${receive40.toLocaleString()}\n**للنسخ:** \`${askFor40}\``, 
+                        inline: false 
+                    }
                 )
-                .setFooter({ text: 'مدعوم من الإمبراطور بوت', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tax System', iconURL: client.user.displayAvatarURL() });
 
             return message.reply({ embeds: [robuxEmbed] }).catch(() => {});
         }
 
-        // 🔵 حساب ضريبة الكريدت (بروبوت 5%)
+        // 🔵 ضريبة الكريدت (5%)
         if (isCredit) {
-            // قانون ضريبة بروبوت (عشان يوصلك المبلغ صافي)
             const askForCredit = Math.floor(amount * (20 / 19)) + 1;
-            
-            // لو حد حول المبلغ ده (هيوصلك كام بعد خصم 5%)
             const receiveCredit = Math.floor(amount * 0.95);
 
             const creditEmbed = new EmbedBuilder()
@@ -88,16 +80,14 @@ module.exports = (client) => {
                 .setAuthor({ name: 'ضريبة الكريدت', iconURL: message.author.displayAvatarURL() })
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields(
-                    { name: '⚙️ المبلغ المكتوب:', value: `**${amount.toLocaleString()}**`, inline: false },
-                    { name: 'ــــــــــــــــــــــــــــــــــــــــــــــــ', value: '\u200B', inline: false },
-                    { name: '🪄 عشان يوصلك صافي تطلب:', value: `**${askForCredit.toLocaleString()}**`, inline: true },
-                    { name: '🔹 اضغط للنسخ:', value: `${askForCredit}`, inline: true },
-                    { name: '📥 لو شخص حول المبلغ هيوصلك:', value: `**${receiveCredit.toLocaleString()}**`, inline: false }
+                    { name: '⚙️ المبلغ:', value: `**${amount.toLocaleString()}**`, inline: false },
+                    { name: '🪄 المطلوب مع الضريبة:', value: `**${askForCredit.toLocaleString()}**`, inline: true },
+                    { name: '📥 الصافي عند التحويل:', value: `**${receiveCredit.toLocaleString()}**`, inline: true },
+                    { name: '🔹 اضغط للنسخ:', value: `${askForCredit}`, inline: false }
                 )
-                .setFooter({ text: 'مدعوم من الإمبراطور بوت', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tax System', iconURL: client.user.displayAvatarURL() });
 
             return message.reply({ embeds: [creditEmbed] }).catch(() => {});
         }
     });
 };
-
