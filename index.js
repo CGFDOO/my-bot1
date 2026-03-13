@@ -84,6 +84,9 @@ try {
 process.on('unhandledRejection', (reason) => console.log('🔴 [ANTI-CRASH] Unhandled Rejection:', reason));
 process.on('uncaughtException', (err) => console.log('🔴 [ANTI-CRASH] Uncaught Exception:', err));
 
+// تشغيل ملف الضريبة
+require('./tax.js')(client);
+
 if (process.env.TOKEN) {
     client.login(process.env.TOKEN).then(() => console.log(`🚀 [SYSTEM ONLINE] البوت متصل بالديسكورد!`));
 }
