@@ -8,16 +8,16 @@ if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
 const loadDB = () => JSON.parse(fs.readFileSync(dbPath));
 const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 4));
 
-// ================= إعدادات الرومات والرتب (ركز هنا يا إمبراطور) =================
-const ALLOWED_CHANNELS = ['1453939768885903462']; // أيدي الروم المسموح للروليت
-const ROLET_ROLES = ['1453946893053726830']; // رتبة تشغيل الروليت في الروم المحدد بس
-const ADMIN_ROLES = ['1453946893053726830']; // الرتبة اللي تقدر تشغل الروليت في أي مكان
-const POINTS_ROLES = ['1453904793746804766']; // الرتبة اللي تقدر (تعطي/تسحب) نقاط
+// ================= إعدادات الرومات والرتب =================
+const ALLOWED_CHANNELS = ['1453939768885903462']; 
+const ROLET_ROLES = ['1453946893053726830']; 
+const ADMIN_ROLES = ['حط_ايدي_رتبة_الادمن_هنا']; 
+const POINTS_ROLES = ['حط_ايدي_رتبة_النقاط_هنا']; 
 
-// ================= إعدادات الأسعار والنقاط =================
-const REWARD_POINTS = 10; // نقاط الفائز
-const LOSE_POINTS = 3;    // نقاط الخاسر
-const TURN_TIME = 20000;  // وقت اختيار اللاعب (20 ثانية)
+// ================= الإعدادات الأساسية =================
+const REWARD_POINTS = 10; 
+const LOSE_POINTS = 3;    
+const TURN_TIME = 20000; // 20 ثانية بالظبط
 
 const STORE_PRICES = {
     double_kick: 350,
@@ -29,11 +29,10 @@ const STORE_PRICES = {
 const activeGames = new Map();
 
 module.exports = (client) => {
-    // ================= معالجة أزرار التفاعل (المتجر والصفحات) =================
+    // ================= أزرار المتجر =================
     client.on('interactionCreate', async interaction => {
         if (!interaction.isButton()) return;
         
-        // 🛒 نظام المتجر (محمي 100%)
         if (interaction.customId.startsWith('buy_')) {
             const itemMap = {
                 'buy_double': { name: 'طرد مرتين', key: 'double_kick', price: STORE_PRICES.double_kick },
@@ -45,19 +44,17 @@ module.exports = (client) => {
             const item = itemMap[interaction.customId];
             if (!item) return;
 
-            const db = loadDB(); // بنسحب رصيده لايف من الداتا بيز
+            const db = loadDB(); 
             const user = db[interaction.user.id] || { points: 0, inventory: {} };
 
-            // ⚠️ مستحيل يشتري لو فلوسه أقل من السعر
             if (user.points < item.price) {
                 return interaction.reply({ content: `❌ نقاطك غير كافية! تحتاج **${item.price}** نقطة، وأنت تمتلك **${user.points}** فقط.`, ephemeral: true });
             }
 
-            // لو معاه فلوس، بنخصم ونديله الأداة
             user.points -= item.price;
             user.inventory[item.key] = (user.inventory[item.key] || 0) + 1;
             db[interaction.user.id] = user;
-            saveDB(db); // بنحفظ الداتا بيز فوراً
+            saveDB(db); 
 
             const updatedShopRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('buy_double').setLabel(`طرد مرتين (${STORE_PRICES.double_kick})`).setStyle(ButtonStyle.Secondary),
@@ -68,7 +65,7 @@ module.exports = (client) => {
             );
 
             await interaction.update({ components: [updatedShopRow] });
-            await interaction.followUp({ content: `✅ مبروك! تم شراء **${item.name}** بنجاح. رصيدك المتبقي: ${user.points}`, ephemeral: true });
+            await interaction.followUp({ content: `✅ تم شراء **${item.name}** بنجاح. رصيدك المتبقي: ${user.points}`, ephemeral: true });
         }
     });
 
@@ -83,7 +80,6 @@ module.exports = (client) => {
         const hasRoletRole = message.member.roles.cache.some(r => ROLET_ROLES.includes(r.id));
         const hasPointsRole = message.member.roles.cache.some(r => POINTS_ROLES.includes(r.id));
 
-        // 🛑 أمر توقيف الروليت
         if (command === '!توقيف') {
             if (!hasAdminRole && !hasRoletRole) return message.reply('❌ لا تملك صلاحية إيقاف اللعبة.');
             if (!activeGames.has(message.channel.id)) return message.reply('⚠️ لا توجد لعبة نشطة لإيقافها.');
@@ -91,72 +87,59 @@ module.exports = (client) => {
             const gameData = activeGames.get(message.channel.id);
             if (gameData.collector) gameData.collector.stop('force_stop');
             activeGames.delete(message.channel.id);
-            return message.reply('🛑 تم إيقاف لعبة الروليت بقوة.');
+            return message.reply('🛑 تم إيقاف لعبة الروليت.');
         }
 
-        // 💰 أمر إعطاء النقاط
         if (command === '!point' || command === '!points') {
-            if (!hasPointsRole) return message.reply('❌ هذا الأمر لمسؤولين النقاط فقط.');
+            if (!hasPointsRole) return;
             const targetUser = message.mentions.users.first();
             const amount = parseInt(args[2]);
-
-            if (!targetUser || isNaN(amount)) return message.reply('❗ الاستخدام الصحيح: `!point @user 100`');
-
+            if (!targetUser || isNaN(amount)) return message.reply('❗ الاستخدام: `!point @user 100`');
             const db = loadDB();
             const userDb = db[targetUser.id] || { points: 0, inventory: {} };
             userDb.points += amount;
             db[targetUser.id] = userDb;
             saveDB(db);
-
-            return message.reply(`✅ تم إضافة **${amount}** نقطة إلى حساب <@${targetUser.id}>. رصيده الآن: **${userDb.points}** نقطة.`);
+            return message.reply(`✅ تم إضافة **${amount}** نقطة لـ <@${targetUser.id}>. رصيده: **${userDb.points}**`);
         }
 
-        // 💸 أمر سحب النقاط
         if (command === '!removepoint' || command === '!removepoints') {
-            if (!hasPointsRole) return message.reply('❌ هذا الأمر لمسؤولين النقاط فقط.');
+            if (!hasPointsRole) return;
             const targetUser = message.mentions.users.first();
             const amount = parseInt(args[2]);
-
-            if (!targetUser || isNaN(amount)) return message.reply('❗ الاستخدام الصحيح: `!removepoint @user 100`');
-
+            if (!targetUser || isNaN(amount)) return message.reply('❗ الاستخدام: `!removepoint @user 100`');
             const db = loadDB();
             const userDb = db[targetUser.id] || { points: 0, inventory: {} };
-            
             userDb.points -= amount;
-            if (userDb.points < 0) userDb.points = 0; // عشان الرصيد ميبقاش بالسالب
-            
+            if (userDb.points < 0) userDb.points = 0; 
             db[targetUser.id] = userDb;
             saveDB(db);
-
-            return message.reply(`📉 تم سحب **${amount}** نقطة من حساب <@${targetUser.id}>. رصيده الآن: **${userDb.points}** نقطة.`);
+            return message.reply(`📉 تم سحب **${amount}** نقطة من <@${targetUser.id}>. رصيده: **${userDb.points}**`);
         }
 
-        // 🎰 أمر تشغيل الروليت
         if (command === '!روليت' || command === '$روليت') {
             const isAllowedChannel = ALLOWED_CHANNELS.includes(message.channel.id);
-            
             if (!hasAdminRole) {
                 if (!isAllowedChannel) return;
-                if (!hasRoletRole) return message.reply('❌ لا تملك الصلاحية لتشغيل اللعبة.');
+                if (!hasRoletRole) return message.reply('❌ لا تملك الصلاحية.');
             }
 
-            if (activeGames.has(message.channel.id)) return message.reply('⚠️ هناك لعبة روليت تعمل حالياً.');
+            if (activeGames.has(message.channel.id)) return message.reply('⚠️ هناك لعبة تعمل حالياً.');
 
             let players = [];
-            const waitTime = 60; // 60 ثانية للتجميع
+            const waitTime = 60; 
             const endTime = Math.floor(Date.now() / 1000) + waitTime;
-            const embedColor = null; 
+            const embedColor = '#800080'; // لون بنفسجي
 
             const startEmbed = new EmbedBuilder()
                 .setTitle('## روليت')
+                .setColor(embedColor)
                 .setDescription('**طريقة اللعب**\n1- اختر الرقم الذي سيمثلك في اللعبة\n2- ستبدأ الجولة الأولى وسيتم تدوير العجلة واختيار لاعب عشوائي\n3- إذا كنت اللاعب المختار، فستختار لاعبًا ليتم طرده\n4- يستمر اللعب حتى يتبقى لاعبان فقط')
                 .addFields(
                     { name: 'الوقت المتبقي للبدء:', value: `⏳ <t:${endTime}:R>`, inline: false },
                     { name: 'المشاركين:', value: `(0/200)\nلا يوجد مشاركين حتى الآن.`, inline: false }
                 )
                 .setImage('https://cdn.discordapp.com/attachments/1454420195539025941/1482162249001865328/1773445405834.jpg');
-
-            if (embedColor) startEmbed.setColor(embedColor);
 
             const joinRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('join_roulette').setLabel('دخول 🎯').setStyle(ButtonStyle.Success),
@@ -165,7 +148,6 @@ module.exports = (client) => {
             );
 
             const gameMessage = await message.channel.send({ embeds: [startEmbed], components: [joinRow] });
-            
             const collector = gameMessage.createMessageComponentCollector({ time: waitTime * 1000 });
             activeGames.set(message.channel.id, { collector });
 
@@ -173,12 +155,7 @@ module.exports = (client) => {
                 if (i.customId === 'open_shop') {
                     const db = loadDB();
                     const user = db[i.user.id] || { points: 0, inventory: {} };
-                    
-                    const shopEmbed = new EmbedBuilder()
-                        .setTitle('🛒 متجر الروليت')
-                        .setDescription('اختر الأداة التي تريد شراءها:')
-                        .setImage('https://i.imgur.com/8Qe9dG0.gif'); 
-
+                    const shopEmbed = new EmbedBuilder().setTitle('🛒 متجر الروليت').setDescription('اختر الأداة:');
                     const shopRow = new ActionRowBuilder().addComponents(
                         new ButtonBuilder().setCustomId('buy_double').setLabel(`طرد مرتين (${STORE_PRICES.double_kick})`).setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder().setCustomId('buy_friend').setLabel(`إنعاش صديق (${STORE_PRICES.revive_friend})`).setStyle(ButtonStyle.Secondary),
@@ -211,21 +188,19 @@ module.exports = (client) => {
 
             collector.on('end', async (collected, reason) => {
                 if (reason === 'force_stop') return;
-
                 if (players.length < 4) {
                     activeGames.delete(message.channel.id);
                     return message.channel.send('❌ تم إلغاء الروليت لعدم اكتمال العدد (أقل عدد 4 لاعبين).');
                 }
-                
                 const endEmbed = EmbedBuilder.from(startEmbed);
                 endEmbed.setFields({ name: 'حالة اللعبة:', value: `🚀 بدأت اللعبة بـ **${players.length}** لاعبين!`, inline: false });
                 await gameMessage.edit({ embeds: [endEmbed], components: [] });
-
                 startGameLoop(message.channel, players);
             });
         }
     });
 
+    // ================= دالة الرسم (مع محاولة إصلاح الخط العربي) =================
     async function generateRouletteImage(playersInfo, centerAvatarUrl) {
         const size = 500;
         const canvas = createCanvas(size, size);
@@ -257,7 +232,8 @@ module.exports = (client) => {
             ctx.rotate(startAngle + sliceAngle / 2);
             ctx.textAlign = 'right';
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 14px Arial';
+            // إضافة خطوط متعددة لدعم العربي لو السيرفر فيه
+            ctx.font = 'bold 16px "Arial", "Tahoma", "Segoe UI", sans-serif'; 
             const name = playersInfo[i].name.substring(0, 10);
             ctx.fillText(name, radius - 20, 5);
             ctx.restore();
@@ -282,6 +258,7 @@ module.exports = (client) => {
         return canvas.toBuffer();
     }
 
+    // ================= دالة الصفحات والأزرار =================
     function getPaginationComponents(targetPlayers, page, channel) {
         let rows = [];
         let currentRow = new ActionRowBuilder();
@@ -302,20 +279,27 @@ module.exports = (client) => {
         });
         if (currentRow.components.length > 0) rows.push(currentRow);
 
+        // إضافة زراير التحكم (انسحاب، عشوائي، صفحات)
         const controlRow = new ActionRowBuilder();
         if (totalPages > 1) {
-            controlRow.addComponents(new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️ السابق').setStyle(ButtonStyle.Primary).setDisabled(page === 0));
+            controlRow.addComponents(new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️').setStyle(ButtonStyle.Primary).setDisabled(page === 0));
         }
-        controlRow.addComponents(new ButtonBuilder().setCustomId('withdraw').setLabel('🚪 انسحاب').setStyle(ButtonStyle.Danger));
+        
+        controlRow.addComponents(
+            new ButtonBuilder().setCustomId('random_kick').setLabel('🎲 طرد عشوائي').setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId('withdraw').setLabel('🚪 انسحاب').setStyle(ButtonStyle.Danger)
+        );
+
         if (totalPages > 1) {
             controlRow.addComponents(new ButtonBuilder().setCustomId('page_info').setLabel(`${page + 1}/${totalPages}`).setStyle(ButtonStyle.Secondary).setDisabled(true));
-            controlRow.addComponents(new ButtonBuilder().setCustomId(`next_${page}`).setLabel('التالي ➡️').setStyle(ButtonStyle.Primary).setDisabled(page === totalPages - 1));
+            controlRow.addComponents(new ButtonBuilder().setCustomId(`next_${page}`).setLabel('➡️').setStyle(ButtonStyle.Primary).setDisabled(page === totalPages - 1));
         }
         rows.push(controlRow);
         
         return rows;
     }
 
+    // ================= دورة اللعب الأساسية =================
     async function startGameLoop(channel, players) {
         let alivePlayers = [...players];
         let db = loadDB();
@@ -323,10 +307,6 @@ module.exports = (client) => {
         while (alivePlayers.length > 1) {
             const turnIndex = Math.floor(Math.random() * alivePlayers.length);
             const turnPlayerId = alivePlayers[turnIndex];
-
-            const spinMsg = await channel.send({ content: `🎰 يتم اختيار اللاعب...`, files: ['https://i.imgur.com/8Qe9dG0.gif'] });
-            await new Promise(r => setTimeout(r, 3000));
-            await spinMsg.delete().catch(() => {});
 
             const playersInfo = alivePlayers.map(id => {
                 const member = channel.guild.members.cache.get(id);
@@ -366,6 +346,11 @@ module.exports = (client) => {
                         actionTaken = true;
                         await interaction.reply({ content: '🚪 لقد انسحبت من اللعبة.' });
                         collector.stop();
+                    } else if (interaction.customId === 'random_kick') {
+                        kickedId = targetPlayers[Math.floor(Math.random() * targetPlayers.length)];
+                        actionTaken = true;
+                        await interaction.reply({ content: `🎲 تم اختيار طرد عشوائي!` });
+                        collector.stop();
                     } else if (interaction.customId.startsWith('kick_')) {
                         kickedId = interaction.customId.split('_')[1];
                         actionTaken = true;
@@ -377,7 +362,8 @@ module.exports = (client) => {
                 collector.on('end', () => resolve());
             });
 
-            await turnMsg.delete().catch(() => {});
+            // تعطيل الأزرار بدل حذف الرسالة
+            await turnMsg.edit({ components: [] }).catch(() => {});
 
             if (!actionTaken) {
                 kickedId = turnPlayerId;
@@ -412,14 +398,11 @@ module.exports = (client) => {
             saveDB(db);
 
             const winnerMember = channel.guild.members.cache.get(winnerId);
-            const embedColor = null;
-
             const winEmbed = new EmbedBuilder()
+                .setColor('#800080')
                 .setTitle('🏆 الفائز في الروليت!')
                 .setDescription(`🎉 تهانينا <@${winnerId}> لفوزك بالروليت!\n💰 تم إضافة **${REWARD_POINTS}** نقطة لحسابك.`)
                 .setThumbnail(winnerMember ? winnerMember.user.displayAvatarURL({ dynamic: true }) : null);
-            
-            if (embedColor) winEmbed.setColor(embedColor);
 
             await channel.send({ content: `<@${winnerId}>`, embeds: [winEmbed] });
         }
