@@ -3,7 +3,7 @@ const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs');
 const GIFEncoder = require('gifencoder');
 
-// ================= تسجيل الخط (لحل المربعات) =================
+// ================= تسجيل الخط (لحل المربعات) =================.
 try {
     if (fs.existsSync('./font.ttf')) {
         registerFont('./font.ttf', { family: 'CustomFont' });
