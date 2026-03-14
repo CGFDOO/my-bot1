@@ -48,7 +48,7 @@ module.exports = (client) => {
             const user = db[interaction.user.id] || { points: 0, inventory: {} };
 
             if (user.points < item.price) {
-                return interaction.reply({ content: `❌ نقاطك غير كافية! تحتاج **${item.price}** نقطة، وأنت تمتلك **${user.points}** فقط.`, ephemeral: true });
+                return interaction.reply({ content: `❌ نقاطك غير كافية! تحتاج **${item.price}** نقطة.`, ephemeral: true });
             }
 
             user.points -= item.price;
@@ -65,7 +65,7 @@ module.exports = (client) => {
             );
 
             await interaction.update({ components: [updatedShopRow] });
-            await interaction.followUp({ content: `✅ تم شراء **${item.name}** بنجاح. رصيدك المتبقي: ${user.points}`, ephemeral: true });
+            await interaction.followUp({ content: `✅ تم شراء **${item.name}** بنجاح.`, ephemeral: true });
         }
     });
 
@@ -87,7 +87,7 @@ module.exports = (client) => {
             const gameData = activeGames.get(message.channel.id);
             if (gameData.collector) gameData.collector.stop('force_stop');
             activeGames.delete(message.channel.id);
-            return message.reply('🛑 تم إيقاف لعبة الروليت.');
+            return message.reply('🛑 تم إيقاف لعبة الروليت بقوة.');
         }
 
         if (command === '!point' || command === '!points') {
@@ -100,7 +100,7 @@ module.exports = (client) => {
             userDb.points += amount;
             db[targetUser.id] = userDb;
             saveDB(db);
-            return message.reply(`✅ تم إضافة **${amount}** نقطة لـ <@${targetUser.id}>. رصيده: **${userDb.points}**`);
+            return message.reply(`✅ تم إضافة **${amount}** نقطة لـ <@${targetUser.id}>.`);
         }
 
         if (command === '!removepoint' || command === '!removepoints') {
@@ -114,7 +114,7 @@ module.exports = (client) => {
             if (userDb.points < 0) userDb.points = 0; 
             db[targetUser.id] = userDb;
             saveDB(db);
-            return message.reply(`📉 تم سحب **${amount}** نقطة من <@${targetUser.id}>. رصيده: **${userDb.points}**`);
+            return message.reply(`📉 تم سحب **${amount}** نقطة من <@${targetUser.id}>.`);
         }
 
         if (command === '!روليت' || command === '$روليت') {
@@ -129,7 +129,7 @@ module.exports = (client) => {
             let players = [];
             const waitTime = 60; 
             const endTime = Math.floor(Date.now() / 1000) + waitTime;
-            const embedColor = '#800080'; // لون بنفسجي
+            const embedColor = '#800080';
 
             const startEmbed = new EmbedBuilder()
                 .setTitle('## روليت')
@@ -200,8 +200,8 @@ module.exports = (client) => {
         }
     });
 
-    // ================= دالة الرسم (مع محاولة إصلاح الخط العربي) =================
-    async function generateRouletteImage(playersInfo, centerAvatarUrl) {
+    // ================= دالة الرسم =================
+    async function generateRouletteImage(playersInfo) {
         const size = 500;
         const canvas = createCanvas(size, size);
         const ctx = canvas.getContext('2d');
@@ -223,7 +223,7 @@ module.exports = (client) => {
             ctx.arc(center, center, radius, startAngle, endAngle);
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = '#000000';
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 1;
             ctx.stroke();
 
@@ -232,34 +232,40 @@ module.exports = (client) => {
             ctx.rotate(startAngle + sliceAngle / 2);
             ctx.textAlign = 'right';
             ctx.fillStyle = '#ffffff';
-            // إضافة خطوط متعددة لدعم العربي لو السيرفر فيه
-            ctx.font = 'bold 16px "Arial", "Tahoma", "Segoe UI", sans-serif'; 
-            const name = playersInfo[i].name.substring(0, 10);
-            ctx.fillText(name, radius - 20, 5);
+            ctx.font = 'bold 24px Arial';
+            // هنرسم الأرقام عشان نتفادى مشكلة المربعات بتاعت الخط
+            ctx.fillText(`${playersInfo[i].globalIdx}`, radius - 30, 8);
             ctx.restore();
         }
 
-        if (centerAvatarUrl) {
-            try {
-                const img = await loadImage(centerAvatarUrl);
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(center, center, 50, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.drawImage(img, center - 50, center - 50, 100, 100);
-                ctx.restore();
-                ctx.beginPath();
-                ctx.arc(center, center, 50, 0, Math.PI * 2);
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
-            } catch(e) {}
-        }
+        // دائرة ROULETTE اللي في النص
+        ctx.beginPath();
+        ctx.arc(center, center, 50, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e1f22';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText('ROULETTE', center, center + 6);
+
+        // سهم المؤشر
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(size - 20, center - 15);
+        ctx.lineTo(size, center);
+        ctx.lineTo(size - 20, center + 15);
+        ctx.closePath();
+        ctx.fill();
+
         return canvas.toBuffer();
     }
 
     // ================= دالة الصفحات والأزرار =================
-    function getPaginationComponents(targetPlayers, page, channel) {
+    function getPaginationComponents(playersInfo, targetPlayers, page) {
         let rows = [];
         let currentRow = new ActionRowBuilder();
         const start = page * 20;
@@ -267,27 +273,27 @@ module.exports = (client) => {
         const currentTargets = targetPlayers.slice(start, end);
         const totalPages = Math.ceil(targetPlayers.length / 20);
 
-        currentTargets.forEach((id, idx) => {
+        currentTargets.forEach((id) => {
             if (currentRow.components.length === 5) {
                 rows.push(currentRow);
                 currentRow = new ActionRowBuilder();
             }
-            const globalIdx = start + idx + 1;
-            const member = channel.guild.members.cache.get(id);
-            const name = member ? member.displayName.substring(0, 10) : 'User';
+            const playerObj = playersInfo.find(p => p.id === id);
+            const globalIdx = playerObj ? playerObj.globalIdx : 0;
+            const name = playerObj ? playerObj.name.substring(0, 10) : 'User';
+            
             currentRow.addComponents(new ButtonBuilder().setCustomId(`kick_${id}`).setLabel(`${globalIdx}- ${name}`).setStyle(ButtonStyle.Secondary));
         });
         if (currentRow.components.length > 0) rows.push(currentRow);
 
-        // إضافة زراير التحكم (انسحاب، عشوائي، صفحات)
         const controlRow = new ActionRowBuilder();
         if (totalPages > 1) {
             controlRow.addComponents(new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️').setStyle(ButtonStyle.Primary).setDisabled(page === 0));
         }
         
         controlRow.addComponents(
-            new ButtonBuilder().setCustomId('random_kick').setLabel('🎲 طرد عشوائي').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('withdraw').setLabel('🚪 انسحاب').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId('withdraw').setLabel('انسحاب').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('random_kick').setLabel('طرد عشوائي').setStyle(ButtonStyle.Secondary)
         );
 
         if (totalPages > 1) {
@@ -308,23 +314,23 @@ module.exports = (client) => {
             const turnIndex = Math.floor(Math.random() * alivePlayers.length);
             const turnPlayerId = alivePlayers[turnIndex];
 
-            const playersInfo = alivePlayers.map(id => {
+            const ObjectPlayersInfo = alivePlayers.map((id, index) => {
                 const member = channel.guild.members.cache.get(id);
-                return { id, name: member ? member.displayName : 'User' };
+                return { id, name: member ? member.displayName : 'User', globalIdx: index + 1 };
             });
-            const turnMember = channel.guild.members.cache.get(turnPlayerId);
-            const avatarUrl = turnMember ? turnMember.user.displayAvatarURL({ extension: 'png', size: 128 }) : null;
-            
-            const buffer = await generateRouletteImage(playersInfo, avatarUrl);
+
+            const buffer = await generateRouletteImage(ObjectPlayersInfo);
             const attachment = new AttachmentBuilder(buffer, { name: 'roulette.png' });
 
             const targetPlayers = alivePlayers.filter(id => id !== turnPlayerId);
             let currentPage = 0;
+            let currentRows = getPaginationComponents(ObjectPlayersInfo, targetPlayers, currentPage);
 
+            // الرسالة زي الصورة بالظبط
             const turnMsg = await channel.send({
-                content: `🔔 دورك يا <@${turnPlayerId}>! أمامك **20 ثانية** لاختيار لاعب لطرده.`,
+                content: `<@${turnPlayerId}> لديك **20 ثانية** لاختيار لاعب لطرده`,
                 files: [attachment],
-                components: getPaginationComponents(targetPlayers, currentPage, channel)
+                components: currentRows
             });
 
             const filter = i => i.user.id === turnPlayerId;
@@ -337,24 +343,26 @@ module.exports = (client) => {
                 collector.on('collect', async interaction => {
                     if (interaction.customId.startsWith('prev_')) {
                         currentPage--;
-                        await interaction.update({ components: getPaginationComponents(targetPlayers, currentPage, channel) });
+                        currentRows = getPaginationComponents(ObjectPlayersInfo, targetPlayers, currentPage);
+                        await interaction.update({ components: currentRows });
                     } else if (interaction.customId.startsWith('next_')) {
                         currentPage++;
-                        await interaction.update({ components: getPaginationComponents(targetPlayers, currentPage, channel) });
+                        currentRows = getPaginationComponents(ObjectPlayersInfo, targetPlayers, currentPage);
+                        await interaction.update({ components: currentRows });
                     } else if (interaction.customId === 'withdraw') {
                         kickedId = turnPlayerId;
                         actionTaken = true;
-                        await interaction.reply({ content: '🚪 لقد انسحبت من اللعبة.' });
+                        await interaction.reply({ content: `تم تأكيد الطرد. ✅`, ephemeral: true });
                         collector.stop();
                     } else if (interaction.customId === 'random_kick') {
                         kickedId = targetPlayers[Math.floor(Math.random() * targetPlayers.length)];
                         actionTaken = true;
-                        await interaction.reply({ content: `🎲 تم اختيار طرد عشوائي!` });
+                        await interaction.reply({ content: `تم تأكيد الطرد. ✅`, ephemeral: true });
                         collector.stop();
                     } else if (interaction.customId.startsWith('kick_')) {
                         kickedId = interaction.customId.split('_')[1];
                         actionTaken = true;
-                        await interaction.reply({ content: `✅ تم تأكيد الطرد.` });
+                        await interaction.reply({ content: `تم تأكيد الطرد. ✅`, ephemeral: true });
                         collector.stop();
                     }
                 });
@@ -362,12 +370,24 @@ module.exports = (client) => {
                 collector.on('end', () => resolve());
             });
 
-            // تعطيل الأزرار بدل حذف الرسالة
-            await turnMsg.edit({ components: [] }).catch(() => {});
+            // هنا الزراير بتطفي ومش بتتمسح خالص
+            const disabledRows = currentRows.map(row => {
+                const newRow = new ActionRowBuilder();
+                row.components.forEach(btn => {
+                    newRow.addComponents(ButtonBuilder.from(btn).setDisabled(true));
+                });
+                return newRow;
+            });
+            await turnMsg.edit({ components: disabledRows }).catch(() => {});
 
+            // رسالة الطرد نسخة طبق الأصل من الصورة
             if (!actionTaken) {
                 kickedId = turnPlayerId;
-                await channel.send(`⏱️ انتهى الوقت! تم طرد <@${turnPlayerId}> لعدم الاختيار.`);
+                await channel.send(`💣 | تم طرد <@${turnPlayerId}> لتأخره في الاختيار ، سيتم بدء الجولة القادمة في بضع ثواني...`);
+            } else if (kickedId === turnPlayerId) {
+                await channel.send(`💣 | لقد انسحب <@${turnPlayerId}> من اللعبة ، سيتم بدء الجولة القادمة في بضع ثواني...`);
+            } else {
+                await channel.send(`💣 | تم طرد <@${kickedId}> من اللعبة ، سيتم بدء الجولة القادمة في بضع ثواني...`);
             }
 
             db = loadDB();
@@ -377,16 +397,16 @@ module.exports = (client) => {
                 kickedUserDb.inventory['self_revive'] -= 1;
                 db[kickedId] = kickedUserDb;
                 saveDB(db);
-                await channel.send(`❤️ **إنعاش!** اللاعب <@${kickedId}> انطرد لكن استخدم الإنعاش الذاتي ورجع للعبة!`);
+                await channel.send(`❤️ **إنعاش!** اللاعب <@${kickedId}> استخدم الإنعاش الذاتي ورجع للعبة!`);
             } else {
                 alivePlayers = alivePlayers.filter(id => id !== kickedId);
-                if (actionTaken && kickedId !== turnPlayerId) {
-                    await channel.send(`💀 اللاعب <@${turnPlayerId}> قام بطرد <@${kickedId}>! المتبقي: ${alivePlayers.length}`);
-                }
                 kickedUserDb.points += LOSE_POINTS;
                 db[kickedId] = kickedUserDb;
                 saveDB(db);
             }
+
+            // ====== هنا الفاصل الزمني الـ 5 ثواني بالظبط ======
+            await new Promise(r => setTimeout(r, 5000));
         }
 
         const winnerId = alivePlayers[0];
@@ -397,14 +417,7 @@ module.exports = (client) => {
             db[winnerId] = winnerDb;
             saveDB(db);
 
-            const winnerMember = channel.guild.members.cache.get(winnerId);
-            const winEmbed = new EmbedBuilder()
-                .setColor('#800080')
-                .setTitle('🏆 الفائز في الروليت!')
-                .setDescription(`🎉 تهانينا <@${winnerId}> لفوزك بالروليت!\n💰 تم إضافة **${REWARD_POINTS}** نقطة لحسابك.`)
-                .setThumbnail(winnerMember ? winnerMember.user.displayAvatarURL({ dynamic: true }) : null);
-
-            await channel.send({ content: `<@${winnerId}>`, embeds: [winEmbed] });
+            await channel.send(`👑 هذه الجولة الأخيرة ! اللاعب المختار هو اللاعب الفائز في اللعبة.\n👑 فاز باللعبة <@${winnerId}>`);
         }
         activeGames.delete(channel.id);
     }
