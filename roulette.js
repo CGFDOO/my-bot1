@@ -1,12 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, StringSelectMenuBuilder } = require('discord.js');
-const { createCanvas, loadImage, registerFont } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
-
-// ================= تسجيل الخط (لحل مشكلة المربعات) =================
-// البوت هيدور على ملف font.ttf عشان يكتب بيه عربي وإنجليزي صح
-if (fs.existsSync('./font.ttf')) {
-    registerFont('./font.ttf', { family: 'CustomFont' });
-}
 
 // ================= إعدادات الداتا بيز =================
 const dbPath = './roulette_db.json';
@@ -14,17 +8,17 @@ if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
 const loadDB = () => JSON.parse(fs.readFileSync(dbPath));
 const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 4));
 
-// ================= إعدادات الرومات والرتب (حط أيديهاتك هنا) =================
+// ================= إعدادات الرومات والرتب =================
 const ALLOWED_CHANNELS = ['1453939768885903462']; 
 const ROLET_ROLES = ['1453946893053726830']; 
-const ADMIN_ROLES = ['حط_ايدي_رتبة_الادمن_هنا']; 
+const ADMIN_ROLES = ['حط_ايدي_رتبة_الادمن_هنا']; // حط أيدي رتبة الإدارة العليا هنا
 const POINTS_ROLES = ['1453904793746804766']; 
-const VIP_ROLES = ['1453904793746804766']; // الرتبة اللي تقدر تستخدم الأدوات مجاناً
+const VIP_ROLES = ['1453904793746804766']; // الرتبة اللي بتلعب وتستخدم الأدوات مجاناً
 
 // ================= الإعدادات الأساسية =================
 const REWARD_POINTS = 10; 
 const LOSE_POINTS = 3;    
-const TURN_TIME = 20000; // 20 ثانية بالظبط
+const TURN_TIME = 20000; // 20 ثانية
 
 const STORE_PRICES = { double_kick: 350, revive_friend: 250, self_revive: 300, nuke: 7500 };
 const activeGames = new Map();
@@ -87,7 +81,7 @@ module.exports = (client) => {
             return message.reply('🛑 تم إيقاف لعبة الروليت.');
         }
 
-        // 🛒 المتجر
+        // 🛒 أمر المتجر الخارجي
         if (command === '!متجر' || command === '!shop') {
             const db = loadDB();
             const user = db[message.author.id] || { points: 0, inventory: {} };
@@ -195,7 +189,8 @@ module.exports = (client) => {
                 
                 const disabledJoinRow = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId('join_done').setLabel('دخول 🎯').setStyle(ButtonStyle.Success).setDisabled(true),
-                    new ButtonBuilder().setCustomId('leave_done').setLabel('خروج 🚪').setStyle(ButtonStyle.Danger).setDisabled(true)
+                    new ButtonBuilder().setCustomId('leave_done').setLabel('خروج 🚪').setStyle(ButtonStyle.Danger).setDisabled(true),
+                    new ButtonBuilder().setCustomId('shop_done').setLabel('🛒 المتجر').setStyle(ButtonStyle.Primary).setDisabled(true)
                 );
 
                 if (players.length < 4) {
@@ -213,7 +208,7 @@ module.exports = (client) => {
         }
     });
 
-    // ================= دالة رسم العجلة =================
+    // ================= دالة رسم العجلة الشاملة (لغات العالم) =================
     async function generateRouletteImage(playersInfo) {
         const size = 500;
         const canvas = createCanvas(size, size);
@@ -225,7 +220,6 @@ module.exports = (client) => {
         ctx.fillRect(0, 0, size, size);
 
         const sliceAngle = (2 * Math.PI) / playersInfo.length;
-        const fontStr = fs.existsSync('./font.ttf') ? 'bold 15px CustomFont, sans-serif' : 'bold 15px sans-serif';
 
         for (let i = 0; i < playersInfo.length; i++) {
             const startAngle = i * sliceAngle;
@@ -246,9 +240,11 @@ module.exports = (client) => {
             ctx.rotate(startAngle + sliceAngle / 2);
             ctx.textAlign = 'right';
             ctx.fillStyle = '#ffffff';
-            ctx.font = fontStr; 
+            
+            // الخط السحري اللي بيدعم كل اللغات والإيموجي
+            ctx.font = 'bold 16px "Noto Sans", "Noto Color Emoji", sans-serif'; 
+            
             const name = playersInfo[i].name.substring(0, 12);
-            // هيكتب الرقم والاسم
             ctx.fillText(`${playersInfo[i].globalIdx}- ${name}`, radius - 20, 5);
             ctx.restore();
         }
@@ -332,7 +328,7 @@ module.exports = (client) => {
         let db = loadDB();
 
         while (alivePlayers.length > 1) {
-            // آخر شخصين الجيم بيكرم الفايز فوراً
+            // ================= الجولة النهائية =================
             if (alivePlayers.length === 2) {
                 const winnerId = alivePlayers[Math.floor(Math.random() * 2)];
                 const ObjectPlayersInfo = alivePlayers.map((id, index) => {
@@ -468,6 +464,7 @@ module.exports = (client) => {
                 collector.on('end', () => resolve());
             });
 
+            // إطفاء الزراير (مش مسحها)
             const disabledRows = turnMsg.components.map(row => {
                 const newRow = new ActionRowBuilder();
                 row.components.forEach(btn => newRow.addComponents(ButtonBuilder.from(btn).setDisabled(true)));
@@ -475,6 +472,7 @@ module.exports = (client) => {
             });
             await turnMsg.edit({ components: disabledRows }).catch(() => {});
 
+            // رسائل الإعلان عن الطرد
             if (nukeUsed) {
                 const numToKill = Math.floor(targetPlayers.length / 2);
                 let killedByNuke = targetPlayers.sort(() => 0.5 - Math.random()).slice(0, numToKill);
@@ -493,6 +491,7 @@ module.exports = (client) => {
                 await channel.send(`💣 | قام <@${turnPlayerId}> بطرد ${mentions} من اللعبة ، سيتم بدء الجولة القادمة في بضع ثواني...`);
             }
 
+            // تحديث النقاط وحالة الإنعاش الذاتي
             db = loadDB();
             for (const kid of kickedIds) {
                 const kickedUserDb = db[kid] || { points: 0, inventory: {} };
@@ -512,9 +511,11 @@ module.exports = (client) => {
             }
             saveDB(db);
 
+            // ================= فاصل الـ 5 ثواني =================
             await new Promise(r => setTimeout(r, 5000));
         }
         
+        // لو فجأة تبقى لاعب واحد بس (بسبب انسحاب أو نووي)
         if (alivePlayers.length === 1) {
             const winnerId = alivePlayers[0];
             db = loadDB();
