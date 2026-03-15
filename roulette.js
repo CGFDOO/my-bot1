@@ -16,25 +16,23 @@ if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify({}));
 const loadDB = () => JSON.parse(fs.readFileSync(dbPath));
 const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 4));
 
-// ================= لوحة التحكم للإمبراطور (عدل براحتك هنا) =================
+// ================= إعدادات الرومات والرتب (تقدر تعدل الأوقات من هنا) =================
 const ALLOWED_CHANNELS = ['1453939768885903462']; 
 const ROLET_ROLES = ['1453946893053726830']; 
 const ADMIN_ROLES = ['1453904793746804766']; 
 const POINTS_ROLES = ['1453904793746804766']; 
 
-const REWARD_POINTS = 10;       // جائزة الفوز بالروليت
-const LOSE_POINTS = 3;          // النقاط المخصومة عند الخسارة
+const REWARD_POINTS = 10; 
+const LOSE_POINTS = 3;    
 const TURN_TIME = 20000;        // وقت الطرد (20 ثانية)
 const DELAY_TIME = 6000;        // وقت الانتظار للجولة القادمة (6 ثواني)
-const REVIVE_TIME = 7000;       // وقت استخدام الإنعاش الذاتي (7 ثواني)
+const REVIVE_TIME = 10000;      // ⏳ وقت الإنعاش الذاتي (10 ثواني)
 
-// أسعار المتجر
 const STORE_PRICES = { double_kick: 350, revive_friend: 250, self_revive: 300, nuke: 7500, freeze: 400 };
 const activeGames = new Map();
 
 module.exports = (client) => {
 
-    // ================= أوامر المتجر والأزرار =================
     client.on('interactionCreate', async interaction => {
         if (!interaction.isButton()) return;
         if (interaction.customId.startsWith('buy_')) {
@@ -116,7 +114,6 @@ module.exports = (client) => {
             return message.reply({ embeds: [embed] });
         }
 
-        // ================= إضافة وسحب النقاط (بدون أخطاء مسافات) =================
         if (command === 'point' || command === 'points') {
             if (!hasPointsRole && !hasAdminRole) return;
             const targetUser = message.mentions.users.first();
@@ -148,7 +145,7 @@ module.exports = (client) => {
             return message.reply(`📉 تم سحب **${actualDeducted}** نقطة من <@${targetUser.id}>.`);
         }
 
-        // ================= أمر اللعبة الأساسي =================
+        // 🎰 أمر اللعبة
         if (command === 'روليت') {
             if (!hasAdminRole && (!ALLOWED_CHANNELS.includes(message.channel.id) || !hasRoletRole)) {
                 return message.reply('❌ **هذا الأمر مخصص للإدارة والإدارة العليا فقط.**');
@@ -159,11 +156,18 @@ module.exports = (client) => {
             const waitTime = 60; 
             const endTime = Math.floor(Date.now() / 1000) + waitTime;
 
-            // الإيمبد مطابق للصورة بالمللي
+            // ================= الإيمبد الأساسي بالأسامي والعد التنازلي =================
+            const getStartDescription = (playersList) => {
+                let mentionsList = playersList.map((p, idx) => `**${idx + 1}-** <@${p}>`).join('\n');
+                if (playersList.length === 0) mentionsList = 'لا يوجد مشاركين.';
+                
+                return `**طريقة اللعب**\n1- اختر الرقم الذي سيمثلك في اللعبة\n2- ستبدأ الجولة الأولى وسيتم تدوير العجلة واختيار لاعب عشوائي\n3- إذا كنت اللاعب المختار، فستختار لاعباً ليتم طرده\n4- يستمر اللعب حتى يتبقى لاعبان فقط\n\nستبدأ اللعبة خلال: ⏳ <t:${endTime}:R>\n\n**المشاركين (${playersList.length}/200):**\n${mentionsList}`;
+            };
+
             const startEmbed = new EmbedBuilder()
                 .setTitle('روليت')
                 .setColor('#2b2d31')
-                .setDescription(`**طريقة اللعب**\n1- اختر الرقم الذي سيمثلك في اللعبة\n2- ستبدأ الجولة الأولى وسيتم تدوير العجلة واختيار لاعب عشوائي\n3- إذا كنت اللاعب المختار، فستختار لاعباً ليتم طرده\n4- يستمر اللعب حتى يتبقى لاعبان فقط\n\nستبدأ اللعبة خلال: ⏰ <t:${endTime}:R>\nالمشاركين (${players.length}/200)`)
+                .setDescription(getStartDescription(players))
                 .setImage('https://cdn.discordapp.com/attachments/1454420195539025941/1482162249001865328/1773445405834.jpg');
 
             const joinRow = new ActionRowBuilder().addComponents(
@@ -207,7 +211,7 @@ module.exports = (client) => {
                     await i.reply({ content: '🚪 تم سحب تسجيلك.', ephemeral: true });
                 }
 
-                startEmbed.setDescription(`**طريقة اللعب**\n1- اختر الرقم الذي سيمثلك في اللعبة\n2- ستبدأ الجولة الأولى وسيتم تدوير العجلة واختيار لاعب عشوائي\n3- إذا كنت اللاعب المختار، فستختار لاعباً ليتم طرده\n4- يستمر اللعب حتى يتبقى لاعبان فقط\n\nستبدأ اللعبة خلال: ⏰ <t:${endTime}:R>\nالمشاركين (${players.length}/200)`);
+                startEmbed.setDescription(getStartDescription(players));
                 await gameMessage.edit({ embeds: [startEmbed] }).catch(()=>{});
             });
 
@@ -236,7 +240,7 @@ module.exports = (client) => {
         }
     });
 
-    // ================= دالة العجلة المتحركة (شفافية مطلقة 100% و6 لفات) =================
+    // ================= دالة العجلة المتحركة (شفافية حقيقية 100% و 6 لفات) =================
     async function generateRouletteGIF(playersInfo, targetId, guild) {
         const size = 500;
         const encoder = new GIFEncoder(size, size);
@@ -244,7 +248,7 @@ module.exports = (client) => {
         encoder.setRepeat(-1); 
         encoder.setQuality(10);
         
-        // 🌟 الشفافية الحقيقية (هتقص اللون الأسود تماماً) 🌟
+        // 🌟 الشفافية الحقيقية 🌟
         encoder.setTransparent(0x000000); 
 
         const canvas = createCanvas(size, size);
@@ -258,6 +262,7 @@ module.exports = (client) => {
         const randomFraction = 0.15 + Math.random() * 0.7; 
         const targetAngle = -(targetIndex * sliceAngle + (sliceAngle * randomFraction));
         
+        // 🌀 6 لفات كاملة 
         const totalSpins = 6; 
         const totalFrames = 75; 
 
@@ -275,7 +280,7 @@ module.exports = (client) => {
             const easeOut = 1 - Math.pow(1 - t, 3); 
             const currentAngle = (targetAngle - (Math.PI * 2 * totalSpins)) + (Math.PI * 2 * totalSpins) * easeOut;
 
-            ctx.fillStyle = '#000000'; // ده هيتقص ويبقى شفاف تماماً
+            ctx.fillStyle = '#000000'; // خلفية شفافة مقصوصة
             ctx.fillRect(0, 0, size, size);
 
             ctx.save();
@@ -337,7 +342,7 @@ module.exports = (client) => {
         const randomFraction = 0.15 + Math.random() * 0.7; 
         const offsetAngle = -(targetIndex * sliceAngle + (sliceAngle * randomFraction));
 
-        ctx.clearRect(0, 0, size, size); // شفافية مطلقة لـ PNG
+        ctx.clearRect(0, 0, size, size); // شفافية PNG
 
         ctx.save();
         ctx.translate(center, center);
@@ -416,11 +421,12 @@ module.exports = (client) => {
             new ButtonBuilder().setCustomId('withdraw').setLabel('انسحاب 🚪').setStyle(ButtonStyle.Danger) 
         ));
 
+        // زراير الصفحات (أرقام فقط زي 1/1000)
         if (totalPages > 1) {
             rows.push(new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️ الصفحة السابقة').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-                new ButtonBuilder().setCustomId('page_info').setLabel(`صفحة ${page + 1}/${totalPages} (${targetPlayers.length} لاعب)`).setStyle(ButtonStyle.Secondary).setDisabled(true),
-                new ButtonBuilder().setCustomId(`next_${page}`).setLabel('الصفحة التالية ➡️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+                new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+                new ButtonBuilder().setCustomId('page_info').setLabel(`${page + 1}/${totalPages}`).setStyle(ButtonStyle.Secondary).setDisabled(true),
+                new ButtonBuilder().setCustomId(`next_${page}`).setLabel('➡️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
             ));
         }
 
@@ -490,7 +496,7 @@ module.exports = (client) => {
                 db[winnerId] = winnerDb;
                 saveDB(db);
 
-                // استبدال الـ GIF بصورة ثابتة عشان متلفش تاني
+                // إعلان الفائز
                 await spinMsg.edit({
                     content: `👑 | 🥳 **الفائز باللعبة هو <@${winnerId}>!**\nتم إضافة **${REWARD_POINTS}** نقطة لحسابه!`,
                     files: [staticAttachment]
@@ -618,7 +624,7 @@ module.exports = (client) => {
                         if (interaction.customId === 'use_double') {
                             uDb.inventory['double_kick'] -= 1; gameLimits[turnPlayerId].double = true; db[turnPlayerId] = uDb; saveDB(db);
                             doubleKickActive = true;
-                            await interaction.reply({ content: '🔪 اختر لاعبين.', ephemeral: true });
+                            await interaction.reply({ content: '🔪 تم اختيار اللاعب الأول، اختر اللاعب الثاني الآن.', ephemeral: true });
                             currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
                             await turnMsg.edit({ components: currentRows }).catch(()=>{});
                             return;
