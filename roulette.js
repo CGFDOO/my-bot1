@@ -97,6 +97,24 @@ module.exports = (client) => {
             return message.channel.send('🛑 **تم إيقاف اللعبة وحذفها.**');
         }
 
+        if (command === 'رصيد' || command === 'نقاط') {
+            let targetUser = message.mentions.users.first();
+            if (targetUser && targetUser.id !== message.author.id) {
+                if (!hasAdminRole && !hasPointsRole) {
+                    return message.reply('❌ **هذا الأمر مخصص للإدارة للإطلاع على بيانات الآخرين.**');
+                }
+            } else { targetUser = message.author; }
+
+            const db = loadDB();
+            const userDb = db[targetUser.id] || { points: 0, inventory: {} };
+
+            const embed = new EmbedBuilder()
+                .setColor('#2b2d31')
+                .setAuthor({ name: `رصيد: ${targetUser.displayName}`, iconURL: targetUser.displayAvatarURL() })
+                .setDescription(`**النقاط:** ${userDb.points}\n\n**الخواص المتاحة:**\nطرد مرتين 🎯: **${userDb.inventory.double_kick || 0}**\nإنعاش صديق 🤝: **${userDb.inventory.revive_friend || 0}**\nإنعاش ذاتي 💉: **${userDb.inventory.self_revive || 0}**\nتجميد 🧊: **${userDb.inventory.freeze || 0}**\nنووي ☢️: **${userDb.inventory.nuke || 0}**`);
+            return message.reply({ embeds: [embed] });
+        }
+
         if (command === 'point' || command === 'points') {
             if (!hasPointsRole && !hasAdminRole) return;
             const targetUser = message.mentions.users.first();
@@ -128,6 +146,7 @@ module.exports = (client) => {
             return message.reply(`📉 تم سحب **${actualDeducted}** نقطة من <@${targetUser.id}>.`);
         }
 
+        // 🎰 أمر اللعبة
         if (command === 'روليت') {
             if (!hasAdminRole && (!ALLOWED_CHANNELS.includes(message.channel.id) || !hasRoletRole)) {
                 return message.reply('❌ **هذا الأمر مخصص للإدارة والإدارة العليا فقط.**');
@@ -157,7 +176,6 @@ module.exports = (client) => {
             const gameMessage = await message.channel.send({ embeds: [startEmbed], components: [joinRow] });
             const collector = gameMessage.createMessageComponentCollector({ time: waitTime * 1000 });
             
-            // إضافة خاصية التجميد المعلق
             activeGames.set(message.channel.id, { collector, gameMessage, pendingFreezes: new Set() });
 
             collector.on('collect', async i => {
@@ -225,13 +243,14 @@ module.exports = (client) => {
         }
     });
 
-    // ================= دالة العجلة المتحركة (5 لفات، شفافة وبطيئة) =================
+    // ================= دالة العجلة المتحركة (5 لفات + شفافية حقيقية) =================
     async function generateRouletteGIF(playersInfo, targetId, guild) {
         const size = 500;
         const encoder = new GIFEncoder(size, size);
         encoder.start();
         encoder.setRepeat(-1); 
         encoder.setQuality(10);
+        // الشفافية المطلقة (هنمسح اللون الأسود تماماً)
         encoder.setTransparent(0x000000); 
 
         const canvas = createCanvas(size, size);
@@ -245,8 +264,8 @@ module.exports = (client) => {
         const randomFraction = 0.15 + Math.random() * 0.7; 
         const targetAngle = -(targetIndex * sliceAngle + (sliceAngle * randomFraction));
         
-        const totalSpins = 5; // 5 لفات كاملة
-        const totalFrames = 60; // فريمات أكتر عشان البطء والنعومة
+        const totalSpins = 5; // 5 لفات
+        const totalFrames = 60; // بطيئة وسلسة
 
         let avatarImg = null;
         const member = guild.members.cache.get(targetId);
@@ -262,7 +281,8 @@ module.exports = (client) => {
             const easeOut = 1 - Math.pow(1 - t, 3); 
             const currentAngle = (targetAngle - (Math.PI * 2 * totalSpins)) + (Math.PI * 2 * totalSpins) * easeOut;
 
-            ctx.fillStyle = '#000000'; // شفافية مطلقة
+            // خلفية سوداء (هتتشال بالشفافية وتبقى مقصوصة)
+            ctx.fillStyle = '#000000'; 
             ctx.fillRect(0, 0, size, size);
 
             ctx.save();
@@ -324,7 +344,7 @@ module.exports = (client) => {
         const randomFraction = 0.15 + Math.random() * 0.7; 
         const offsetAngle = -(targetIndex * sliceAngle + (sliceAngle * randomFraction));
 
-        ctx.clearRect(0, 0, size, size); // شفاف
+        ctx.clearRect(0, 0, size, size); // شفافية PNG
 
         ctx.save();
         ctx.translate(center, center);
@@ -375,7 +395,7 @@ module.exports = (client) => {
     }
 
     // ================= تصميم الزراير والديناميكية =================
-    function getTurnComponents(playersInfo, targetPlayers, page, turnPlayerId, gameLimits) {
+    function getTurnComponents(playersInfo, targetPlayers, page, turnPlayerId, gameLimits, alivePlayers) {
         let rows = [];
         const PLAYERS_PER_PAGE = 10; 
         
@@ -386,7 +406,6 @@ module.exports = (client) => {
         const end = start + PLAYERS_PER_PAGE;
         const currentTargets = targetPlayers.slice(start, end);
 
-        // 1. زراير اللاعبين
         let currentRow = new ActionRowBuilder();
         currentTargets.forEach((id) => {
             if (currentRow.components.length === 5) {
@@ -399,22 +418,20 @@ module.exports = (client) => {
         });
         if (currentRow.components.length > 0) rows.push(currentRow);
 
-        // 2. التحكم الأساسي
         rows.push(new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('random_kick').setLabel('طرد عشوائي 🎲').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('withdraw').setLabel('انسحاب 🚪').setStyle(ButtonStyle.Danger) 
         ));
 
-        // 3. زراير الصفحات الديناميكية (بالأرقام فقط)
+        // زراير الصفحات (ديناميكية)
         if (totalPages > 1) {
             rows.push(new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️ الصفحة السابقة').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-                new ButtonBuilder().setCustomId('page_info').setLabel(`صفحة ${page + 1}/${totalPages} (${targetPlayers.length} لاعب)`).setStyle(ButtonStyle.Secondary).setDisabled(true),
-                new ButtonBuilder().setCustomId(`next_${page}`).setLabel('الصفحة التالية ➡️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+                new ButtonBuilder().setCustomId(`prev_${page}`).setLabel('⬅️').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+                new ButtonBuilder().setCustomId('page_info').setLabel(`${page + 1}/${totalPages}`).setStyle(ButtonStyle.Secondary).setDisabled(true),
+                new ButtonBuilder().setCustomId(`next_${page}`).setLabel('➡️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
             ));
         }
 
-        // 4. الخواص (مقفولة لو مش معاه)
         const db = loadDB();
         const userDb = db[turnPlayerId] || { inventory: {} };
         const limits = gameLimits[turnPlayerId] || { nuke: false, double: false, revive: false, freeze: false };
@@ -422,13 +439,23 @@ module.exports = (client) => {
         const canDouble = (userDb.inventory['double_kick'] || 0) > 0 && !limits.double;
         const canNuke = (userDb.inventory['nuke'] || 0) > 0 && !limits.nuke;
         const canReviveFriend = (userDb.inventory['revive_friend'] || 0) > 0 && !limits.revive;
-        const canFreeze = (userDb.inventory['freeze'] || 0) > 0 && !limits.freeze;
+
+        let anyoneHasFreeze = false;
+        for (const pid of alivePlayers) {
+            if (pid !== turnPlayerId) {
+                const pDb = db[pid] || { inventory: {} };
+                const pLimits = gameLimits[pid] || { freeze: false };
+                if ((pDb.inventory['freeze'] || 0) > 0 && !pLimits.freeze) {
+                    anyoneHasFreeze = true; break;
+                }
+            }
+        }
 
         rows.push(new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('use_double').setLabel('طرد مرتين 🎯').setStyle(ButtonStyle.Secondary).setDisabled(!canDouble),
             new ButtonBuilder().setCustomId('use_nuke').setLabel('نووي ☢️').setStyle(ButtonStyle.Secondary).setDisabled(!canNuke),
             new ButtonBuilder().setCustomId('use_revive_friend').setLabel('إنعاش صديق 🤝').setStyle(ButtonStyle.Secondary).setDisabled(!canReviveFriend),
-            new ButtonBuilder().setCustomId('use_freeze').setLabel('تجميد اللاعب 🧊').setStyle(ButtonStyle.Secondary).setDisabled(!canFreeze)
+            new ButtonBuilder().setCustomId('use_freeze').setLabel('تجميد اللاعب 🧊').setStyle(ButtonStyle.Secondary).setDisabled(!anyoneHasFreeze)
         ));
         
         return rows;
@@ -460,7 +487,7 @@ module.exports = (client) => {
                 
                 let spinMsg = await channel.send({ content: `🎰 **يتم تدوير العجلة لاختيار الفائز...**`, files: [attachmentGIF] });
                 
-                await new Promise(r => setTimeout(r, 3800)); // مدة الـ 5 لفات
+                await new Promise(r => setTimeout(r, 4500)); // مدة الـ 5 لفات
 
                 const staticBuffer = await generateStaticImage(ObjectPlayersInfo, winnerId, channel.guild);
                 const staticAttachment = new AttachmentBuilder(staticBuffer, { name: 'win.png' });
@@ -489,7 +516,6 @@ module.exports = (client) => {
             });
 
             try {
-                // التحقق من التجميد قبل بداية الدور
                 const gameData = activeGames.get(channel.id);
                 const isCurrentlyFrozen = gameData.pendingFreezes && gameData.pendingFreezes.has(turnPlayerId);
                 if (isCurrentlyFrozen) {
@@ -501,14 +527,14 @@ module.exports = (client) => {
 
                 let turnMsg = await channel.send({ content: `🎰 **يتم تدوير العجلة...**`, files: [attachmentGIF] });
                 
-                await new Promise(r => setTimeout(r, 3800)); 
+                await new Promise(r => setTimeout(r, 4500)); 
 
                 const staticBuffer = await generateStaticImage(ObjectPlayersInfo, turnPlayerId, channel.guild);
                 const staticAttachment = new AttachmentBuilder(staticBuffer, { name: 'result.png' });
 
                 let targetPlayers = alivePlayers.filter(id => id !== turnPlayerId);
                 let currentPage = 0;
-                let currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits);
+                let currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
 
                 if (isCurrentlyFrozen) {
                     const disabledRows = currentRows.map(row => {
@@ -554,7 +580,6 @@ module.exports = (client) => {
 
                         let uDb = db[turnPlayerId] || { inventory: {} };
 
-                        // نظام التجميد الصايع (بيختار مين يتجمد الدور الجاي)
                         if (interaction.customId === 'use_freeze') {
                             uDb.inventory['freeze'] -= 1; gameLimits[turnPlayerId].freeze = true; db[turnPlayerId] = uDb; saveDB(db);
                             
@@ -575,7 +600,7 @@ module.exports = (client) => {
                             if(gameD) gameD.pendingFreezes.add(frozenId);
                             
                             await interaction.update({ content: `🧊 سيتم تجميد <@${frozenId}> في دوره القادم! أكمل اللعب.`, components: [] });
-                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits);
+                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
                             await turnMsg.edit({ components: currentRows }).catch(()=>{});
                             return;
                         }
@@ -590,7 +615,7 @@ module.exports = (client) => {
                             uDb.inventory['double_kick'] -= 1; gameLimits[turnPlayerId].double = true; db[turnPlayerId] = uDb; saveDB(db);
                             doubleKickActive = true;
                             await interaction.reply({ content: '🔪 اختر لاعبين.', ephemeral: true });
-                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits);
+                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
                             await turnMsg.edit({ components: currentRows }).catch(()=>{});
                             return;
                         }
@@ -615,18 +640,18 @@ module.exports = (client) => {
                             await interaction.update({ content: `✅ تم إنعاش <@${revivedId}>.`, components: [] });
                             
                             targetPlayers = alivePlayers.filter(id => id !== turnPlayerId); 
-                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits);
+                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
                             await turnMsg.edit({ components: currentRows }).catch(()=>{});
                             return;
                         }
 
                         if (interaction.customId.startsWith('prev_')) {
                             currentPage--;
-                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits);
+                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
                             await interaction.update({ components: currentRows });
                         } else if (interaction.customId.startsWith('next_')) {
                             currentPage++;
-                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits);
+                            currentRows = getTurnComponents(ObjectPlayersInfo, targetPlayers, currentPage, turnPlayerId, gameLimits, alivePlayers);
                             await interaction.update({ components: currentRows });
                         } else if (interaction.customId === 'withdraw') {
                             kickedIds.push(turnPlayerId); actionTaken = true;
@@ -683,11 +708,12 @@ module.exports = (client) => {
                         const reviveRow = new ActionRowBuilder().addComponents(
                             new ButtonBuilder().setCustomId(`self_revive_${kid}`).setLabel('استخدم الإنعاش الذاتي! 💉').setStyle(ButtonStyle.Success)
                         );
-                        const promptMsg = await channel.send({ content: `⚠️ <@${kid}> لديك إنعاش ذاتي، لديك 10 ثواني لاستخدامه.`, components: [reviveRow] });
+                        // الوقت 7 ثواني زي ما طلبت
+                        const promptMsg = await channel.send({ content: `⚠️ <@${kid}> لقد تم طردك! لديك إنعاش ذاتي، أمامك 7 ثواني لاستخدامه.`, components: [reviveRow] });
                         
                         try {
                             const filter = i => i.customId === `self_revive_${kid}` && i.user.id === kid;
-                            await promptMsg.awaitMessageComponent({ filter, time: 10000 });
+                            await promptMsg.awaitMessageComponent({ filter, time: 7000 });
                             kickedUserDb.inventory['self_revive'] -= 1; db[kid] = kickedUserDb; saveDB(db);
                             await promptMsg.delete().catch(()=>{});
                             await channel.send(`💉 استخدم <@${kid}> الإنعاش الذاتي وعاد إلى اللعبة.`);
